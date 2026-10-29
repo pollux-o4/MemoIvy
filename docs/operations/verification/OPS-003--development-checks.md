@@ -32,3 +32,9 @@
 - KEY-001·FMT-002 단축키
   - FMT-001과 같은 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/key_001_ui_smoke.py`.
   - 키보드 새 메모·서식 적용/해제·체크·검색·도움말·정상 닫기 저장을 확인한다.
+
+- CANVAS-001·CANVAS-002 메모 캔버스
+  - 기본 GTK 테스트에 확대 보간·중간 재목표·모션 줄이기·위젯 유지·유휴 종료와 원본 동기화·연결·완료·되돌리기·방향키·저장 실패·창 종료 위젯 검증을 포함한다.
+  - 브라우저 시각 검증: `gtk4-broadwayd -a 127.0.0.1 -p 8085 :5` 실행 후, 합성 XDG_DATA_HOME으로 `GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 cargo run --locked`. 브라우저에서 로컬 포트를 연다.
+  - 네이티브 화면 캡처: `LSM_CANVAS_ARTIFACT_DIR=/tmp/lsm-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
+  - 실제 포인터로 선택·드래그·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.

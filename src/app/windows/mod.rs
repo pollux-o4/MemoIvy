@@ -1,3 +1,4 @@
+pub(in crate::app) mod canvas;
 mod editor;
 pub(in crate::app) mod focus;
 mod library;

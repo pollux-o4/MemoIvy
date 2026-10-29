@@ -32,6 +32,7 @@ pub(super) fn start(state: &State, app: &Application) {
 fn process_result(st: &State, a: &Application) {
     let mut s = st.borrow_mut();
     let result = s.queue.poll();
+    let received = result.is_some();
     if let Some((transaction, result)) = result {
         if transaction {
             let operation = s.operation.take().map(|pending| pending.0);
@@ -49,7 +50,7 @@ fn process_result(st: &State, a: &Application) {
                             s = st.borrow_mut();
                         }
                         Some(Operation::Delete(id)) => {
-                            s.store.notes.retain(|n| n.id != id);
+                            crate::persistence::canvas::remove(&mut s.store.notes, id);
                             let w = s.windows.remove(&id).map(|editor| editor.window);
                             s.bypass = true;
                             drop(s);
@@ -94,6 +95,10 @@ fn process_result(st: &State, a: &Application) {
             }
         }
     }
+    drop(s);
+    if received {
+        super::windows::canvas::update_status(st);
+    }
 }
 
 fn tick(st: &State, a: &Application) -> glib::ControlFlow {
@@ -103,7 +108,7 @@ fn tick(st: &State, a: &Application) -> glib::ControlFlow {
         let mut notes = s.store.notes.clone();
         match &s.operation.as_ref().unwrap().0 {
             Operation::Create(note) => notes.push(note.clone()),
-            Operation::Delete(id) => notes.retain(|n| n.id != *id),
+            Operation::Delete(id) => crate::persistence::canvas::remove(&mut notes, *id),
         }
         s.operation.as_mut().unwrap().1 = true;
         s.queue.transaction(&notes);

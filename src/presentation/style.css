@@ -46,3 +46,33 @@
 .lsm-window .icon-button > button:focus-visible { outline: 2px solid #365ecc; outline-offset: 2px; }
 .md-checkbox { padding: 0; margin: 0; min-width: 18px; min-height: 18px; }
 .md-checkbox check { min-width: 14px; min-height: 14px; }
+/* Canvas · surfaces, cards, controls */
+.canvas-root { background: #f7f8fb; color: #242832; }
+.canvas-root.dark { background: #202226; color: #f0f2f5; }
+.canvas-toolbar { padding: 14px 20px; background: alpha(white,.48); border-bottom: 1px solid alpha(#8190a5,.2); }
+.dark .canvas-toolbar { background: alpha(white,.025); }
+.canvas-inspector { padding: 24px 20px; background: alpha(white,.88); border-left: 1px solid alpha(#8190a5,.2); }
+.dark .canvas-inspector { background: #24272e; }
+.canvas-heading { font-size: 1.2em; font-weight: 700; margin-bottom: 8px; }
+.canvas-help { color: #626975; font-size: .94em; }
+.dark .canvas-help { color: #b4bbc7; }
+.canvas-status { padding: 10px 20px; font-size: .9em; border-top: 1px solid alpha(#8190a5,.2); }
+.canvas-toolbar button, .canvas-inspector button { border-radius: 11px; box-shadow: none; background-image: none; transition: background-color 140ms ease-out, box-shadow 160ms ease-out; }
+.canvas-toolbar button { color: inherit; background-color: alpha(white,.55); border: 1px solid alpha(#8190a5,.3); }
+.dark .canvas-toolbar button { color: #f0f2f5; background-color: alpha(white,.06); border-color: #4b5260; }
+.canvas-toolbar button:hover { background-color: alpha(#527cd6,.1); }
+.dark .canvas-toolbar button:hover { background-color: alpha(#9bb6ff,.15); }
+.canvas-toolbar button:disabled { opacity: .45; }
+.dark .canvas-inspector checkbutton check { border: 1px solid #8997af; background: #303642; }
+.dark .canvas-inspector checkbutton check:checked { background: #365ecc; color: white; }
+.canvas-card { border-radius: 14px; border: 1px solid alpha(white,.5); box-shadow: 0 1px 3px alpha(#24334a,.06), 0 8px 24px alpha(#24334a,.09); color: #292c31; transition: box-shadow 160ms ease-out; }
+.canvas-card.yellow { background: #fff4cc; }.canvas-card.pink { background: #fce1e8; }.canvas-card.blue { background: #dfedfc; }.canvas-card.green { background: #e3f0dc; }.canvas-card.purple { background: #ece3f8; }
+.dark .canvas-card { color: #f2f1ed; border-color: alpha(white,.1); box-shadow: 0 1px 3px alpha(black,.18), 0 8px 24px alpha(black,.22); }
+.dark .canvas-card.yellow { background: #3c3829; }.dark .canvas-card.pink { background: #412e36; }.dark .canvas-card.blue { background: #2b3745; }.dark .canvas-card.green { background: #2d3c31; }.dark .canvas-card.purple { background: #373044; }
+.canvas-card.selected { outline: 2px solid #527cd6; outline-offset: 3px; box-shadow: 0 3px 8px alpha(#365ecc,.1), 0 10px 28px alpha(#365ecc,.18); }
+.canvas-handle, .canvas-open { background: transparent; background-image: none; border: 0; box-shadow: none; color: inherit; }
+.canvas-handle { padding: 9px 12px; border-radius: 14px 14px 0 0; border-bottom: 1px solid alpha(#626975,.14); font-size: .8em; }
+.canvas-open { padding: 14px 16px; border-radius: 0 0 14px 14px; }
+.canvas-handle:hover, .canvas-open:hover { background: alpha(white,.16); }
+.dark .canvas-handle:hover, .dark .canvas-open:hover { background: alpha(white,.055); }
+.canvas-root button:focus-visible, .canvas-root checkbutton:focus-visible, .canvas-root dropdown:focus-visible { outline: 2px solid #365ecc; outline-offset: 2px; }

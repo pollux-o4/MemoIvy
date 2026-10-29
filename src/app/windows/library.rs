@@ -88,6 +88,7 @@ pub(in crate::app) fn build(app: &Application) {
     window.set_child(Some(&outer));
     let state = Rc::new(RefCell::new(AppState {
         store,
+        canvas: None,
         queue: SaveQueue::new(path),
         windows: HashMap::new(),
         list,
@@ -104,6 +105,12 @@ pub(in crate::app) fn build(app: &Application) {
         operation: None,
         add: add.clone(),
     }));
+    let canvas = Button::with_label("캔버스");
+    canvas.add_css_class("lsm-action");
+    let st = state.clone();
+    let a = app.clone();
+    canvas.connect_clicked(move |_| super::canvas::open(&st, &a, None));
+    actions.prepend(&canvas);
     super::shortcuts::attach(&window, &state);
     let st = state.clone();
     let a = app.clone();
@@ -113,13 +120,23 @@ pub(in crate::app) fn build(app: &Application) {
     add.connect_clicked(move |_| {
         let mut s = st.borrow_mut();
         if s.operation.is_none() {
-            s.operation = Some((Operation::Create(Note::new()), false));
+            let mut note = Note::new();
+            note.canvas.position = Some(crate::persistence::canvas::vacant(&s.store.notes));
+            s.operation = Some((Operation::Create(note), false));
             s.add.set_sensitive(false);
         }
     });
     let st = state.clone();
     window.connect_close_request(move |w| {
         let mut s = st.borrow_mut();
+        if s.windows.is_empty() && (s.bypass || (s.queue.clean() && s.operation.is_none())) {
+            let canvas = s.canvas.take();
+            drop(s);
+            if let Some(canvas) = canvas {
+                canvas.destroy();
+            }
+            return glib::Propagation::Proceed;
+        }
         if s.bypass {
             return glib::Propagation::Proceed;
         }

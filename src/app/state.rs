@@ -25,6 +25,7 @@ impl EditorWindow {
 }
 pub(super) struct AppState {
     pub(super) store: Store,
+    pub(super) canvas: Option<Rc<super::windows::canvas::CanvasView>>,
     pub(super) queue: SaveQueue,
     pub(super) windows: HashMap<Uuid, EditorWindow>,
     pub(super) list: GtkBox,

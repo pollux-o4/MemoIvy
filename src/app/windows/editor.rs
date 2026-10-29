@@ -96,6 +96,12 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     choices.append(&colors);
     pop.set_child(Some(&choices));
     palette.set_popover(Some(&pop));
+    let canvas = Button::with_label("캔버스");
+    canvas.add_css_class("lsm-action");
+    let st = state.clone();
+    let a = app.clone();
+    canvas.connect_clicked(move |_| super::canvas::open(&st, &a, Some(id)));
+    actions.append(&canvas);
     actions.append(&palette);
     let view = TextView::new();
     view.set_wrap_mode(gtk::WrapMode::WordChar);

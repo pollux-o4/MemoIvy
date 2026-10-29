@@ -493,6 +493,7 @@ mod tests {
     fn fmt_001_live_editor_preserves_source_selection_undo_and_preedit() {
         gtk::init().expect("FMT-001 requires a display; run under xvfb-run");
         crate::app::windows::focus::tests::focus_001_releases_and_restores_input_owner();
+        crate::app::windows::canvas::tests::canvas_001_widget_flow_and_recovery();
         let view = TextView::new();
         let buffer = view.buffer();
         let original =

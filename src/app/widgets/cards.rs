@@ -94,6 +94,8 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         card.append(&row);
         s.list.append(&card);
     }
+    drop(s);
+    crate::app::windows::canvas::refresh(state);
 }
 
 fn note_title(text: &str) -> &str {
