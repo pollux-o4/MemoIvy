@@ -32,6 +32,8 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
         .default_width(380)
         .default_height(420)
         .build();
+    super::focus::watch(&window);
+    super::shortcuts::attach(&window, state);
     let (header_bar, actions) = header(&window, "메모");
     header_bar.add_css_class(&note.color);
     dark(header_bar.upcast_ref());
@@ -95,7 +97,6 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     pop.set_child(Some(&choices));
     palette.set_popover(Some(&pop));
     actions.append(&palette);
-    actions.append(&menu_for(state, app, id));
     let view = TextView::new();
     view.set_wrap_mode(gtk::WrapMode::WordChar);
     view.set_left_margin(20);
@@ -109,6 +110,42 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
         .hexpand(true)
         .child(&view)
         .build();
+    let source = crate::app::widgets::format_editor(&view);
+    let menu = menu_for(state, app, id);
+    let popover = menu.popover().unwrap();
+    let delete = popover.child().unwrap();
+    popover.set_child(None::<&gtk::Widget>);
+    let options = GtkBox::new(Orientation::Vertical, 8);
+    options.set_margin_top(8);
+    options.set_margin_bottom(8);
+    options.set_margin_start(8);
+    options.set_margin_end(8);
+    options.append(&source);
+    let shortcuts = Button::with_label("단축키 · F1");
+    shortcuts.add_css_class("lsm-action");
+    let weak = window.downgrade();
+    shortcuts.connect_clicked(move |_| {
+        if let Some(window) = weak.upgrade() {
+            super::shortcuts::help(&window);
+        }
+    });
+    options.append(&shortcuts);
+    let help = gtk::Expander::new(Some("서식 도움말"));
+    let help_text = Label::new(Some("# 제목 · ## 소제목\n**굵게** · *기울임* · ~~취소선~~\n- 목록 · 1. 번호 목록\n- [ ] 할 일 · - [x] 완료\n[링크 이름](https://example.com)\n체크: 클릭 / Ctrl+Enter\n링크: Ctrl+클릭\n원문: Ctrl+Shift+M"));
+    help_text.set_xalign(0.);
+    help_text.set_margin_top(8);
+    help.set_child(Some(&help_text));
+    options.append(&help);
+    options.append(&gtk::Separator::new(Orientation::Horizontal));
+    options.append(&delete);
+    popover.set_child(Some(&options));
+    let popup = popover.downgrade();
+    source.connect_toggled(move |_| {
+        if let Some(popover) = popup.upgrade() {
+            popover.popdown();
+        }
+    });
+    actions.append(&menu);
     outer.append(&scroll);
     let status = Label::new(Some("자동 저장됨"));
     status.set_xalign(0.);

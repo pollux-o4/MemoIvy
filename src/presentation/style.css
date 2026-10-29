@@ -9,8 +9,8 @@
 .count, .preview, .empty-sub { color: #626975; font-size: .9em; }
 .dark .count, .dark .preview, .dark .empty-sub { color: #b4bbc7; }
 .card { border-radius: 12px; margin-bottom: 12px; border: 1px solid alpha(#202020,.08); }
-.card.yellow, .memo.yellow { background: #fff4cc; }.card.pink, .memo.pink { background: #fce1e8; }.card.blue, .memo.blue { background: #dfedfc; }.card.green, .memo.green { background: #e3f0dc; }.card.purple, .memo.purple { background: #ece3f8; }
-.dark .card.yellow, .memo.dark.yellow { background: #3c3829; }.dark .card.pink, .memo.dark.pink { background: #412e36; }.dark .card.blue, .memo.dark.blue { background: #2b3745; }.dark .card.green, .memo.dark.green { background: #2d3c31; }.dark .card.purple, .memo.dark.purple { background: #373044; }
+.card.yellow, .memo.yellow, .memo.yellow .md-checkbox { background: #fff4cc; }.card.pink, .memo.pink, .memo.pink .md-checkbox { background: #fce1e8; }.card.blue, .memo.blue, .memo.blue .md-checkbox { background: #dfedfc; }.card.green, .memo.green, .memo.green .md-checkbox { background: #e3f0dc; }.card.purple, .memo.purple, .memo.purple .md-checkbox { background: #ece3f8; }
+.dark .card.yellow, .memo.dark.yellow, .memo.dark.yellow .md-checkbox { background: #3c3829; }.dark .card.pink, .memo.dark.pink, .memo.dark.pink .md-checkbox { background: #412e36; }.dark .card.blue, .memo.dark.blue, .memo.dark.blue .md-checkbox { background: #2b3745; }.dark .card.green, .memo.dark.green, .memo.dark.green .md-checkbox { background: #2d3c31; }.dark .card.purple, .memo.dark.purple, .memo.dark.purple .md-checkbox { background: #373044; }
 .strip { min-height: 4px; border-radius: 12px 12px 0 0; }.yellow .strip { background: #e8c55d; }.pink .strip { background: #e99bb0; }.blue .strip { background: #83b4e9; }.green .strip { background: #9cc88d; }.purple .strip { background: #b49ade; }
 .card-open { background: transparent; border: 0; box-shadow: none; padding: 14px 16px; color: #292c31; }.dark .card-open { color: #f2f1ed; }
 .card-open:hover { background: alpha(white,.18); }.card-title { font-size: 1.06em; font-weight: 700; }
@@ -44,3 +44,5 @@
 .dark .window-action:hover, .dark .icon-button > button:hover { background: alpha(white,.08); }
 .window-action.close:hover { background: alpha(#c63742,.12); }
 .lsm-window .icon-button > button:focus-visible { outline: 2px solid #365ecc; outline-offset: 2px; }
+.md-checkbox { padding: 0; margin: 0; min-width: 18px; min-height: 18px; }
+.md-checkbox check { min-width: 14px; min-height: 14px; }

@@ -1,4 +1,5 @@
 pub(crate) mod icons;
+pub(crate) mod markdown;
 pub(crate) mod theme;
 
 pub(crate) fn install() {

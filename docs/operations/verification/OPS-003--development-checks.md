@@ -1,11 +1,11 @@
 # OPS-003 · 개발 검증
 
-- 기본 검사
+- 기본 검사: Rust 변경 시 실행.
   - `cargo fmt --check`
-  - `dbus-run-session -- cargo test --locked`
+  - `dbus-run-session -- xvfb-run -a cargo test --locked` — GTK 편집 위젯 검증 포함, Xvfb 필요.
   - `cargo clippy --locked -- -D warnings`
   - `cargo build --locked`
-- SAVE-001 UI smoke
+- SAVE-001 UI smoke: 저장·닫기 변경 시 실행.
   - 전제: debug 빌드, Xvfb, Openbox, xdotool.
   - `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/save_001_ui_smoke.py`
   - 별도 설치 경로는 LSM_OPENBOX·LSM_XDOTOOL, 라이브러리는 LD_LIBRARY_PATH, Openbox 테마는 XDG_DATA_DIRS로 지정한다.
@@ -13,7 +13,7 @@
 - PERF-001 합성 probe
   - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/quality/performance-probe/Cargo.toml`
   - `timeout 15s xvfb-run -a target/debug/lsm-performance-probe`
-  - 검증 범위는 PERF-001과 결과 기록을 따른다.
+  - 검증 범위는 PERF-001을 따른다.
 - UI-002 앱 메뉴 아이콘
   - 전제: 설치 완료, python3-gi, GTK3 introspection.
   - `dbus-run-session -- python3 tools/quality/ui_002_app_icon.py`
@@ -21,4 +21,14 @@
   - GTK 개발 패키지가 별도 경로에 있으면 PKG_CONFIG_PATH·LIBRARY_PATH를 지정한다.
   - Glycin SVG 로더의 D-Bus 권한 오류는 소켓 사용이 허용된 격리 D-Bus 세션에서 재검증한다.
   - X11 테스트의 창 관리자와 도구가 실제 실행되는지 stderr를 확인한다.
-- 검증 기록: `docs/verification`에서 계약 ID로 검색한다. 이력은 날짜별로 보존하고 코드 변경 후의 현재 결과와 구분한다.
+- FMT-001 실시간 편집
+  - SAVE-001 환경에 xclip·python3-pil 추가. 별도 xclip 경로는 LSM_XCLIP으로 지정.
+  - `timeout 45s dbus-run-session -- xvfb-run -a python3 tools/behavior/fmt_001_live_ui_smoke.py`.
+  - 실제 GTK 앱에서 선택·원문 복사·줄 경계 삭제·undo·체크 클릭/키보드·창 크기·안전한 링크 제스처·저장·재열기를 검증한다. 링크는 임시 URI 핸들러를 사용한다.
+  - 화면 캡처는 기본 `/tmp/lsm-live-preview`, 변경은 LSM_ARTIFACT_DIR. 어두운 테마는 `GTK_THEME=Adwaita:dark`로 별도 실행한다.
+- FOCUS-001 입력 소유권
+  - FMT-001과 같은 환경에서 `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/focus_001_ui_smoke.py`.
+  - 마우스 창 전환 5회, 메모 저장 내용과 검색어 불변을 확인한다. 실제 Wayland·한글 IME 검증과 구분한다.
+- KEY-001·FMT-002 단축키
+  - FMT-001과 같은 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/key_001_ui_smoke.py`.
+  - 키보드 새 메모·서식 적용/해제·체크·검색·도움말·정상 닫기 저장을 확인한다.

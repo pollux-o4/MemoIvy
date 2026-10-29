@@ -22,6 +22,7 @@ pub(in crate::app) fn build(app: &Application) {
         .default_width(440)
         .default_height(600)
         .build();
+    super::focus::watch(&window);
     let (_, actions) = header(&window, "스티키 메모");
     let add = Button::new();
     let add_contents = GtkBox::new(Orientation::Horizontal, 4);
@@ -29,6 +30,7 @@ pub(in crate::app) fn build(app: &Application) {
     add_contents.append(&Label::new(Some("새 메모")));
     add.set_child(Some(&add_contents));
     add.add_css_class("new-note");
+    add.set_tooltip_text(Some("새 메모 · Ctrl+N"));
     actions.append(&add);
     let path = match data_path() {
         Ok(p) => p,
@@ -65,6 +67,7 @@ pub(in crate::app) fn build(app: &Application) {
     let search = SearchEntry::new();
     search.add_css_class("lsm-search");
     search.set_placeholder_text(Some("메모 검색"));
+    search.set_tooltip_text(Some("메모 검색 · Ctrl+F"));
     outer.append(&search);
     let count = Label::new(None);
     count.set_xalign(0.);
@@ -101,6 +104,7 @@ pub(in crate::app) fn build(app: &Application) {
         operation: None,
         add: add.clone(),
     }));
+    super::shortcuts::attach(&window, &state);
     let st = state.clone();
     let a = app.clone();
     search.connect_search_changed(move |_| refresh(&st, &a));
