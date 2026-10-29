@@ -12,7 +12,7 @@ mod store {
         Ok(())
     }
 }
-#[path = "../../../src/save_queue.rs"]
+#[path = "../../../../src/persistence/save_queue.rs"]
 mod save_queue;
 
 fn main() {

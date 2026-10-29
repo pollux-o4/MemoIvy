@@ -1,6 +1,9 @@
-use super::*;
+use crate::app::state::{Operation, State};
+use crate::presentation::icons;
+use gtk::{prelude::*, Application, ApplicationWindow, Button};
+use uuid::Uuid;
 
-pub(super) fn menu_for(state: &State, app: &Application, id: Uuid) -> gtk::MenuButton {
+pub(in crate::app) fn menu_for(state: &State, app: &Application, id: Uuid) -> gtk::MenuButton {
     let menu = gtk::MenuButton::new();
     menu.set_child(Some(&icons::image(icons::MORE, false)));
     menu.update_property(&[gtk::accessible::Property::Label("더 보기")]);

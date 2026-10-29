@@ -9,7 +9,7 @@ Ubuntu용 Rust/GTK 스티키 메모. 목록 검색, 독립 편집 창, 색상 �
 
 ## 탐색
 
-- `architecture`: C1·C2, UI·저장 C3, 컴포넌트 키워드·심볼 검색.
-- `decisions`: ui·persistence·structure. 파일명의 `current`로 현재 결정 검색.
-- `specs`: behavior·data·quality. 계약 ID로 테스트 대응.
-- `verification`: 검증 결과·환경·미검증 범위.
+- `src`: app(창·위젯·상태·조율), persistence(저장·경로), presentation(테마·아이콘·스타일).
+- `docs`: architecture·decisions·specs·operations·verification. 관심사·고정 ID로 검색.
+- `tools`: behavior·quality 검증 도구.
+- `integration`: 실행기·설치·앱 메뉴 자산.

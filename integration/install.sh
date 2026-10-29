@@ -7,7 +7,7 @@ install -Dm755 target/release/linux-sticky-memo "${HOME}/.local/bin/linux-sticky
 gcc -Wall -Wextra -O2 "-DUSER_HOME=\"${HOME}\"" integration/launcher.c -o "$temp_dir/launcher"
 install -Dm755 "$temp_dir/launcher" "${HOME}/.local/libexec/linux-sticky-memo-launcher"
 install -Dm644 integration/linux-sticky-memo.svg "${HOME}/.local/share/icons/hicolor/scalable/apps/linux-sticky-memo.svg"
-sed "s|@HOME@|${HOME}|g" linux-sticky-memo.desktop > "$temp_dir/desktop"
+sed "s|@HOME@|${HOME}|g" integration/linux-sticky-memo.desktop > "$temp_dir/desktop"
 install -Dm644 "$temp_dir/desktop" "${HOME}/.local/share/applications/io.github.lsm.LinuxStickyMemo.desktop"
 link="${HOME}/바탕화면/서비스 실행 파일/Linux Sticky Memo"
 if [ ! -L "$link" ] || [ "$(readlink "$link")" != "${HOME}/.local/libexec/linux-sticky-memo-launcher" ]; then

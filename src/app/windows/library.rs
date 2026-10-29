@@ -1,6 +1,21 @@
-use super::*;
+use crate::app::{
+    controller::{self, dispatch},
+    state::{AppState, Operation},
+    widgets::{header, refresh},
+};
+use crate::persistence::{
+    paths::data_path,
+    save_queue::SaveQueue,
+    store::{Note, Store},
+};
+use crate::presentation::{icons, theme::watch as dark};
+use gtk::{
+    glib, prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
+    ScrolledWindow, SearchEntry,
+};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-pub(super) fn build(app: &Application) {
+pub(in crate::app) fn build(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("스티키 메모")

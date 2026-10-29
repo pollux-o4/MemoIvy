@@ -1,4 +1,10 @@
-use super::*;
+use super::{
+    state::{AppState, Operation, State},
+    widgets::refresh,
+    windows::open_note,
+};
+use gtk::{glib, prelude::*, Application};
+use std::time::{Duration, Instant};
 
 pub(super) fn mark(state: &State) {
     let mut s = state.borrow_mut();

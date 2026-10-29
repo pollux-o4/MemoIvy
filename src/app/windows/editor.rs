@@ -1,6 +1,17 @@
-use super::*;
+use crate::app::{
+    controller::{dispatch, mark},
+    state::{EditorWindow, State},
+    widgets::{header, menu_for, refresh},
+};
+use crate::persistence::store;
+use crate::presentation::{icons, theme::watch as dark};
+use gtk::{
+    glib, prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
+    ScrolledWindow, TextView,
+};
+use uuid::Uuid;
 
-pub(super) fn open_note(state: &State, app: &Application, id: Uuid) {
+pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     if let Some(editor) = state.borrow().windows.get(&id) {
         editor.window.present();
         return;

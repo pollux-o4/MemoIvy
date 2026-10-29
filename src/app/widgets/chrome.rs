@@ -1,7 +1,8 @@
-use super::*;
+use crate::presentation::{icons, theme::watch as dark};
+use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, Orientation};
 
 // shortcut: 창 위치 복원·항상 위 고정은 대상 세션 지원을 미확인, 해당 기능 요청과 대상 세션 확정 시 검토.
-pub(super) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox, GtkBox) {
+pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox, GtkBox) {
     window.add_css_class("lsm-window");
     dark(window.upcast_ref());
     window.connect_notify_local(Some("maximized"), |w, _| {

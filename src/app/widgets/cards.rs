@@ -1,6 +1,8 @@
-use super::*;
+use super::menu_for;
+use crate::app::{state::State, windows::open_note};
+use gtk::{prelude::*, Application, Box as GtkBox, Button, Label, Orientation};
 
-pub(super) fn refresh(state: &State, app: &Application) {
+pub(in crate::app) fn refresh(state: &State, app: &Application) {
     let s = state.borrow();
     while let Some(child) = s.list.first_child() {
         s.list.remove(&child);

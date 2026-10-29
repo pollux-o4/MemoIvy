@@ -3,13 +3,13 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 thread_local! { static CACHE: RefCell<HashMap<(&'static str, &'static str, i32), gtk::gdk_pixbuf::Pixbuf>> = RefCell::new(HashMap::new()); }
 
-pub const CLOSE: &str = include_str!("icons/close.svg");
-pub const MINIMIZE: &str = include_str!("icons/minimize.svg");
-pub const MAXIMIZE: &str = include_str!("icons/maximize.svg");
-pub const RESTORE: &str = include_str!("icons/restore.svg");
-pub const PALETTE: &str = include_str!("icons/palette.svg");
-pub const MORE: &str = include_str!("icons/more.svg");
-pub const ADD: &str = include_str!("icons/add.svg");
+pub const CLOSE: &str = include_str!("window/close.svg");
+pub const MINIMIZE: &str = include_str!("window/minimize.svg");
+pub const MAXIMIZE: &str = include_str!("window/maximize.svg");
+pub const RESTORE: &str = include_str!("window/restore.svg");
+pub const PALETTE: &str = include_str!("actions/palette.svg");
+pub const MORE: &str = include_str!("actions/more.svg");
+pub const ADD: &str = include_str!("actions/add.svg");
 
 fn render(svg: &str, color: &str, scale: i32) -> gtk::gdk_pixbuf::Pixbuf {
     let bytes = svg.replace("COLOR", color);
@@ -44,7 +44,7 @@ pub fn image(svg: &'static str, white: bool) -> gtk::DrawingArea {
             "#ffffff"
         } else if gtk::Settings::default()
             .as_ref()
-            .is_some_and(crate::theme::is_dark)
+            .is_some_and(super::theme::is_dark)
         {
             "#e2e6ec"
         } else {

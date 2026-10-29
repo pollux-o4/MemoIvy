@@ -7,18 +7,18 @@
   - `cargo build --locked`
 - SAVE-001 UI smoke
   - 전제: debug 빌드, Xvfb, Openbox, xdotool.
-  - `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/save_001_ui_smoke.py`
+  - `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/save_001_ui_smoke.py`
   - 별도 설치 경로는 LSM_OPENBOX·LSM_XDOTOOL, 라이브러리는 LD_LIBRARY_PATH, Openbox 테마는 XDG_DATA_DIRS로 지정한다.
   - 합성 XDG 데이터로 생성·입력·즉시 닫기·종료·재실행·다시 열기를 확인한다.
 - PERF-001 합성 probe
-  - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/performance-probe/Cargo.toml`
+  - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/quality/performance-probe/Cargo.toml`
   - `timeout 15s xvfb-run -a target/debug/lsm-performance-probe`
   - 검증 범위는 PERF-001과 결과 기록을 따른다.
 - UI-002 앱 메뉴 아이콘
   - 전제: 설치 완료, python3-gi, GTK3 introspection.
-  - `dbus-run-session -- python3 tools/ui_002_app_icon.py`
+  - `dbus-run-session -- python3 tools/quality/ui_002_app_icon.py`
 - 환경 진단
   - GTK 개발 패키지가 별도 경로에 있으면 PKG_CONFIG_PATH·LIBRARY_PATH를 지정한다.
   - Glycin SVG 로더의 D-Bus 권한 오류는 소켓 사용이 허용된 격리 D-Bus 세션에서 재검증한다.
   - X11 테스트의 창 관리자와 도구가 실제 실행되는지 stderr를 확인한다.
-- 검증 기록: `verification`에서 계약 ID로 검색한다. 이력은 날짜별로 보존하고 코드 변경 후의 현재 결과와 구분한다.
+- 검증 기록: `docs/verification`에서 계약 ID로 검색한다. 이력은 날짜별로 보존하고 코드 변경 후의 현재 결과와 구분한다.

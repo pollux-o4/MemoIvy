@@ -1,4 +1,4 @@
-use crate::store::{self, Note};
+use super::store::{self, Note};
 use std::{path::PathBuf, sync::mpsc, thread};
 
 pub struct SaveQueue {
@@ -172,5 +172,5 @@ mod tests {
         assert!(queue.clean());
         assert_eq!(Store::load(path).unwrap().notes[0].text, "99");
     }
-    use crate::store::Store;
+    use super::store::Store;
 }
