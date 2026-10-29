@@ -41,3 +41,7 @@ cargo build --release
 
 
 UI 회귀 검사는 `dbus-run-session -- xvfb-run -a python3 tools/ui_smoke.py`로 실행합니다. `xdotool`, `openbox`, Xvfb가 필요하며 별도 경로에 있다면 `LSM_XDOTOOL`, `LSM_OPENBOX`와 해당 라이브러리 경로를 지정합니다. 임시 데이터만 사용하며 생성·입력·즉시 닫기 저장·종료·재실행·메모 다시 열기를 확인합니다.
+
+## 아키텍처
+
+[architecture/README.md](architecture/README.md)에서 C1 맥락 → C2 컨테이너 → C3 UI·저장 컴포넌트 → C4 코드 경로 순으로 탐색할 수 있습니다. 각 수준과 책임을 별도 문서로 유지합니다.
