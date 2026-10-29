@@ -9,6 +9,7 @@
   - 직접 실행: `./target/release/linux-sticky-memo`
   - 설치·업데이트: `./integration/install.sh`
   - 설치기는 현재 HOME과 `바탕화면/서비스 실행 파일` 폴더를 사용한다. 폴더가 없으면 먼저 만든다.
+- 아이콘 확인: UI-002. 메뉴는 설치된 SVG 절대 경로를 사용한다.
 - 확인: 폴더의 Linux Sticky Memo 또는 앱 메뉴에서 목록·편집 창을 연다. 기존 프로세스가 열려 있으면 정상 종료 후 다시 실행한다.
 - 실패 대응
   - 실행 로그: `~/.local/share/linux-sticky-memo-launch.log`.

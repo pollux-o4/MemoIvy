@@ -14,6 +14,9 @@
   - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/performance-probe/Cargo.toml`
   - `timeout 15s xvfb-run -a target/debug/lsm-performance-probe`
   - 검증 범위는 PERF-001과 결과 기록을 따른다.
+- UI-002 앱 메뉴 아이콘
+  - 전제: 설치 완료, python3-gi, GTK3 introspection.
+  - `dbus-run-session -- python3 tools/ui_002_app_icon.py`
 - 환경 진단
   - GTK 개발 패키지가 별도 경로에 있으면 PKG_CONFIG_PATH·LIBRARY_PATH를 지정한다.
   - Glycin SVG 로더의 D-Bus 권한 오류는 소켓 사용이 허용된 격리 D-Bus 세션에서 재검증한다.
