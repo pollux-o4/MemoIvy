@@ -10,6 +10,7 @@ install -Dm644 integration/linux-sticky-memo.svg "${HOME}/.local/share/icons/hic
 sed "s|@HOME@|${HOME}|g" integration/linux-sticky-memo.desktop > "$temp_dir/desktop"
 install -Dm644 "$temp_dir/desktop" "${HOME}/.local/share/applications/io.github.lsm.LinuxStickyMemo.desktop"
 link="${HOME}/바탕화면/서비스 실행 파일/Linux Sticky Memo"
+mkdir -p "$(dirname "$link")"
 if [ ! -L "$link" ] || [ "$(readlink "$link")" != "${HOME}/.local/libexec/linux-sticky-memo-launcher" ]; then
     ln -s "${HOME}/.local/libexec/linux-sticky-memo-launcher" "$link"
 fi

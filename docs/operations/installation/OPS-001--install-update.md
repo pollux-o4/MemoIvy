@@ -5,9 +5,10 @@
 - 시스템 의존성
   - `sudo apt install build-essential pkg-config libgtk-4-dev librsvg2-common zenity`
 - 실행
-  - 빌드: `cargo build --release --locked`
+  - 개발 실행: `mise run dev`.
+  - 빌드: `mise run build` (`cargo build --release --locked`).
   - 직접 실행: `./target/release/linux-sticky-memo`
-  - 설치·업데이트: `./integration/install.sh`
+  - 설치·업데이트: `mise run install` — 릴리스 빌드 완료 후 `integration/install.sh` 실행. 스크립트 직접 실행은 기존 릴리스 빌드만 설치한다.
   - 설치기는 현재 HOME과 `바탕화면/서비스 실행 파일` 폴더를 사용한다. 폴더가 없으면 먼저 만든다.
 - 아이콘 확인: UI-002. 메뉴는 설치된 SVG 절대 경로를 사용한다.
 - 확인: 폴더의 Linux Sticky Memo 또는 앱 메뉴에서 목록·편집 창을 연다. 기존 프로세스가 열려 있으면 정상 종료 후 다시 실행한다.

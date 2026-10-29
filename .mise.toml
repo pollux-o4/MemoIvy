@@ -1,2 +1,23 @@
 [tools]
 rust = "1.99.1"
+
+[tasks.dev]
+description = "개발 모드로 실행"
+run = "cargo run --locked"
+
+[tasks.build]
+description = "릴리스 실행파일 빌드"
+run = "cargo build --release --locked"
+
+[tasks.install]
+description = "빌드 후 앱 메뉴·바탕화면 설치본 갱신"
+depends = ["build"]
+run = "./integration/install.sh"
+
+[tasks.check]
+description = "Rust 포맷·테스트·정적 검사"
+run = [
+    "cargo fmt --check",
+    "dbus-run-session -- xvfb-run -a cargo test --locked",
+    "cargo clippy --locked -- -D warnings",
+]
