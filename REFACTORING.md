@@ -16,4 +16,4 @@
 - DIP: GTK 없는 SaveQueue/Store와 GTK 조율을 분리한다. 저장 구현이 한 개이므로 가상의 여러 저장소를 위한 추상화는 추가하지 않는다.
 
 ## 보존 계약과 검증
-JSON 형식, 0600, 원자 교체, 단일 writer, revision 확인, 닫기 flush, 실패 재시도 및 화면 외관을 유지한다. 기존 저장/큐/SVG 테스트 10개와 fmt/clippy/debug·release build를 통과했다. 격리 X11 UI 재검증은 테스트 창 관리자/포털 초기화 및 창 탐색 문제로 완료하지 못했으며 성공으로 기록하지 않는다. 실제 Wayland/IME의 기존 검증 한계는 README를 따른다.
+JSON 형식, 0600, 원자 교체, 단일 writer, revision 확인, 닫기 flush, 실패 재시도 및 화면 외관을 유지한다. 기존 저장/큐/SVG 테스트 10개와 fmt/clippy/debug·release build를 통과했다. 격리 X11에서 tools/ui_smoke.py로 생성·입력·즉시 닫기 저장·정상 종료·재실행·메모 다시 열기를 통과했다. 초기 테스트 도구의 라이브러리 경로 누락은 해결했다. 실제 Wayland/IME의 기존 검증 한계는 README를 따른다.

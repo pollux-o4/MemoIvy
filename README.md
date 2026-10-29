@@ -39,4 +39,5 @@ cargo build --release
 
 진입점은 `src/main.rs`, 앱 조립과 비공개 상태는 `src/app/mod.rs`입니다. `app/chrome.rs`는 창 장식, `cards.rs`는 목록 카드, `library.rs`는 목록 창, `editor.rs`는 편집 창, `menus.rs`는 삭제 메뉴, `controller.rs`는 저장·닫기 조율을 담당합니다. `theme.rs`는 테마 판정, `paths.rs`는 데이터 경로, `icons.rs`는 SVG, `save_queue.rs`는 비동기 저장, `store.rs`는 데이터 검증·원자 저장을 담당합니다. 분석과 패턴 선택은 `REFACTORING.md`에 기록했습니다.
 
-- shortcut: 이번 리팩토링의 Xvfb UI 회귀 확인은 테스트 창 관리자·포털 초기화 및 창 탐색 문제로 완료하지 못함, 테스트 세션 설정 복구 후 생성·입력·닫기·재실행 흐름 재검증. 관련 경로: src/app/.
+
+UI 회귀 검사는 `dbus-run-session -- xvfb-run -a python3 tools/ui_smoke.py`로 실행합니다. `xdotool`, `openbox`, Xvfb가 필요하며 별도 경로에 있다면 `LSM_XDOTOOL`, `LSM_OPENBOX`와 해당 라이브러리 경로를 지정합니다. 임시 데이터만 사용하며 생성·입력·즉시 닫기 저장·종료·재실행·메모 다시 열기를 확인합니다.
