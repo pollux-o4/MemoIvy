@@ -89,7 +89,7 @@ pub fn image(svg: &'static str, white: bool) -> gtk::DrawingArea {
 mod tests {
     use super::*;
     #[test]
-    fn all_icons_decode_at_both_scales() {
+    fn ui_001_all_icons_decode_at_both_scales() {
         for svg in [CLOSE, MINIMIZE, MAXIMIZE, RESTORE, PALETTE, MORE, ADD] {
             for scale in [1, 2] {
                 let p = render(svg, "#39414b", scale);

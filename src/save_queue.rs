@@ -100,7 +100,7 @@ mod tests {
         }
     }
     #[test]
-    fn newer_revision_stays_dirty_until_written() {
+    fn save_001_newer_revision_stays_dirty_until_written() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let mut queue = SaveQueue::new(path.clone());
@@ -117,7 +117,7 @@ mod tests {
         assert_eq!(Store::load(path).unwrap().notes[0].text, note.text);
     }
     #[test]
-    fn failure_remains_dirty_and_can_retry() {
+    fn save_002_failure_remains_dirty_and_can_retry() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         std::fs::create_dir(&path).unwrap();
@@ -134,7 +134,7 @@ mod tests {
         assert!(queue.clean());
     }
     #[test]
-    fn transaction_then_latest_snapshot_preserves_other_edit() {
+    fn note_002_transaction_then_latest_snapshot_preserves_other_edit() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let mut queue = SaveQueue::new(path.clone());
@@ -153,7 +153,7 @@ mod tests {
         assert_ne!(notes[0].id, deleted.id);
     }
     #[test]
-    fn burst_coalesces_until_in_flight_finishes() {
+    fn perf_001_burst_coalesces_until_in_flight_finishes() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let mut queue = SaveQueue::new(path.clone());

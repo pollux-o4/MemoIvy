@@ -1,3 +1,4 @@
+# 검증: SAVE-001; NOTE-001의 생성·닫기·재열기 일부
 # Run from the repository root under dbus-run-session and xvfb-run.
 import subprocess as sp, tempfile, os, time, json
 from pathlib import Path
@@ -5,7 +6,7 @@ x=os.environ.get('LSM_XDOTOOL', 'xdotool')
 def call(*args): return sp.check_output([x,*args],text=True,timeout=5).strip()
 def window(title):
  for _ in range(120):
-  r=sp.run([x,'search','--name',title],capture_output=True,text=True)
+  r=sp.run([x,'search','--onlyvisible','--name',title],capture_output=True,text=True)
   if r.returncode==0: return r.stdout.splitlines()[-1]
   time.sleep(.05)
  print('app exit',app.poll(),flush=True);print(sp.run([x,'search','--name','.*'],capture_output=True,text=True),flush=True);raise RuntimeError('window missing: '+title)
@@ -16,6 +17,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-refactor-') as tmp:
  app=None
  try:
   time.sleep(.6)
+  if wm.poll() is not None: raise RuntimeError('Openbox failed; check its library and theme paths')
   app=sp.Popen(['target/debug/linux-sticky-memo'],env=env,stdout=log,stderr=log)
   print('wait library',flush=True);lib=window('^스티키 메모$');print('library',lib,flush=True);call('windowraise',lib);call('windowfocus',lib)
   call('mousemove','--window',lib,'385','26');call('click','1')

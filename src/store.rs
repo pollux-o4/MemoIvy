@@ -99,7 +99,7 @@ mod tests {
     use super::*;
     #[cfg(unix)]
     #[test]
-    fn saved_files_are_private() {
+    fn data_002_saved_files_are_private() {
         use std::os::unix::fs::PermissionsExt;
 
         let dir = tempfile::tempdir().unwrap();
@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o077, 0);
     }
     #[test]
-    fn round_trip_and_delete() {
+    fn data_001_round_trip_and_delete() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let mut store = Store::load(path.clone()).unwrap();
@@ -130,7 +130,7 @@ mod tests {
         assert!(Store::load(path).unwrap().notes.is_empty());
     }
     #[test]
-    fn corrupt_data_is_preserved() {
+    fn data_001_corrupt_data_is_preserved() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         fs::write(&path, b"{broken").unwrap();
@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(fs::read(path).unwrap(), b"{broken");
     }
     #[test]
-    fn invalid_ids_and_colors_are_preserved() {
+    fn data_001_invalid_ids_and_colors_are_preserved() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let note = Note::new();
@@ -154,7 +154,7 @@ mod tests {
         assert_eq!(fs::read(path).unwrap(), invalid);
     }
     #[test]
-    fn failed_save_keeps_existing_data() {
+    fn data_002_failed_save_keeps_existing_data() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         fs::create_dir(&path).unwrap();
