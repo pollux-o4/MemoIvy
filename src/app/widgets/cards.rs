@@ -1,5 +1,6 @@
 use super::menu_for;
 use crate::app::{state::State, windows::open_note};
+use crate::persistence::store::Note;
 use gtk::{prelude::*, Application, Box as GtkBox, Button, Label, Orientation};
 
 pub(in crate::app) fn refresh(state: &State, app: &Application) {
@@ -7,10 +8,8 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
     while let Some(child) = s.list.first_child() {
         s.list.remove(&child);
     }
-    let query = s.search.text().to_lowercase();
-    let mut notes = s.store.notes.clone();
-    notes.sort_by_key(|n| std::cmp::Reverse(n.modified));
-    notes.retain(|n| n.text.to_lowercase().contains(&query));
+    let query = s.search.text().to_string();
+    let notes = search_notes(&s.store.notes, &query);
     s.count.set_text(&format!(
         "{} {}개",
         if query.is_empty() {
@@ -52,11 +51,11 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         let row = GtkBox::new(Orientation::Horizontal, 0);
         let contents = GtkBox::new(Orientation::Vertical, 6);
         let mut lines = note.text.lines().skip_while(|l| l.trim().is_empty());
-        let title = lines
-            .next()
-            .map(str::trim)
-            .filter(|x| !x.is_empty())
-            .unwrap_or("빈 메모");
+        lines.next();
+        let title = match note_title(&note.text) {
+            "" => "빈 메모",
+            title => title,
+        };
         let preview = lines
             .map(str::trim)
             .filter(|x| !x.is_empty())
@@ -94,5 +93,62 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         row.append(&menu);
         card.append(&row);
         s.list.append(&card);
+    }
+}
+
+fn note_title(text: &str) -> &str {
+    text.lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or("")
+}
+
+fn search_notes<'a>(notes: &'a [Note], query: &str) -> Vec<&'a Note> {
+    let query = query.to_lowercase();
+    let mut matches: Vec<_> = notes
+        .iter()
+        .filter(|note| note.text.to_lowercase().contains(&query))
+        .collect();
+    matches.sort_by_cached_key(|note| {
+        (
+            !query.is_empty() && !note_title(&note.text).to_lowercase().contains(&query),
+            std::cmp::Reverse(note.modified),
+        )
+    });
+    matches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn note_003_title_matches_precede_newer_body_matches() {
+        let notes: Vec<_> = [
+            ("다른 제목\n스티커 메모", 30),
+            ("\n  스티커 메모  \n본문", 10),
+            ("스티커 모음\n본문", 20),
+            ("일치하지 않음", 40),
+        ]
+        .into_iter()
+        .map(|(text, modified)| {
+            let mut note = Note::new();
+            note.text = text.into();
+            note.modified = modified;
+            note
+        })
+        .collect();
+        let revisions = |query| {
+            search_notes(&notes, query)
+                .iter()
+                .map(|note| note.modified)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(revisions("스티커"), [20, 10, 30]);
+        assert_eq!(revisions(""), [40, 30, 20, 10]);
+        assert!(revisions("없음").is_empty());
+        let mut english = Note::new();
+        english.text = "\n  Sticky Memo\nbody".into();
+        assert_eq!(search_notes(&[english], "sTICKY").len(), 1);
     }
 }
