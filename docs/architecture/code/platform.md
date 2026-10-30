@@ -1,12 +1,24 @@
-# Code · 시각 기반·실행 통합 탐색
+# C4 Code · 표현·실행 통합 탐색
 
-- 시각 기반: presentation의 `install`, CSS 적용.
-  - 테마 판정·구독: theme의 `is_dark`, `watch`.
-  - SVG·배율·색: icons의 `image`, `render`, 아이콘 SVG 원본.
-  - 외관: style의 window-action·card·memo 선택자.
-- 데스크톱 통합: integration.
-  - 실행·오류 로그: launcher의 `main`.
-  - 설치·고정 경로·아이콘 등록: install 스크립트.
-  - 앱 메뉴: desktop 템플릿의 Exec·Icon.
+## Markdown 해석
 
-아이콘 계약: UI-001. 설치·진단: OPS-001, OPS-003.
+`presentation::markdown` 루트가 공개 타입·함수와 공통 기호 `BULLETS`를 모은다.
+
+| 관심사 | 탐색 키 |
+|---|---|
+| 서식·원문 범위 | inline의 `parse`·`plain_line`, `Document::item_at` |
+| 목록 인식 | list의 `line_mark`·`scan_items` |
+| 링크 판별·목적지 표시 | links의 `safe_link`·`link_info` |
+| 카드 요약 | summary의 `summary`·`fit_preview` |
+
+## 시각 기반
+
+- CSS 설치·테마 구독: presentation의 `install`, theme의 `is_dark`·`WATCHED`.
+- SVG 렌더링·캐시: icons의 `image`·`illustration`·`cached`.
+- 표식 공통 외관: styles의 `.md-checkbox check`·`.line-marker.task`; 색상 원본은 `tokens-light`·`tokens-dark`.
+
+## 데스크톱 통합
+
+integration의 launcher `main`은 앱 실행·실패 로그를 맡는다. install 스크립트가 실행기·아이콘·앱 메뉴·바탕화면 링크를 배치하고, desktop 템플릿의 `Exec`·`Icon`을 설치 경로로 확정한다.
+
+설치·갱신·진단: OPS-001. 아이콘 계약: UI-001, UI-002.

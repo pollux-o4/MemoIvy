@@ -2,28 +2,32 @@
 
 ```mermaid
 flowchart TB
-    run["앱 조립 · run"] --> shell["shell · commands / views / lifecycle / state"]
-    shell --> library["library · 목록·cards"]
-    shell --> editor["editor · 편집·live_editor·link_preview·formatting"]
-    shell --> canvas["canvas · CanvasView"]
+    run["앱 조립 · run"] --> shell["shell · 명령·창 수명·저장 이벤트 조율"]
+    subgraph features["기능별 화면·세션"]
+        library["library · 검색·목록"]
+        editor["editor · 원문 편집·서식·링크 카드"]
+        canvas["canvas · 배치·연결·선택·모션"]
+    end
+    shell --> library
+    shell --> editor
+    shell --> canvas
     library -->|명령| shell
     editor -->|명령| shell
     canvas -->|명령| shell
     shell --> notebook["persistence 공개 계약 · Notebook"]
-    library --> shared["shared · chrome / menus / focus / shortcuts"]
+    canvas --> port["canvas::port · 읽기 모델·저장 연결"]
+    port --> notebook
+    library --> shared["shared · 창 장식·메뉴·포커스·단축키"]
     editor --> shared
     canvas --> shared
-    canvas --> model["model · 순수 규칙·History"]
-    canvas --> parts["scene / input / panels / motion"]
-    canvas --> port["port · Notebook 연결"]
-    port --> notebook
-    shared --> visuals["presentation · markdown / theme / icons / styles"]
+    library --> presentation["presentation · Markdown 해석·테마·아이콘·CSS"]
+    editor --> presentation
+    canvas --> presentation
+    shared --> presentation
 ```
 
-- 기능 모듈끼리 직접 호출하지 않는다. shell은 창 열기·갱신·닫기를 조율하고 Notebook 이벤트를 화면에 반영한다.
-- AppState는 Notebook과 Views를 소유한다. Views는 목록 위젯·편집 창·캔버스를 묶고 Closing은 닫기 상태를 표현한다.
-- CanvasWidgets는 위젯, BoardSession은 선택·카메라·표시 상태, History는 undo·redo를 맡는다. model은 GTK를 모른다.
-- 본문 서식은 presentation::markdown으로 파싱하고 editor에서 적용한다. 카드 크기·초기 배치·색상 문구는 프런트 소유다.
-- 저장 폴링과 화면 전환 콜백은 할 일이 있을 때만 유지한다. 모션 줄이기에서는 즉시 전환한다.
+- `AppState`는 `Notebook`과 `Views`를 소유한다. `Closing`과 삭제 대기열은 저장 결과에 맞춰 창 종료·다음 삭제를 진행한다.
+- 편집 원문은 `TextBuffer`에 두고 서식·목록 표식·링크 카드를 파생시킨다. 캔버스는 `port`의 읽기 모델로 카드와 패널을 구성한다.
+- GTK 독립 Markdown 해석·요약은 편집기와 캔버스가 공유한다. 표식 기호는 같은 상수, 체크 색·테두리는 공통 CSS 선택자를 쓴다.
 
-책임·경계: ADR-0007, ADR-0009, ADR-0010. 동작·모션: CANVAS-001, CANVAS-002, CANVAS-003.
+기능 간 조율·저장 경계: ADR-0010. 캔버스 상호작용 설계: ADR-0009.
