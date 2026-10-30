@@ -116,6 +116,19 @@ fn hover_owner(v: &CanvasView) -> Option<Uuid> {
     let point = camera.to_world(v.session.pointer.get());
     let margin = PORT_SIZE;
     let shown = v.session.shown.borrow();
+    let contains = |position: &[f64; 2]| {
+        let rect = port::rect_at(*position);
+        point.0 >= rect.x
+            && point.0 <= rect.right() + margin
+            && point.1 >= rect.y
+            && point.1 <= rect.bottom()
+    };
+    // 대부분은 빈 공간 또는 카드 하나다. 겹칠 때만 GTK의 실제 쌓임 순서를 읽는다.
+    let mut hits = shown.iter().filter(|(_, position)| contains(position));
+    let (&first, _) = hits.next()?;
+    if hits.next().is_none() {
+        return Some(first);
+    }
     // 위에 그려진 카드를 먼저 찾는다.
     let mut child = v.widgets.world.last_child();
     while let Some(widget) = child {
@@ -124,12 +137,7 @@ fn hover_owner(v: &CanvasView) -> Option<Uuid> {
             continue;
         };
         if let Some(p) = shown.get(&id) {
-            let r = port::rect_at(*p);
-            if point.0 >= r.x
-                && point.0 <= r.right() + margin
-                && point.1 >= r.y
-                && point.1 <= r.bottom()
-            {
+            if contains(p) {
                 return Some(id);
             }
         }

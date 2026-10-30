@@ -96,6 +96,129 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
     scene::board::set_camera(v, Camera::default());
 }
 
+fn pointer_hit_testing(v: &Rc<CanvasView>, id: Uuid, other: Uuid) {
+    until(|| v.session.fitted.get() && v.widgets.surface.is_mapped());
+    let selected = v.session.selection.borrow().ids().to_vec();
+    // 창 재매핑의 기본 카드 포커스가 선택을 되살리지 않게 툴바로 옮긴다.
+    v.widgets.zoom_label.grab_focus();
+    until(|| v.widgets.zoom_label.is_focus());
+    v.session.selection.borrow_mut().set([]);
+    v.session.pointer.set((-10_000., -10_000.));
+    scene::board::update_port(v);
+    let controllers = v.widgets.surface.observe_controllers();
+    let pointer = (0..controllers.n_items())
+        .find_map(|i| {
+            controllers
+                .item(i)
+                .and_downcast::<gtk::EventControllerMotion>()
+        })
+        .unwrap();
+    let position = v.session.shown.borrow()[&id];
+    let point = v
+        .session
+        .camera
+        .get()
+        .to_screen((position[0] + 10., position[1] + 10.));
+    for event in 0..1000 {
+        let x = if event == 999 { point.0 } else { -1000. };
+        pointer.emit_by_name::<()>("motion", &[&x, &point.1]);
+    }
+    assert_eq!(
+        v.session.pointer.get(),
+        point,
+        "input coordinates stay immediate"
+    );
+    assert_eq!(
+        v.session.port_owner.get(),
+        Some(id),
+        "latest hover owner stays immediate"
+    );
+    until(|| {
+        v.session.port_owner.get() == Some(id)
+            && v.widgets.port_handle.is_mapped()
+            && v.widgets.port_handle.width() > 0
+    });
+    // 이탈은 즉시 반영되고 다음 프레임에도 되살아나지 않는다.
+    pointer.emit_by_name::<()>("motion", &[&point.0, &point.1]);
+    pointer.emit_by_name::<()>("leave", &[]);
+    assert_eq!(v.session.port_owner.get(), None);
+    settle(40);
+    assert_eq!(v.session.port_owner.get(), None);
+    // GTK는 숨긴 위젯의 크기를 0으로 만든다. 배치 후 실제 hit target을 검증한다.
+    let handle_point = v.session.camera.get().to_screen((
+        position[0] + port::CARD_WIDTH - scene::card::PORT_SIZE / 4.,
+        position[1] + port::CARD_HEIGHT / 2.,
+    ));
+    pointer.emit_by_name::<()>("motion", &[&handle_point.0, &handle_point.1]);
+    until(|| {
+        v.widgets
+            .surface
+            .pick(handle_point.0, handle_point.1, gtk::PickFlags::DEFAULT)
+            .as_ref()
+            == Some(v.widgets.port_handle.upcast_ref())
+    });
+    let controllers = v.widgets.port_handle.observe_controllers();
+    let link = (0..controllers.n_items())
+        .find_map(|i| controllers.item(i).and_downcast::<gtk::GestureDrag>())
+        .unwrap();
+    link.emit_by_name::<()>("drag-begin", &[&0., &0.]);
+    assert!(
+        matches!(*v.session.interaction.borrow(), Interaction::Link { from, .. } if from == id)
+    );
+    link.emit_by_name::<()>("cancel", &[&None::<gtk::gdk::EventSequence>]);
+    assert!(v.session.interaction.borrow().is_idle());
+    let camera = v.session.camera.get();
+    scene::board::set_camera(
+        v,
+        Camera {
+            zoom: 0.2,
+            ..camera
+        },
+    );
+    let tiny_handle = v.session.camera.get().to_screen((
+        position[0] + port::CARD_WIDTH,
+        position[1] + port::CARD_HEIGHT / 2.,
+    ));
+    pointer.emit_by_name::<()>("motion", &[&tiny_handle.0, &tiny_handle.1]);
+    assert_ne!(
+        v.widgets
+            .surface
+            .pick(tiny_handle.0, tiny_handle.1, gtk::PickFlags::DEFAULT)
+            .as_ref(),
+        Some(v.widgets.port_handle.upcast_ref()),
+        "tiny zoom must not route a press to a hidden handle"
+    );
+    settle(40);
+    assert_eq!(
+        v.session.port_owner.get(),
+        None,
+        "tiny zoom keeps handles hidden"
+    );
+    scene::board::set_camera(v, camera);
+    // 겹친 두 카드에서는 GTK의 실제 그리기 순서를 따르고, 맨 위로 올리면 즉시 바뀐다.
+    let other_position = v.session.shown.borrow()[&other];
+    scene::board::show_card(v, other, position);
+    let cards = v.widgets.cards.borrow();
+    cards[&other]
+        .root
+        .insert_before(&v.widgets.world, Some(&v.widgets.port_handle));
+    pointer.emit_by_name::<()>("motion", &[&point.0, &point.1]);
+    assert_eq!(v.session.port_owner.get(), Some(other));
+    cards[&id]
+        .root
+        .insert_before(&v.widgets.world, Some(&v.widgets.port_handle));
+    pointer.emit_by_name::<()>("motion", &[&point.0, &point.1]);
+    assert_eq!(v.session.port_owner.get(), Some(id));
+    // 실제 카드 이동 경로처럼 순서를 바꾼 뒤 원래 위치로 돌린다.
+    cards[&other]
+        .root
+        .insert_before(&v.widgets.world, Some(&v.widgets.port_handle));
+    drop(cards);
+    scene::board::show_card(v, other, other_position);
+    v.session.selection.borrow_mut().set(selected);
+    v.sync_selection();
+}
+
 fn wait_notebook(state: &State) {
     until(|| {
         state.borrow_mut().notebook.tick(std::time::Instant::now());
@@ -199,6 +322,7 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     v.widgets.window.set_default_size(820, 620);
     v.widgets.window.present();
     until(|| (760..=840).contains(&v.widgets.window.width()) && v.widgets.surface.width() > 0);
+    pointer_hit_testing(&v, a, b);
     touchpad_burst(&v);
     // 화면 밖 카드는 측정에서 빠지고 다시 들어오면 나타난다.
     scene::board::set_camera(
@@ -701,6 +825,40 @@ pub(in crate::app) fn perf_002_frames() {
     open(&state, &app, None);
     settle(600);
     let v = state.borrow().views.canvas.clone().unwrap();
+    let initial_camera = v.session.camera.get();
+    let initial_pointer = v.session.pointer.get();
+    scene::board::set_camera(&v, Camera::default());
+    let controllers = v.widgets.surface.observe_controllers();
+    let pointer = (0..controllers.n_items())
+        .find_map(|i| {
+            controllers
+                .item(i)
+                .and_downcast::<gtk::EventControllerMotion>()
+        })
+        .unwrap();
+    for zoom in [1., 0.2] {
+        scene::board::set_camera(
+            &v,
+            Camera {
+                zoom,
+                ..Camera::default()
+            },
+        );
+        for burst in [200, 1000] {
+            settle(40);
+            let pointer_started = std::time::Instant::now();
+            for event in 0..burst {
+                pointer.emit_by_name::<()>("motion", &[&(event as f64 / 10.), &-100.]);
+            }
+            println!(
+                "PERF-002 pointer-input-{burst} zoom={zoom:.1}: {:.3}ms",
+                pointer_started.elapsed().as_secs_f64() * 1000.
+            );
+        }
+    }
+    settle(40);
+    v.session.pointer.set(initial_pointer);
+    scene::board::set_camera(&v, initial_camera);
     // shortcut: Xvfb 소프트웨어 렌더링은 변경 전에도 PERF-002 절대 기준 미달, 실제 GPU 환경 확보 시 재측정.
     let measure = |name: &str, seconds: f64, step: &mut dyn FnMut(f64)| {
         let frames = Rc::new(RefCell::new(Vec::<Instant>::new()));
