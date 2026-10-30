@@ -1,5 +1,13 @@
 use super::*;
 
+#[derive(Default)]
+pub(super) struct LayoutState {
+    pub paragraphs: RefCell<ParagraphTags>,
+    pub frames: Cell<u8>,
+    /// 원문 표식의 측정 폭과 실제 그려진 폭의 차이.
+    pub hang_fix: RefCell<HashMap<String, i32>>,
+}
+
 impl LiveEditor {
     /// 표식은 한 글자처럼 다룬다. 커서가 그 안에 놓이면 본문 앞으로 옮겨 문법 앞에 글자가 들어가지 않게 한다.
     pub(super) fn leave_marker(&self, buffer: &TextBuffer, document: &Document) {
@@ -7,7 +15,11 @@ impl LiveEditor {
             return;
         }
         let at = buffer.iter_at_mark(&buffer.get_insert()).offset();
-        if let Some(item) = document.items.iter().find(|i| i.marker.contains(&at)) {
+        if let Some(item) = document
+            .item_at(at)
+            .map(|(_, item)| item)
+            .filter(|item| item.marker.contains(&at))
+        {
             buffer.place_cursor(&buffer.iter_at_offset(item.content.start));
         }
     }
@@ -27,19 +39,14 @@ impl LiveEditor {
             for item in &document.items {
                 let line = item.marker.start..item.content.end;
                 let text_x = base + GUTTER * (item.depth as i32 + 1);
-                let marker = buffer
-                    .text(
-                        &buffer.iter_at_offset(item.marker.start),
-                        &buffer.iter_at_offset(item.marker.end),
-                        true,
-                    )
-                    .to_string();
+                let marker = super::super::source_slice(&buffer, item.marker.clone());
                 // pixel_size는 올림이라 본문이 밀린다. 실제 폭에 가장 가까운 픽셀을 쓴다.
                 let width = *widths.entry(marker).or_insert_with_key(|text| {
                     let units = view.create_pango_layout(Some(text)).size().0;
                     let width = (f64::from(units) / f64::from(pango::SCALE)).round() as i32;
                     width
                         + self
+                            .layout
                             .hang_fix
                             .borrow()
                             .get(text.as_str())
@@ -55,7 +62,7 @@ impl LiveEditor {
                 wanted.entry(key).or_default().push(line);
             }
         }
-        let mut tags = self.paragraphs.borrow_mut();
+        let mut tags = self.layout.paragraphs.borrow_mut();
         for key in wanted.keys() {
             tags.entry(*key).or_insert_with(|| {
                 let tag = TextTag::builder().left_margin(key.0).indent(key.1).build();
@@ -93,20 +100,14 @@ impl LiveEditor {
                 let got = view
                     .iter_location(&buffer.iter_at_offset(item.content.start))
                     .x();
-                let marker = buffer
-                    .text(
-                        &buffer.iter_at_offset(item.marker.start),
-                        &buffer.iter_at_offset(item.marker.end),
-                        true,
-                    )
-                    .to_string();
+                let marker = super::super::source_slice(&buffer, item.marker.clone());
                 (marker, got - want)
             };
         let (marker, delta) = correction;
         if delta == 0 {
             return;
         }
-        let mut fixes = self.hang_fix.borrow_mut();
+        let mut fixes = self.layout.hang_fix.borrow_mut();
         let fix = fixes.entry(marker).or_insert(0);
         // 큰 차이는 측정 오류다. 여백 부족 등으로 맞출 수 없는 경우 흔들리지 않게 한다.
         if (*fix + delta).abs() <= HANG_FIX_LIMIT {

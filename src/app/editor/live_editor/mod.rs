@@ -34,32 +34,16 @@ type ParagraphTags = HashMap<(i32, i32), TextTag>;
 struct LiveEditor {
     view: glib::WeakRef<TextView>,
     document: RefCell<Document>,
-    tags: Vec<(Style, TextTag)>,
-    hidden: TextTag,
-    syntax: TextTag,
-    /// 표식 글자를 투명하게 한다. 줄을 접지 않아 빈 항목에도 커서가 놓이고 위치 계산이 정확하다.
-    marker: TextTag,
-    paragraphs: RefCell<ParagraphTags>,
-    link_hover: TextTag,
+    tags: EditorTags,
+    widgets: MarkerWidgets,
+    input: InputState,
+    pointer: PointerState,
+    layout: LayoutState,
     preview: Rc<LinkPreview>,
     dirty: Cell<bool>,
     restyle: Cell<bool>,
     pending: Cell<bool>,
-    composing: Cell<bool>,
     source: Cell<bool>,
-    task_widgets: RefCell<Vec<TaskWidget>>,
-    bullet_widgets: RefCell<Vec<gtk::Label>>,
-    syncing_tasks: Cell<bool>,
-    layout_frames: Cell<u8>,
-    /// 커서 이동과 입력을 구분해 타이핑 중에는 링크 카드를 띄우지 않는다.
-    edited: Cell<bool>,
-    caret_moved: Cell<bool>,
-    hovered: RefCell<Option<Range<i32>>>,
-    pointer: Cell<Option<(f64, f64)>>,
-    /// 조합 중 Enter. 확정된 뒤 다음 항목 표식을 채운다.
-    commit_newline: Cell<bool>,
-    /// 원문 표식의 측정 폭과 실제 그려진 폭의 차이. 본문이 커서 줄에서 밀리지 않게 보정한다.
-    hang_fix: RefCell<HashMap<String, i32>>,
 }
 
 impl LiveEditor {
@@ -75,7 +59,7 @@ impl LiveEditor {
     }
 
     fn refresh(self: &Rc<Self>) {
-        if self.composing.get() {
+        if self.input.composing.get() {
             return;
         }
         let Some(view) = self.view.upgrade() else {
@@ -89,7 +73,7 @@ impl LiveEditor {
             *self.document.borrow_mut() = markdown::parse(&text);
             self.restyle.set(true);
         }
-        if self.commit_newline.replace(false) && !self.source.get() {
+        if self.input.commit_newline.replace(false) && !self.source.get() {
             list_edit::continue_after_commit(&view, &self.document.borrow());
             if self.dirty.replace(false) {
                 let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
@@ -99,7 +83,7 @@ impl LiveEditor {
         }
         let document = self.document.borrow();
         if self.restyle.replace(false) {
-            for (style, tag) in &self.tags {
+            for (style, tag) in &self.tags.styles {
                 let ranges = if self.source.get() {
                     Vec::new()
                 } else {
@@ -122,7 +106,7 @@ impl LiveEditor {
                     .chain(document.items.iter().map(|item| item.marker.clone()))
                     .collect()
             };
-            reconcile(&buffer, &self.syntax, syntax);
+            reconcile(&buffer, &self.tags.syntax, syntax);
         }
         self.leave_marker(&buffer, &document);
         let active = active_lines(&buffer);
@@ -150,7 +134,7 @@ impl LiveEditor {
                     .map(|item| item.marker.clone()),
             )
             .collect();
-        reconcile(&buffer, &self.hidden, hidden);
+        reconcile(&buffer, &self.tags.hidden, hidden);
         // 기호·체크는 위젯으로 그리고 표식 글자는 보이지 않게 한다. 선택 중에도 같고 복사는 원문이다.
         let markers = if self.source.get() {
             Vec::new()
@@ -162,15 +146,15 @@ impl LiveEditor {
                 .map(|item| item.marker.clone())
                 .collect()
         };
-        reconcile(&buffer, &self.marker, markers);
+        reconcile(&buffer, &self.tags.marker, markers);
         self.sync_paragraphs(&view, &document, &selected);
         drop(document);
         self.sync_theme(&view);
         self.sync_tasks();
-        self.layout_frames.set(2);
+        self.layout.frames.set(2);
         // 입력으로 움직인 커서는 링크 안에 있어도 카드를 띄우지 않는다.
-        let edited = self.edited.replace(false);
-        if self.caret_moved.replace(false) && !edited {
+        let edited = self.input.edited.replace(false);
+        if self.input.caret_moved.replace(false) && !edited {
             self.sync_caret_preview();
         }
     }
@@ -182,8 +166,11 @@ mod markers;
 mod tags;
 
 use input::{connect_gestures, connect_keys, connect_updates, source_toggle};
+use input::{InputState, PointerState};
+use layout::LayoutState;
 use layout::{active_lines, hides_marker, selected_lines};
-use tags::{create_tags, reconcile};
+use markers::MarkerWidgets;
+use tags::{create_tags, reconcile, EditorTags};
 
 /// 본문 여백과 줄 간격. 목록 표식 칸과 원문 내어쓰기가 이 값을 기준으로 계산된다.
 pub(in crate::app) fn configure(view: &TextView) {
@@ -204,33 +191,21 @@ pub(in crate::app) fn attach(view: &TextView) -> CheckButton {
 fn attach_editor(view: &TextView) -> (CheckButton, Rc<LiveEditor>) {
     let buffer = view.buffer();
     buffer.set_enable_undo(true);
-    let (tags, hidden, syntax, marker, link_hover) = create_tags(&buffer);
-    let preview = LinkPreview::new(view, link_hover.clone());
+    let tags = create_tags(&buffer);
+    let preview = LinkPreview::new(view, tags.link_hover.clone());
     let editor = Rc::new(LiveEditor {
         view: view.downgrade(),
         document: RefCell::new(Document::default()),
         tags,
-        hidden,
-        syntax,
-        marker,
-        paragraphs: RefCell::new(HashMap::new()),
-        link_hover,
+        widgets: MarkerWidgets::default(),
+        input: InputState::default(),
+        pointer: PointerState::default(),
+        layout: LayoutState::default(),
         preview,
         dirty: Cell::new(true),
         restyle: Cell::new(true),
         pending: Cell::new(false),
-        composing: Cell::new(false),
         source: Cell::new(false),
-        task_widgets: RefCell::new(Vec::new()),
-        bullet_widgets: RefCell::new(Vec::new()),
-        syncing_tasks: Cell::new(false),
-        layout_frames: Cell::new(0),
-        edited: Cell::new(false),
-        caret_moved: Cell::new(false),
-        hovered: RefCell::new(None),
-        pointer: Cell::new(None),
-        commit_newline: Cell::new(false),
-        hang_fix: RefCell::new(HashMap::new()),
     });
     editor.refresh();
     connect_updates(view, &buffer, &editor);

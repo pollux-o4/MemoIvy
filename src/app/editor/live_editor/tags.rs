@@ -1,33 +1,42 @@
 use super::*;
 
+pub(super) struct EditorTags {
+    pub styles: Vec<(Style, TextTag)>,
+    pub hidden: TextTag,
+    pub syntax: TextTag,
+    // 표식은 투명하게 남겨 빈 항목의 커서·줄 위치를 보존한다.
+    pub marker: TextTag,
+    pub link_hover: TextTag,
+}
+
 impl LiveEditor {
     /// 표시 전용 태그 색은 CSS 토큰에서 읽는다. 테마가 바뀌면 다음 갱신에 따라간다.
     #[allow(deprecated)]
     pub(super) fn sync_theme(&self, view: &TextView) {
         let context = view.style_context();
         if let Some(muted) = context.lookup_color("note_muted") {
-            if self.syntax.foreground_rgba().as_ref() != Some(&muted) {
-                self.syntax.set_foreground_rgba(Some(&muted));
-                if let Some((_, done)) = self.tags.iter().find(|(s, _)| *s == Style::TaskDone) {
+            if self.tags.syntax.foreground_rgba().as_ref() != Some(&muted) {
+                self.tags.syntax.set_foreground_rgba(Some(&muted));
+                if let Some((_, done)) =
+                    self.tags.styles.iter().find(|(s, _)| *s == Style::TaskDone)
+                {
                     done.set_foreground_rgba(Some(&muted));
                 }
-                if let Some((_, task)) = self.tags.iter().find(|(s, _)| *s == Style::Task) {
+                if let Some((_, task)) = self.tags.styles.iter().find(|(s, _)| *s == Style::Task) {
                     task.set_foreground_rgba(Some(&muted));
                 }
             }
         }
         if let Some(accent) = context.lookup_color("lsm_accent") {
             let tint = gdk::RGBA::new(accent.red(), accent.green(), accent.blue(), 0.16);
-            if self.link_hover.background_rgba().as_ref() != Some(&tint) {
-                self.link_hover.set_background_rgba(Some(&tint));
+            if self.tags.link_hover.background_rgba().as_ref() != Some(&tint) {
+                self.tags.link_hover.set_background_rgba(Some(&tint));
             }
         }
     }
 }
 
-pub(super) fn create_tags(
-    buffer: &TextBuffer,
-) -> (Vec<(Style, TextTag)>, TextTag, TextTag, TextTag, TextTag) {
+pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
     let tags = vec![
         (
             Style::Heading1,
@@ -94,7 +103,13 @@ pub(super) fn create_tags(
     buffer.tag_table().add(&syntax);
     buffer.tag_table().add(&marker);
     buffer.tag_table().add(&link_hover);
-    (tags, hidden, syntax, marker, link_hover)
+    EditorTags {
+        styles: tags,
+        hidden,
+        syntax,
+        marker,
+        link_hover,
+    }
 }
 
 // GTK already moves tag boundaries with edits; change only ranges whose decoration differs.

@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Default)]
+pub(super) struct MarkerWidgets {
+    pub tasks: RefCell<Vec<TaskWidget>>,
+    pub bullets: RefCell<Vec<gtk::Label>>,
+    pub syncing: Cell<bool>,
+}
+
 impl LiveEditor {
     pub(super) fn sync_tasks(self: &Rc<Self>) {
         let Some(view) = self.view.upgrade() else {
@@ -8,7 +15,7 @@ impl LiveEditor {
         let buffer = view.buffer();
         let document = self.document.borrow();
         self.sync_bullets(&view, &document);
-        let mut widgets = self.task_widgets.borrow_mut();
+        let mut widgets = self.widgets.tasks.borrow_mut();
         // shortcut: GTK overlay에는 공개 제거 API가 없어 창 안에서 최대 개수만큼 재사용, GTK가 제거 API를 제공하면 회수 정책 재검토.
         for widget in widgets.iter().skip(document.tasks.len()) {
             widget.button.set_visible(false);
@@ -23,7 +30,7 @@ impl LiveEditor {
             let weak = Rc::downgrade(self);
             button.connect_toggled(move |_| {
                 if let Some(editor) = weak.upgrade() {
-                    if !editor.syncing_tasks.get() {
+                    if !editor.widgets.syncing.get() {
                         editor.toggle_task(position.get());
                     }
                 }
@@ -31,7 +38,7 @@ impl LiveEditor {
             view.add_overlay(&button, 0, 0);
             widgets.push(TaskWidget { button, offset });
         }
-        self.syncing_tasks.set(true);
+        self.widgets.syncing.set(true);
         for (widget, task) in widgets.iter().zip(&document.tasks) {
             widget.offset.set(task.range.start);
             widget.button.set_active(task.checked);
@@ -58,7 +65,7 @@ impl LiveEditor {
                 view.move_overlay(&widget.button, marker_x(&view, item.depth), rect.y());
             }
         }
-        self.syncing_tasks.set(false);
+        self.widgets.syncing.set(false);
     }
 
     /// 글머리 기호는 원문을 바꾸지 않고 표식 칸에 그린다. 입력·클릭은 본문으로 통과한다.
@@ -69,7 +76,7 @@ impl LiveEditor {
             .iter()
             .filter(|item| item.kind == ListKind::Bullet && !self.source.get())
             .collect();
-        let mut widgets = self.bullet_widgets.borrow_mut();
+        let mut widgets = self.widgets.bullets.borrow_mut();
         for widget in widgets.iter().skip(bullets.len()) {
             widget.set_visible(false);
         }
@@ -90,7 +97,7 @@ impl LiveEditor {
     }
 
     pub(super) fn toggle_task(self: &Rc<Self>, offset: i32) -> bool {
-        if self.composing.get() {
+        if self.input.composing.get() {
             return false;
         }
         let Some(view) = self.view.upgrade() else {

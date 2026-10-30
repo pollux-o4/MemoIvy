@@ -1,5 +1,8 @@
 use std::ops::Range;
 
+/// 편집기와 카드가 깊이별로 공유하는 목록 기호.
+pub(crate) const BULLETS: [&str; 3] = ["•", "◦", "▪"];
+
 mod inline;
 mod links;
 mod list;
@@ -75,6 +78,18 @@ pub(crate) struct Document {
     pub links: Vec<Link>,
     pub tasks: Vec<Task>,
     pub items: Vec<ListItem>,
+}
+
+impl Document {
+    /// 줄 순서로 정렬된 항목에서 커서 위치를 찾는다. 줄 끝 커서도 해당 항목에 속한다.
+    pub(crate) fn item_at(&self, offset: i32) -> Option<(usize, &ListItem)> {
+        let index = self
+            .items
+            .partition_point(|item| item.marker.start <= offset)
+            .checked_sub(1)?;
+        let item = &self.items[index];
+        (offset <= item.content.end).then_some((index, item))
+    }
 }
 
 /// GTK offsets count characters; the parser reports UTF-8 byte ranges.

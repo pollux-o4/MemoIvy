@@ -4,16 +4,6 @@ use gtk::{gdk, prelude::*, TextBuffer, TextView};
 
 const INDENT: &str = "  ";
 
-fn slice(buffer: &TextBuffer, start: i32, end: i32) -> String {
-    buffer
-        .text(
-            &buffer.iter_at_offset(start),
-            &buffer.iter_at_offset(end),
-            true,
-        )
-        .to_string()
-}
-
 fn delete(buffer: &TextBuffer, start: i32, end: i32) {
     buffer.delete(
         &mut buffer.iter_at_offset(start),
@@ -23,14 +13,6 @@ fn delete(buffer: &TextBuffer, start: i32, end: i32) {
 
 fn cursor(buffer: &TextBuffer) -> i32 {
     buffer.iter_at_mark(&buffer.get_insert()).offset()
-}
-
-fn item_at(document: &Document, offset: i32) -> Option<(usize, &ListItem)> {
-    document
-        .items
-        .iter()
-        .enumerate()
-        .find(|(_, item)| item.marker.start <= offset && offset <= item.content.end)
 }
 
 /// 다음 항목의 표식. 체크는 비운 상태로 시작하고 번호는 하나 늘린다.
@@ -68,7 +50,7 @@ fn renumber_after(buffer: &TextBuffer, document: &Document, index: usize, first:
         if item.kind != ListKind::Ordered {
             break;
         }
-        let marker = slice(buffer, item.marker.start, item.marker.end);
+        let marker = super::source_slice(buffer, item.marker.clone());
         let lead = marker.len() - marker.trim_start().len();
         let digits = marker[lead..]
             .bytes()
@@ -87,7 +69,7 @@ fn renumber_after(buffer: &TextBuffer, document: &Document, index: usize, first:
 }
 
 fn outdent(buffer: &TextBuffer, item: &ListItem) -> bool {
-    let marker = slice(buffer, item.marker.start, item.marker.end);
+    let marker = super::source_slice(buffer, item.marker.clone());
     let width = if marker.starts_with('\t') {
         1
     } else {
@@ -111,7 +93,7 @@ fn unlist(buffer: &TextBuffer, item: &ListItem) {
 fn split(view: &TextView, document: &Document, index: usize, item: &ListItem) {
     let buffer = view.buffer();
     let next = next_marker(
-        &slice(&buffer, item.marker.start, item.marker.end),
+        &super::source_slice(&buffer, item.marker.clone()),
         item.kind,
     );
     buffer.begin_user_action();
@@ -180,7 +162,7 @@ pub(super) fn handle(
         return false;
     }
     let at = cursor(&buffer);
-    let found = item_at(document, at);
+    let found = document.item_at(at);
     // 표식은 한 글자처럼 다룬다. 왼쪽으로 가면 표식을 건너 앞 줄 끝으로 간다.
     if key == gdk::Key::Left
         && (mods == gdk::ModifierType::empty() || mods == gdk::ModifierType::CONTROL_MASK)
@@ -244,12 +226,12 @@ pub(super) fn continue_after_commit(view: &TextView, document: &Document) {
     if !at.ends_line() || at.line_offset() != 0 || at.offset() == 0 {
         return;
     }
-    let Some((_, item)) = item_at(document, at.offset() - 1) else {
+    let Some((_, item)) = document.item_at(at.offset() - 1) else {
         return;
     };
     if item.content.start < item.content.end {
         let next = next_marker(
-            &slice(&buffer, item.marker.start, item.marker.end),
+            &super::source_slice(&buffer, item.marker.clone()),
             item.kind,
         );
         buffer.begin_user_action();

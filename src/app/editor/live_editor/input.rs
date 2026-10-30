@@ -1,5 +1,21 @@
 use super::*;
 
+#[derive(Default)]
+pub(super) struct InputState {
+    pub composing: Cell<bool>,
+    /// 커서 이동과 입력을 구분해 타이핑 중 링크 카드를 띄우지 않는다.
+    pub edited: Cell<bool>,
+    pub caret_moved: Cell<bool>,
+    /// 조합 중 Enter는 확정된 뒤 다음 항목 표식을 채운다.
+    pub commit_newline: Cell<bool>,
+}
+
+#[derive(Default)]
+pub(super) struct PointerState {
+    pub hovered: RefCell<Option<Range<i32>>>,
+    pub position: Cell<Option<(f64, f64)>>,
+}
+
 impl LiveEditor {
     pub(super) fn link_at(&self, offset: i32) -> Option<markdown::Link> {
         self.document
@@ -16,7 +32,7 @@ impl LiveEditor {
             return;
         };
         let buffer = view.buffer();
-        if self.composing.get() || buffer.has_selection() || !view.is_focus() {
+        if self.input.composing.get() || buffer.has_selection() || !view.is_focus() {
             self.preview.caret(None, gdk::Rectangle::new(0, 0, 0, 0));
             return;
         }
@@ -57,10 +73,10 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
                 editor.schedule();
             }
             // Text layout validates after tag changes; settle overlays on the following frames.
-            if !editor.composing.get() && editor.layout_frames.get() > 0 {
+            if !editor.input.composing.get() && editor.layout.frames.get() > 0 {
                 editor.sync_tasks();
-                editor.layout_frames.set(editor.layout_frames.get() - 1);
-                if editor.layout_frames.get() == 0 {
+                editor.layout.frames.set(editor.layout.frames.get() - 1);
+                if editor.layout.frames.get() == 0 {
                     editor.correct_hang();
                 }
             }
@@ -70,10 +86,10 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
     let state = editor.clone();
     buffer.connect_changed(move |_| {
         state.dirty.set(true);
-        state.edited.set(true);
+        state.input.edited.set(true);
         // 입력이 시작되면 카드는 바로 물러나고, 포인터가 다시 움직일 때까지 뜨지 않는다.
         state.preview.hide();
-        state.hovered.replace(None);
+        state.pointer.hovered.replace(None);
         state.schedule();
     });
     let state = editor.clone();
@@ -82,13 +98,13 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
             .name()
             .is_some_and(|name| name == "insert" || name == "selection_bound")
         {
-            state.caret_moved.set(true);
+            state.input.caret_moved.set(true);
             state.schedule();
         }
     });
     let state = editor.clone();
     view.connect_preedit_changed(move |_, preedit| {
-        state.composing.set(!preedit.is_empty());
+        state.input.composing.set(!preedit.is_empty());
         if preedit.is_empty() {
             state.schedule();
         } else {
@@ -111,7 +127,7 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
         let measured = weak.clone();
         adjustment.connect_changed(move |_| {
             if let Some(editor) = measured.upgrade() {
-                editor.layout_frames.set(2);
+                editor.layout.frames.set(2);
             }
         });
     };
@@ -163,7 +179,7 @@ pub(super) fn connect_gestures(view: &TextView, editor: &Rc<LiveEditor>) {
     click.set_propagation_phase(gtk::PropagationPhase::Capture);
     let state = editor.clone();
     click.connect_pressed(move |gesture, count, x, y| {
-        if count != 1 || state.composing.get() {
+        if count != 1 || state.input.composing.get() {
             return;
         }
         let Some(view) = state.view.upgrade() else {
@@ -214,25 +230,26 @@ pub(super) fn connect_hover(view: &TextView, editor: &Rc<LiveEditor>) {
             return;
         };
         let modifiers = controller.current_event_state();
-        let link = if modifiers.contains(gdk::ModifierType::BUTTON1_MASK) || state.composing.get() {
-            None
-        } else {
-            char_at(&view, x, y).and_then(|iter| {
-                state
-                    .link_at(iter.offset())
-                    .map(|link| (link, iter.offset()))
-            })
-        };
+        let link =
+            if modifiers.contains(gdk::ModifierType::BUTTON1_MASK) || state.input.composing.get() {
+                None
+            } else {
+                char_at(&view, x, y).and_then(|iter| {
+                    state
+                        .link_at(iter.offset())
+                        .map(|link| (link, iter.offset()))
+                })
+            };
         let owner = link.as_ref().map(|(link, _)| link.owner.clone());
         // 표면이 바뀌면 GTK가 제자리 이동을 합성한다. 진짜로 움직였을 때만 카드를 예약한다.
-        let moved = state.pointer.replace(Some((x, y))) != Some((x, y));
+        let moved = state.pointer.position.replace(Some((x, y))) != Some((x, y));
         // Ctrl을 누르면 눌러서 여는 곳임을 커서로 알린다.
         let opens = owner.is_some() && modifiers.contains(gdk::ModifierType::CONTROL_MASK);
         view.set_cursor_from_name(Some(if opens { "pointer" } else { "text" }));
-        if !moved || *state.hovered.borrow() == owner {
+        if !moved || *state.pointer.hovered.borrow() == owner {
             return;
         }
-        state.hovered.replace(owner);
+        state.pointer.hovered.replace(owner);
         match link {
             Some((link, offset)) => state.preview.hover(
                 Some(&link),
@@ -243,7 +260,7 @@ pub(super) fn connect_hover(view: &TextView, editor: &Rc<LiveEditor>) {
     });
     let state = editor.clone();
     motion.connect_leave(move |_| {
-        state.hovered.replace(None);
+        state.pointer.hovered.replace(None);
         state.preview.pointer_left();
     });
     view.add_controller(motion);
@@ -258,7 +275,7 @@ pub(super) fn connect_keys(view: &TextView, editor: Rc<LiveEditor>, source: &Che
             editor.preview.dismiss();
             return glib::Propagation::Stop;
         }
-        if !editor.composing.get() {
+        if !editor.input.composing.get() {
             if let Some(view) = editor.view.upgrade() {
                 if super::super::formatting::handle(&view, key, modifiers) {
                     return glib::Propagation::Stop;
@@ -275,7 +292,7 @@ pub(super) fn connect_keys(view: &TextView, editor: Rc<LiveEditor>, source: &Che
                 }
             }
         } else if matches!(key, gdk::Key::Return | gdk::Key::KP_Enter) {
-            editor.commit_newline.set(true);
+            editor.input.commit_newline.set(true);
         }
         if (key == gdk::Key::m || key == gdk::Key::M)
             && modifiers.contains(gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::SHIFT_MASK)

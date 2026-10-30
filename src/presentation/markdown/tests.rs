@@ -344,6 +344,8 @@ fn fmt_001_link_protocols() {
     for url in [
         "https://example.com",
         "HTTP://example.com",
+        "hTtPs://한글.example/😀",
+        "MAILTO:a@example.test",
         "mailto:a@example.test",
     ] {
         assert!(safe_link(url));
@@ -353,10 +355,32 @@ fn fmt_001_link_protocols() {
         "file:///tmp/test",
         "data:text/html,test",
         "https://example.com\n",
+        "hTtPs://example.com\0",
+        "https😀",
+        "mailto",
     ] {
         assert!(!safe_link(url));
     }
     assert!(parse("[bad](javascript:alert) [file](file:///tmp/test)")
         .links
         .is_empty());
+}
+
+#[test]
+fn fmt_003_item_at_matches_source_boundaries() {
+    let text = "앞😀\n- 한글\n\n  - 안쪽\n- ";
+    let doc = parse(text);
+    for offset in -1..=text.chars().count() as i32 + 1 {
+        let expected = doc
+            .items
+            .iter()
+            .enumerate()
+            .find(|(_, item)| item.marker.start <= offset && offset <= item.content.end);
+        assert_eq!(
+            doc.item_at(offset).map(|(index, _)| index),
+            expected.map(|(index, _)| index),
+            "offset {offset}"
+        );
+    }
+    assert!(parse("").item_at(0).is_none());
 }

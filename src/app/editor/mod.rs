@@ -199,3 +199,13 @@ fn editor_menu(
     });
     menu
 }
+
+fn source_slice(buffer: &gtk::TextBuffer, range: std::ops::Range<i32>) -> String {
+    buffer
+        .text(
+            &buffer.iter_at_offset(range.start),
+            &buffer.iter_at_offset(range.end),
+            true,
+        )
+        .to_string()
+}
