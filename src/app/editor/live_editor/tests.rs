@@ -228,9 +228,9 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     let link = |i: usize| editor.document.borrow().links[i].clone();
     let anchor = gdk::Rectangle::new(10, 10, 1, 18);
     // 지나가는 포인터에는 뜨지 않는다.
-    editor.preview.hover(Some(&link(0)), anchor);
+    editor.preview.hover(&link(0), anchor);
     assert!(editor.preview.is_pending());
-    editor.preview.hover(None, anchor);
+    editor.preview.pointer_left();
     assert!(!editor.preview.is_pending());
     settle(450);
     assert_eq!(editor.preview.shown_url(), None);
@@ -239,7 +239,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| {
         // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
         if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(Some(&link(0)), anchor);
+            editor.preview.hover(&link(0), anchor);
         }
         editor.preview.is_shown()
     });
@@ -250,8 +250,18 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     assert!(editor.preview.card_is_visible());
     assert_eq!(editor.preview.title(), "이름");
     assert!(view.is_focus(), "preview must not steal typing focus");
+    // 전환 대기 중에는 기존 카드를 유지하고, 취소하면 그 카드의 닫기 유예로 돌아간다.
+    editor.preview.hover(&link(1), anchor);
+    assert!(editor.preview.is_pending());
+    assert_eq!(
+        editor.preview.shown_url().as_deref(),
+        Some("https://a.example/b")
+    );
+    editor.preview.pointer_left();
+    assert!(!editor.preview.is_pending());
+    assert!(editor.preview.is_shown());
     // 옆 링크로 옮기면 기다리지 않고 내용을 바꾼다.
-    editor.preview.hover(Some(&link(1)), anchor);
+    editor.preview.hover(&link(1), anchor);
     until(&|| editor.preview.shown_url().as_deref() == Some("https://c.example"));
     assert_eq!(editor.preview.title(), "c.example");
     // 복사는 카드를 닫지 않고 원본 주소를 넣는다.
@@ -263,7 +273,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     assert_eq!(copied.as_str(), "https://c.example");
     assert!(editor.preview.is_shown());
     // 벗어나면 잠시 뒤 닫힌다.
-    editor.preview.hover(None, anchor);
+    editor.preview.pointer_left();
     assert!(editor.preview.is_shown(), "grace period to reach the card");
     until(&|| !editor.preview.is_shown());
     until(|| !editor.preview.card_is_visible());
@@ -271,7 +281,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| {
         // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
         if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(Some(&link(0)), anchor);
+            editor.preview.hover(&link(0), anchor);
         }
         editor.preview.is_shown()
     });
@@ -294,7 +304,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| {
         // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
         if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(Some(&link(0)), anchor);
+            editor.preview.hover(&link(0), anchor);
         }
         editor.preview.is_shown()
     });
@@ -308,7 +318,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| {
         // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
         if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(Some(&link(0)), anchor);
+            editor.preview.hover(&link(0), anchor);
         }
         editor.preview.is_shown()
     });
@@ -353,7 +363,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     assert!(!editor.preview.is_shown());
     view.emit_preedit_changed("");
     // 대기 중 창을 닫아도 타이머·보조 표면이 남지 않는다.
-    editor.preview.hover(Some(&link(0)), anchor);
+    editor.preview.hover(&link(0), anchor);
     window.destroy();
     settle(450);
 }

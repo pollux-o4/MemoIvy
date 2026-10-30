@@ -33,13 +33,17 @@ impl LiveEditor {
         };
         let buffer = view.buffer();
         if self.input.composing.get() || buffer.has_selection() || !view.is_focus() {
-            self.preview.caret(None, gdk::Rectangle::new(0, 0, 0, 0));
+            self.preview.caret_left();
             return;
         }
         let offset = buffer.iter_at_mark(&buffer.get_insert()).offset();
         let link = self.link_at(offset);
-        self.preview
-            .caret(link.as_ref(), LinkPreview::anchor(&view, offset, None));
+        if let Some(link) = link {
+            self.preview
+                .caret(&link, LinkPreview::anchor(&view, offset, None));
+        } else {
+            self.preview.caret_left();
+        }
     }
 }
 
@@ -251,11 +255,10 @@ pub(super) fn connect_hover(view: &TextView, editor: &Rc<LiveEditor>) {
         }
         state.pointer.hovered.replace(owner);
         match link {
-            Some((link, offset)) => state.preview.hover(
-                Some(&link),
-                LinkPreview::anchor(&view, offset, Some(x as i32)),
-            ),
-            None => state.preview.hover(None, gdk::Rectangle::new(0, 0, 0, 0)),
+            Some((link, offset)) => state
+                .preview
+                .hover(&link, LinkPreview::anchor(&view, offset, Some(x as i32))),
+            None => state.preview.pointer_left(),
         }
     });
     let state = editor.clone();
