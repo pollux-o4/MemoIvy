@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
 use std::os::unix::fs::OpenOptionsExt;
 use std::{
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
 };
 use uuid::Uuid;
 
@@ -16,32 +14,7 @@ pub const COLORS: [(&str, &str); 5] = [
     ("purple", "보라"),
 ];
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Note {
-    pub id: Uuid,
-    pub text: String,
-    pub color: String,
-    pub modified: u64,
-    #[serde(default)]
-    pub canvas: super::canvas::CanvasNode,
-}
-impl Note {
-    pub fn new() -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            text: String::new(),
-            color: COLORS[0].0.into(),
-            modified: now(),
-            canvas: Default::default(),
-        }
-    }
-}
-pub fn now() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
+pub use super::note::{now, Note};
 
 pub struct Store {
     #[allow(dead_code)]

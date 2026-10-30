@@ -12,6 +12,9 @@ mod store {
         Ok(())
     }
 }
+mod note {
+    pub use super::store::Note;
+}
 #[path = "../../../../src/persistence/save_queue.rs"]
 mod save_queue;
 
