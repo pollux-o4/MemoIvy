@@ -26,6 +26,8 @@ fn scroll_controller(v: &CanvasView) -> gtk::EventControllerScroll {
 }
 
 fn touchpad_burst(v: &Rc<CanvasView>) {
+    until(|| v.session.fitted.get());
+    motion::stop_camera(v);
     scene::board::set_camera(v, Camera::default());
     let scroll = scroll_controller(v);
     let child = v
@@ -526,8 +528,9 @@ pub(in crate::app) fn canvas_004_markers_shortcuts_and_delete() {
         .collect();
     let state = AppState::fixture(path.clone(), &app, notes);
     open(&state, &app, None);
-    settle(80);
     let v = state.borrow().views.canvas.clone().unwrap();
+    until(|| v.session.fitted.get() && v.widgets.surface.width() > 0);
+    scene::board::set_camera(&v, Camera::default());
 
     // 카드 미리보기가 표식과 상태를 잃지 않는다.
     {
