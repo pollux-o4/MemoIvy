@@ -36,7 +36,7 @@ fn adr_0010_backend_does_not_know_the_frontend() {
 
 #[test]
 fn adr_0010_canvas_reaches_storage_only_through_its_port() {
-    for (path, code) in sources("src/app/windows/canvas") {
+    for (path, code) in sources("src/app/canvas") {
         let allowed = path.ends_with("canvas/port.rs") || path.ends_with("canvas/tests.rs");
         if !allowed {
             assert!(
@@ -49,7 +49,7 @@ fn adr_0010_canvas_reaches_storage_only_through_its_port() {
 
 #[test]
 fn adr_0010_canvas_model_stays_pure() {
-    for (path, code) in sources("src/app/windows/canvas/model") {
+    for (path, code) in sources("src/app/canvas/model") {
         for forbidden in ["gtk::", "use gtk", "persistence", "cairo"] {
             assert!(
                 !code.contains(forbidden),

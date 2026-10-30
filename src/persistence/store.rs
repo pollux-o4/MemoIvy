@@ -6,54 +6,35 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const COLORS: [(&str, &str); 5] = [
-    ("yellow", "노랑"),
-    ("pink", "분홍"),
-    ("blue", "파랑"),
-    ("green", "초록"),
-    ("purple", "보라"),
-];
-
-pub use super::note::{now, Note};
+use super::note::{Note, COLORS};
 
 pub struct Store {
-    #[allow(dead_code)]
-    pub path: PathBuf,
     pub notes: Vec<Note>,
 }
 impl Store {
     pub fn load(path: PathBuf) -> io::Result<Self> {
-        let mut notes: Vec<Note> = match fs::read(&path) {
+        let notes: Vec<Note> = match fs::read(&path) {
             Ok(data) => serde_json::from_slice(&data)
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
             Err(e) if e.kind() == io::ErrorKind::NotFound => Vec::new(),
             Err(e) => return Err(e),
         };
         let mut ids = std::collections::HashSet::new();
-        if !super::canvas::valid(&notes)
-            || notes.iter().any(|note: &Note| {
-                !ids.insert(note.id) || !COLORS.iter().any(|(name, _)| *name == note.color)
-            })
+        if !super::links::valid(&notes)
+            || notes
+                .iter()
+                .any(|note: &Note| !ids.insert(note.id) || !COLORS.contains(&note.color.as_str()))
         {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "중복된 메모 ID, 알 수 없는 색상 또는 올바르지 않은 캔버스 연결",
             ));
         }
-        for (i, note) in notes.iter_mut().enumerate() {
-            if note.canvas.position.is_none() {
-                note.canvas.position = Some(super::canvas::position(note, i));
-            }
-        }
-        Ok(Self { path, notes })
-    }
-    #[allow(dead_code)]
-    pub fn save(&self) -> io::Result<()> {
-        save(&self.path, &self.notes)
+        Ok(Self { notes })
     }
 }
 pub fn save(path: &Path, notes: &[Note]) -> io::Result<()> {
-    if !super::canvas::valid(notes) {
+    if !super::links::valid(notes) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "올바르지 않은 캔버스 데이터",
@@ -98,18 +79,18 @@ mod tests {
         .unwrap();
         let mut store = Store::load(path.clone()).unwrap();
         assert_eq!(store.notes[0].id, id);
-        assert!(store.notes[0].canvas.position.is_some());
+        assert!(store.notes[0].canvas.position.is_none());
         let mut next = Note::new();
-        next.canvas.position = Some(super::super::canvas::vacant(&store.notes));
+        next.canvas.position = Some([64., 64.]);
         store.notes[0].canvas.next.push(next.id);
         store.notes[0].canvas.done = true;
         store.notes.push(next);
-        store.save().unwrap();
+        save(&path, &store.notes).unwrap();
         let loaded = Store::load(path.clone()).unwrap();
         assert_eq!(loaded.notes[0].canvas, store.notes[0].canvas);
         let original = fs::read(&path).unwrap();
         store.notes[0].canvas.next.push(Uuid::new_v4());
-        assert!(store.save().is_err());
+        assert!(save(&path, &store.notes).is_err());
         assert_eq!(fs::read(&path).unwrap(), original);
         fs::write(&path, serde_json::to_vec(&store.notes).unwrap()).unwrap();
         assert!(Store::load(path).is_err());
@@ -122,10 +103,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("notes.json");
         let store = Store::load(path.clone()).unwrap();
-        store.save().unwrap();
+        save(&path, &store.notes).unwrap();
         assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o077, 0);
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
-        store.save().unwrap();
+        save(&path, &store.notes).unwrap();
         assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o077, 0);
     }
     #[test]
@@ -137,13 +118,13 @@ mod tests {
         note.text = "안녕하세요 🌻\n두 번째 줄".into();
         note.color = "pink".into();
         store.notes.push(note.clone());
-        store.save().unwrap();
+        save(&path, &store.notes).unwrap();
         let mut loaded = Store::load(path.clone()).unwrap();
         assert_eq!(loaded.notes[0].id, note.id);
         assert_eq!(loaded.notes[0].text, note.text);
         assert_eq!(loaded.notes[0].color, "pink");
         loaded.notes.clear();
-        loaded.save().unwrap();
+        save(&path, &loaded.notes).unwrap();
         assert!(Store::load(path).unwrap().notes.is_empty());
     }
     #[test]

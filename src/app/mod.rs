@@ -1,7 +1,10 @@
-mod controller;
-mod state;
-mod widgets;
-mod windows;
+mod canvas;
+mod editor;
+#[cfg(test)]
+mod gtk_tests;
+mod library;
+mod shared;
+mod shell;
 
 use gtk::{prelude::*, Application};
 
@@ -18,7 +21,7 @@ pub(crate) fn run() {
         {
             w.present();
         } else {
-            windows::build(app);
+            library::build(app);
         }
     });
     app.run();
