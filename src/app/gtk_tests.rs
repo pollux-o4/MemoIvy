@@ -13,6 +13,11 @@ fn isolated(name: &str, run: fn()) {
     let _display = DISPLAY.lock().unwrap_or_else(|poison| poison.into_inner());
     let output = Command::new(std::env::current_exe().expect("test executable"))
         .args(["--exact", &exact, "--nocapture"])
+        // xvfb-run sets DISPLAY, but GTK otherwise prefers the host Wayland socket.
+        .env(
+            "GDK_BACKEND",
+            std::env::var("GDK_BACKEND").unwrap_or_else(|_| "x11".into()),
+        )
         .env("LSM_GTK_SCENARIO", &exact)
         .output()
         .expect("run isolated GTK scenario");

@@ -411,6 +411,12 @@ impl LinkPreview {
     pub(super) fn is_pending(&self) -> bool {
         self.pending().is_some()
     }
+    pub(super) fn card_is_mapped(&self) -> bool {
+        self.card
+            .borrow()
+            .as_ref()
+            .is_some_and(|c| c.popover.is_mapped())
+    }
     pub(super) fn card_is_visible(&self) -> bool {
         self.card
             .borrow()

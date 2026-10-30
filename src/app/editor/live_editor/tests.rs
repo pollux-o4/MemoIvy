@@ -26,7 +26,13 @@ fn shown_window(text: &str) -> (gtk::Window, TextView, CheckButton, Rc<LiveEdito
         .child(&scroll)
         .build();
     window.present();
-    until(|| view.is_mapped() && view.width() > 0 && view.height() > 0);
+    until(|| {
+        view.is_mapped()
+            && view.width() > 0
+            && view.height() > 0
+            && !editor.pending.get()
+            && editor.layout.frames.get() == 0
+    });
     (window, view, source, editor)
 }
 
@@ -236,13 +242,8 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     assert_eq!(editor.preview.shown_url(), None);
     // 머무르면 뜨고, 이름과 목적지를 함께 보여 준다. 포커스는 편집기에 남는다.
     view.grab_focus();
-    until(&|| {
-        // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(&link(0), anchor);
-        }
-        editor.preview.is_shown()
-    });
+    editor.preview.hover(&link(0), anchor);
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     assert_eq!(
         editor.preview.shown_url().as_deref(),
         Some("https://a.example/b")
@@ -278,13 +279,8 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| !editor.preview.is_shown());
     until(|| !editor.preview.card_is_visible());
     // Esc는 포인터를 옮기지 않고 닫는다.
-    until(&|| {
-        // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(&link(0), anchor);
-        }
-        editor.preview.is_shown()
-    });
+    editor.preview.hover(&link(0), anchor);
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     let controllers = view.observe_controllers();
     let key = (0..controllers.n_items())
         .find_map(|i| {
@@ -299,29 +295,19 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     );
     assert!(stopped);
     assert!(!editor.preview.is_shown());
-    settle(150);
+    until(|| !editor.preview.card_is_visible());
     // 주소 수정은 원문의 주소만 선택한다.
-    until(&|| {
-        // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(&link(0), anchor);
-        }
-        editor.preview.is_shown()
-    });
+    editor.preview.hover(&link(0), anchor);
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     editor.preview.click_edit();
-    settle(30);
+    until(|| !editor.preview.card_is_visible());
     let (start, end) = buffer.selection_bounds().unwrap();
     assert_eq!(buffer.text(&start, &end, true), "https://a.example/b");
     assert!(!editor.preview.is_shown());
     // 입력하면 예약까지 취소되고 표시 태그는 undo에 들어가지 않는다.
     buffer.place_cursor(&buffer.end_iter());
-    until(&|| {
-        // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.preview.hover(&link(0), anchor);
-        }
-        editor.preview.is_shown()
-    });
+    editor.preview.hover(&link(0), anchor);
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     assert!(!buffer.can_undo());
     buffer.insert_at_cursor("a");
     assert!(!editor.preview.is_shown());
@@ -330,12 +316,9 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     // 커서가 링크에 머무르면 키보드로도 뜨고, 벗어나면 닫힌다.
     view.grab_focus();
     buffer.place_cursor(&buffer.iter_at_offset(2));
-    until(&|| {
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.sync_caret_preview();
-        }
-        editor.preview.is_shown()
-    });
+    drain();
+    editor.sync_caret_preview();
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     assert_eq!(
         editor.preview.shown_url().as_deref(),
         Some("https://a.example/b")
@@ -344,12 +327,9 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(&|| !editor.preview.is_shown());
     // Esc로 닫으면 같은 링크 안에서 움직여도 다시 뜨지 않고, 벗어났다 오면 뜬다.
     buffer.place_cursor(&buffer.iter_at_offset(2));
-    until(&|| {
-        if !editor.preview.is_shown() && !editor.preview.is_pending() {
-            editor.sync_caret_preview();
-        }
-        editor.preview.is_shown()
-    });
+    drain();
+    editor.sync_caret_preview();
+    until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     editor.preview.dismiss();
     buffer.place_cursor(&buffer.iter_at_offset(3));
     settle(750);
