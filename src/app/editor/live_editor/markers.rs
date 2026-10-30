@@ -46,17 +46,17 @@ impl LiveEditor {
             let iter = buffer.iter_at_offset(task.range.start);
             let mut end = iter;
             end.forward_to_line_end();
-            let label = buffer.text(&buffer.iter_at_offset(task.range.end), &end, true);
+            let label = super::super::source_slice(&buffer, task.range.end..end.offset());
             widget
                 .button
                 .update_property(&[gtk::accessible::Property::Label(label.trim())]);
             // 인용문처럼 원문으로 두는 항목에는 위젯을 올리지 않는다.
-            let index = document
-                .items
-                .partition_point(|item| item.marker.end < task.range.end);
-            let item = document.items.get(index).filter(|item| {
-                item.marker.start <= task.range.start && task.range.end <= item.marker.end
-            });
+            let item = document
+                .item_at(task.range.start)
+                .map(|(_, item)| item)
+                .filter(|item| {
+                    item.marker.start <= task.range.start && task.range.end <= item.marker.end
+                });
             let visible = !self.source.get() && item.is_some();
             widget.button.set_visible(visible);
             if let (true, Some(item)) = (visible, item) {

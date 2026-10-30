@@ -88,21 +88,22 @@ impl LiveEditor {
             return;
         }
         let active = active_lines(&buffer);
-        let correction =
-            {
-                let document = self.document.borrow();
-                let Some(item) = document.items.iter().find(|item| {
-                    item.marker.start >= active.start && item.content.end < active.end
-                }) else {
-                    return;
-                };
-                let want = view.left_margin() + GUTTER * (item.depth as i32 + 1);
-                let got = view
-                    .iter_location(&buffer.iter_at_offset(item.content.start))
-                    .x();
-                let marker = super::super::source_slice(&buffer, item.marker.clone());
-                (marker, got - want)
+        let correction = {
+            let document = self.document.borrow();
+            let Some(item) = document
+                .item_at(active.start)
+                .map(|(_, item)| item)
+                .filter(|item| item.marker.start >= active.start && item.content.end < active.end)
+            else {
+                return;
             };
+            let want = view.left_margin() + GUTTER * (item.depth as i32 + 1);
+            let got = view
+                .iter_location(&buffer.iter_at_offset(item.content.start))
+                .x();
+            let marker = super::super::source_slice(&buffer, item.marker.clone());
+            (marker, got - want)
+        };
         let (marker, delta) = correction;
         if delta == 0 {
             return;

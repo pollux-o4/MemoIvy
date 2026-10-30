@@ -167,13 +167,7 @@ impl LinkPreview {
 
     pub(super) fn fill(&self, card: &Card, view: &TextView, link: &Link) {
         let buffer = view.buffer();
-        let label = buffer
-            .text(
-                &buffer.iter_at_offset(link.range.start),
-                &buffer.iter_at_offset(link.range.end),
-                true,
-            )
-            .to_string();
+        let label = super::super::source_slice(&buffer, link.range.clone());
         // 이름의 서식 문법이 판별과 표시에 끼어들지 않게 평문으로 읽는다.
         let label = markdown::plain_line(&label);
         let info = markdown::link_info(&link.url, &label);

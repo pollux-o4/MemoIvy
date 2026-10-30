@@ -107,6 +107,7 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
         }
     });
     let state = editor.clone();
+    // shortcut: 조합 신호 재현으로만 검증, 실제 Wayland·한글 IME 환경에서 Enter 확정 동작 재검증.
     view.connect_preedit_changed(move |_, preedit| {
         state.input.composing.set(!preedit.is_empty());
         if preedit.is_empty() {
