@@ -7,7 +7,13 @@ type SavedFocus = RefCell<Option<glib::WeakRef<Widget>>>;
 fn sync(window: &ApplicationWindow, active: bool, saved: &SavedFocus) {
     if active {
         if gtk::prelude::GtkWindowExt::focus(window).is_none() {
-            if let Some(widget) = saved.borrow().as_ref().and_then(|weak| weak.upgrade()) {
+            // 그사이 숨겨진 위젯에 포커스를 돌려주면 이후 키 입력이 모두 사라진다.
+            if let Some(widget) = saved
+                .borrow()
+                .as_ref()
+                .and_then(|weak| weak.upgrade())
+                .filter(|widget| widget.is_drawable())
+            {
                 widget.grab_focus();
             }
         }
@@ -35,6 +41,14 @@ pub(in crate::app) mod tests {
         let window = ApplicationWindow::new(&app);
         let entry = gtk::SearchEntry::new();
         window.set_child(Some(&entry));
+        window.present();
+        let context = gtk::glib::MainContext::default();
+        for _ in 0..50 {
+            while context.pending() {
+                context.iteration(false);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
         entry.grab_focus();
         let saved = SavedFocus::new(None);
         assert!(gtk::prelude::GtkWindowExt::focus(&window).is_some());
@@ -42,5 +56,13 @@ pub(in crate::app) mod tests {
         assert!(gtk::prelude::GtkWindowExt::focus(&window).is_none());
         sync(&window, true, &saved);
         assert!(gtk::prelude::GtkWindowExt::focus(&window).is_some());
+        sync(&window, false, &saved);
+        entry.set_visible(false);
+        sync(&window, true, &saved);
+        assert!(
+            gtk::prelude::GtkWindowExt::focus(&window).is_none(),
+            "a widget hidden while inactive must not take keyboard input back"
+        );
+        window.destroy();
     }
 }
