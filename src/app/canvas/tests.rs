@@ -13,6 +13,70 @@ fn note(text: String, position: [f64; 2], next: Vec<Uuid>, id: Uuid) -> Note {
     .unwrap()
 }
 
+fn scroll_controller(v: &CanvasView) -> gtk::EventControllerScroll {
+    let controllers = v.widgets.surface.observe_controllers();
+    (0..controllers.n_items())
+        .find_map(|i| {
+            controllers
+                .item(i)
+                .and_downcast::<gtk::EventControllerScroll>()
+        })
+        .expect("canvas scroll controller")
+}
+
+fn touchpad_burst(v: &Rc<CanvasView>) {
+    scene::board::set_camera(v, Camera::default());
+    let scroll = scroll_controller(v);
+    let child = v
+        .widgets
+        .stage
+        .layout_manager()
+        .unwrap()
+        .layout_child(&v.widgets.world);
+    let updates = Rc::new(Cell::new(0));
+    let count = updates.clone();
+    let handler =
+        child.connect_notify_local(Some("transform"), move |_, _| count.set(count.get() + 1));
+    // shortcut: GTK Wheel을 60으로 정규화해 연속 입력 재현, 실제 Wayland 터치패드 환경에서 실측 재검증.
+    for (dx, dy, expected) in [
+        (0.25, 0.125, (25., 12.5)),
+        (-0.25, 0.125, (0., 25.)),
+        (-0.25, -0.125, (-25., 12.5)),
+        (0.25, -0.125, (0., 0.)),
+    ] {
+        updates.set(0);
+        let start = std::time::Instant::now();
+        for _ in 0..100 {
+            scroll.emit_by_name::<bool>("scroll", &[&(dx / 60.), &(dy / 60.)]);
+        }
+        println!(
+            "TOUCHPAD burst=100 viewport_updates={} handler_ms={:.3}",
+            updates.get(),
+            start.elapsed().as_secs_f64() * 1000.
+        );
+        assert_eq!(
+            updates.get(),
+            0,
+            "scroll must wait for the frame before updating widgets"
+        );
+        settle(50);
+        assert!((v.session.camera.get().x - expected.0).abs() < 0.001);
+        assert!((v.session.camera.get().y - expected.1).abs() < 0.001);
+        assert_eq!(updates.get(), 1);
+        assert!(
+            !v.session.camera_queued.get(),
+            "one-shot callback must stop at idle"
+        );
+    }
+    // 대기 중 다른 조작이 카메라를 바꿔도 오래된 스크롤 위치를 재생하지 않는다.
+    scroll.emit_by_name::<bool>("scroll", &[&0.25, &0.125]);
+    scene::board::set_camera(v, Camera::default());
+    settle(50);
+    assert_eq!(v.session.camera.get(), Camera::default());
+    child.disconnect(handler);
+    scene::board::set_camera(v, Camera::default());
+}
+
 fn wait_notebook(state: &State) {
     for _ in 0..1000 {
         state.borrow_mut().notebook.tick(std::time::Instant::now());
@@ -155,6 +219,7 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
     settle(50);
+    touchpad_burst(&v);
     // 화면 밖 카드는 측정에서 빠지고 다시 들어오면 나타난다.
     scene::board::set_camera(
         &v,
@@ -475,6 +540,24 @@ pub(in crate::app) fn perf_002_frames() {
     };
     scene::board::set_camera(&v, Camera::default());
     settle(100);
+    let scroll = scroll_controller(&v);
+    let burst_started = Instant::now();
+    for _ in 0..100 {
+        scroll.emit_by_name::<bool>("scroll", &[&(0.25 / 60.), &(0.125 / 60.)]);
+    }
+    println!(
+        "PERF-002 touchpad-input-100: {:.3}ms",
+        burst_started.elapsed().as_secs_f64() * 1000.
+    );
+    settle(50);
+    scene::board::set_camera(&v, Camera::default());
+    measure("touchpad-burst", 2., &mut |t| {
+        let direction = if t < 1. { 1. } else { -1. };
+        for _ in 0..16 {
+            scroll.emit_by_name::<bool>("scroll", &[&(direction / 60.), &(direction * 0.5 / 60.)]);
+        }
+    });
+    scene::board::set_camera(&v, Camera::default());
     measure("pan-100%", 2., &mut |t| {
         scene::board::set_camera(
             &v,

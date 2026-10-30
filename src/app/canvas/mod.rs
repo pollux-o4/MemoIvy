@@ -85,6 +85,7 @@ struct BoardSession {
     shown: RefCell<HashMap<Uuid, [f64; 2]>>,
     selection: RefCell<Selection>,
     camera: Cell<Camera>,
+    camera_queued: Cell<bool>,
     fitted: Cell<bool>,
     interaction: RefCell<Interaction>,
     guides: RefCell<Vec<Guide>>,
@@ -211,6 +212,7 @@ pub(in crate::app) fn open(state: &State, app: &Application, selected: Option<Uu
             shown: RefCell::new(HashMap::new()),
             selection: RefCell::new(Selection::default()),
             camera: Cell::new(Camera::default()),
+            camera_queued: Cell::new(false),
             fitted: Cell::new(false),
             interaction: RefCell::new(Interaction::Idle),
             guides: RefCell::new(Vec::new()),
@@ -264,6 +266,37 @@ pub(in crate::app) fn update_status(state: &State) {
 }
 
 impl CanvasView {
+    fn keep_camera(&self, camera: Camera) -> Camera {
+        let viewport = (
+            f64::from(self.widgets.surface.width()),
+            f64::from(self.widgets.surface.height()),
+        );
+        if viewport.0 < 1. || viewport.1 < 1. {
+            return camera;
+        }
+        self.session
+            .content
+            .get()
+            .map_or(camera, |area| camera.kept_near(area, viewport))
+    }
+
+    fn queue_camera(self: &Rc<Self>, camera: Camera) {
+        // 입력 좌표는 즉시 누적하고 카드·변환 갱신은 프레임당 한 번만 한다.
+        self.session.camera.set(self.keep_camera(camera));
+        if self.session.camera_queued.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        self.widgets.surface.add_tick_callback(move |_, _| {
+            if let Some(view) = weak.upgrade() {
+                view.session.camera_queued.set(false);
+                scene::board::set_camera(&view, view.session.camera.get());
+                input::pointer::follow(&view);
+            }
+            gtk::glib::ControlFlow::Break
+        });
+    }
+
     /// GTK는 창을 띄울 때 첫 위젯에 포커스를 준다. 그 때문에 카드가 저절로 선택되지 않게 한다.
     fn present(&self) {
         self.session.presenting.set(true);

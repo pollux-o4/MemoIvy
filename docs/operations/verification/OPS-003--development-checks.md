@@ -17,7 +17,7 @@
 - PERF-002 앱 품질 감사
   - `cargo build --release --locked` 후 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/quality/perf_002_app_audit.py`.
   - 프레임: `GSK_RENDERER=ngl LSM_CANVAS_PERF=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' cargo test --release --locked fmt_001_live -- --nocapture`. `cairo`로 반복한다.
-  - 성능 모드는 일반 GTK 시나리오와 분리하며 목록을 먼저 구성한다. 전후 비교도 같은 준비 조건으로 측정한다.
+  - 성능 모드는 일반 GTK 시나리오와 분리하며 목록을 먼저 구성한다. 연속 스크롤 신호의 100개 입력 처리 시간·버스트 프레임 측정을 포함한다. 전후 비교도 같은 준비 조건으로 측정한다.
 - UI-002 앱 메뉴 아이콘
   - 전제: 설치 완료, python3-gi, GTK3 introspection.
   - `dbus-run-session -- python3 tools/quality/ui_002_app_icon.py`

@@ -14,7 +14,7 @@ const PORT_MIN_ZOOM: f64 = 0.3;
 
 /// 월드 전체에 변환 하나만 적용해 확대·이동 비용을 카드 수와 무관하게 유지한다.
 pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
-    let camera = keep_content(v, camera);
+    let camera = v.keep_camera(camera);
     v.session.camera.set(camera);
     let transform = gtk::gsk::Transform::new()
         .translate(&gtk::graphene::Point::new(
@@ -39,20 +39,6 @@ pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
     update_port(v);
     v.widgets.backdrop.queue_draw();
     super::paint::sync_hud(v);
-}
-
-fn keep_content(v: &CanvasView, camera: Camera) -> Camera {
-    let viewport = (
-        f64::from(v.widgets.surface.width()),
-        f64::from(v.widgets.surface.height()),
-    );
-    if viewport.0 < 1. || viewport.1 < 1. {
-        return camera;
-    }
-    match v.session.content.get() {
-        Some(area) => camera.kept_near(area, viewport),
-        None => camera,
-    }
 }
 
 /// 화면 밖 카드는 측정·그리기에서 뺀다. 비용을 메모 수가 아니라 보이는 카드 수에 맞춘다.

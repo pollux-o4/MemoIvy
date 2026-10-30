@@ -55,15 +55,13 @@ fn attach_scroll(v: &Rc<CanvasView>) {
                 v.session.pointer.get(),
                 camera.zoom * (-dy * strength).exp(),
             );
-            scene::board::set_camera(&v, next);
+            v.queue_camera(next);
         } else {
             let unit = if wheel { WHEEL_PAN } else { 1. };
             motion::stop_camera(&v);
             let next = v.session.camera.get().panned(dx * unit, dy * unit);
-            scene::board::set_camera(&v, next);
+            v.queue_camera(next);
         }
-        scene::board::update_port(&v);
-        follow(&v);
         glib::Propagation::Stop
     });
     let weak = Rc::downgrade(v);
