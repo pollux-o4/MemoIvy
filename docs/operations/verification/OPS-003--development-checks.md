@@ -14,6 +14,9 @@
   - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/quality/performance-probe/Cargo.toml`
   - `timeout 15s xvfb-run -a target/debug/lsm-performance-probe`
   - 검증 범위는 PERF-001을 따른다.
+- PERF-002 앱 품질 감사
+  - `cargo build --release --locked` 후 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/quality/perf_002_app_audit.py`.
+  - 프레임: `GSK_RENDERER=ngl LSM_CANVAS_PERF=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' cargo test --release --locked fmt_001_live -- --nocapture`. `cairo`로 반복한다.
 - UI-002 앱 메뉴 아이콘
   - 전제: 설치 완료, python3-gi, GTK3 introspection.
   - `dbus-run-session -- python3 tools/quality/ui_002_app_icon.py`
@@ -33,9 +36,9 @@
   - FMT-001과 같은 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/key_001_ui_smoke.py`.
   - 키보드 새 메모·서식 적용/해제·체크·검색·도움말·정상 닫기 저장을 확인한다.
 
-- CANVAS-001·CANVAS-002 메모 캔버스
+- CANVAS-001·CANVAS-002·CANVAS-003 메모 캔버스
   - 기본 GTK 테스트에 확대 보간·중간 재목표·모션 줄이기·위젯 유지·유휴 종료와 원본 동기화·연결·완료·되돌리기·방향키·저장 실패·창 종료 위젯 검증을 포함한다.
   - 브라우저 시각 검증: `gtk4-broadwayd -a 127.0.0.1 -p 8085 :5` 실행 후, 합성 XDG_DATA_HOME으로 `GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 cargo run --locked`. 브라우저에서 로컬 포트를 연다.
   - 네이티브 화면 캡처: `LSM_CANVAS_ARTIFACT_DIR=/tmp/lsm-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
-  - 실제 포인터로 선택·드래그·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.
+  - 실제 포인터로 선택·끌기·범위 선택·정렬·연결 점 끌기·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. 브라우저 에뮬레이션 뷰포트는 좌표가 어긋날 수 있으니 패널 기본 크기로 조작한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.
   - 실제 캔버스 조작: SAVE-001 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/canvas_001_ui_smoke.py`. `GTK_THEME=Adwaita:dark`로 반복한다. 범위·사용자 연구와의 구분은 UX-001을 따른다.
