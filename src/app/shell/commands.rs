@@ -11,7 +11,7 @@ pub(in crate::app) fn new_note(state: &State) {
     drop(s);
     lifecycle::wake(state);
 }
-pub(in crate::app) fn delete_note(state: &State, id: Uuid) {
+fn delete_note(state: &State, id: Uuid) {
     let mut s = state.borrow_mut();
     if s.notebook.request_delete(id) {
         if let Some(editor) = s.views.windows.get(&id) {

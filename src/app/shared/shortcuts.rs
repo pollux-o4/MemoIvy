@@ -173,18 +173,7 @@ pub(in crate::app) fn help(window: &ApplicationWindow) {
         .child(&body)
         .build();
     dialog.set_child(Some(&scroll));
-    let keys = gtk::EventControllerKey::new();
-    let weak = dialog.downgrade();
-    keys.connect_key_pressed(move |_, key, _, _| {
-        if key == gdk::Key::Escape {
-            if let Some(dialog) = weak.upgrade() {
-                dialog.close();
-            }
-            return glib::Propagation::Stop;
-        }
-        glib::Propagation::Proceed
-    });
-    dialog.add_controller(keys);
+    super::close_on_escape(&dialog);
     dialog.present();
     // 읽는 창이다. 닫기 버튼에 저절로 포커스 링을 띄우지 않는다.
     gtk::prelude::GtkWindowExt::set_focus(&dialog, None::<&gtk::Widget>);

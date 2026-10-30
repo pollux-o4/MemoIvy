@@ -175,19 +175,9 @@ fn connect_menu(v: &Rc<CanvasView>) -> bool {
     if v.session.selection.borrow().single().is_none() {
         return false;
     }
-    let mut stack = vec![v.widgets.inspector.clone().upcast::<gtk::Widget>()];
-    while let Some(widget) = stack.pop() {
-        if widget.widget_name() == "canvas-control-connect" {
-            if let Some(menu) = widget.downcast_ref::<gtk::MenuButton>() {
-                menu.popup();
-                return true;
-            }
-        }
-        let mut child = widget.first_child();
-        while let Some(next) = child {
-            child = next.next_sibling();
-            stack.push(next);
-        }
+    if let Some(menu) = v.widgets.connect_menu.borrow().as_ref() {
+        menu.popup();
+        return true;
     }
     false
 }

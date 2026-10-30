@@ -64,6 +64,7 @@ struct CanvasWidgets {
     hud: DrawingArea,
     panel: Revealer,
     inspector: GtkBox,
+    connect_menu: RefCell<Option<gtk::MenuButton>>,
     align_bar: Revealer,
     align_count: Label,
     distribute: [Button; 2],
@@ -192,6 +193,7 @@ pub(in crate::app) fn open(state: &State, app: &Application, selected: Option<Uu
             hud,
             panel: floating.panel,
             inspector: floating.inspector,
+            connect_menu: RefCell::new(None),
             align_bar: floating.align_bar,
             align_count: floating.align_count,
             distribute: floating.distribute,
@@ -430,15 +432,23 @@ impl CanvasView {
             .map(|p| port::rect_at(*p))
     }
 
-    fn selected_nodes(&self) -> Vec<layout::Node> {
+    fn selected_views<T>(&self, read: impl Fn(&NodeView) -> T) -> Vec<T> {
         let selection = self.session.selection.borrow();
         self.session
             .nodes
             .borrow()
             .iter()
-            .filter(|n| selection.contains(n.id))
-            .map(|n| (n.id, n.rect()))
+            .filter(|node| selection.contains(node.id))
+            .map(read)
             .collect()
+    }
+
+    fn selected_ids(&self) -> Vec<Uuid> {
+        self.selected_views(|node| node.id)
+    }
+
+    fn selected_nodes(&self) -> Vec<layout::Node> {
+        self.selected_views(|node| (node.id, node.rect()))
     }
 
     fn reveal(self: &Rc<Self>) {
@@ -504,14 +514,7 @@ impl CanvasView {
 
     /// 선택 전체의 완료를 한 번에 바꾼다. 하나라도 미완료면 모두 완료, 전부 완료면 모두 해제.
     fn toggle_selected_done(self: &Rc<Self>) {
-        let selected: Vec<_> = self
-            .session
-            .nodes
-            .borrow()
-            .iter()
-            .filter(|n| self.session.selection.borrow().contains(n.id))
-            .map(|n| (n.id, n.done, !n.next.is_empty()))
-            .collect();
+        let selected = self.selected_views(|n| (n.id, n.done, !n.next.is_empty()));
         if selected.is_empty() {
             return;
         }
@@ -532,14 +535,7 @@ impl CanvasView {
 
     /// NOTE-002: 복구할 수 없으므로 취소가 기본인 확인을 거친다.
     fn delete_selected(self: &Rc<Self>) {
-        let ids: Vec<Uuid> = self
-            .session
-            .nodes
-            .borrow()
-            .iter()
-            .filter(|n| self.session.selection.borrow().contains(n.id))
-            .map(|n| n.id)
-            .collect();
+        let ids = self.selected_ids();
         let Some(st) = self.state.upgrade() else {
             return;
         };

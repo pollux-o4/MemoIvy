@@ -129,18 +129,7 @@ pub(in crate::app) fn confirm_delete(
             dialog.close();
         }
     });
-    let keys = gtk::EventControllerKey::new();
-    let weak = dialog.downgrade();
-    keys.connect_key_pressed(move |_, key, _, _| {
-        if key == gtk::gdk::Key::Escape {
-            if let Some(dialog) = weak.upgrade() {
-                dialog.close();
-            }
-            return gtk::glib::Propagation::Stop;
-        }
-        gtk::glib::Propagation::Proceed
-    });
-    dialog.add_controller(keys);
+    super::close_on_escape(&dialog);
     dialog.present();
     cancel.grab_focus();
 }
@@ -221,17 +210,6 @@ pub(in crate::app) fn message(parent: &ApplicationWindow, title: &str, message: 
             dialog.close();
         }
     });
-    let keys = gtk::EventControllerKey::new();
-    let weak = dialog.downgrade();
-    keys.connect_key_pressed(move |_, key, _, _| {
-        if key == gtk::gdk::Key::Escape {
-            if let Some(dialog) = weak.upgrade() {
-                dialog.close();
-            }
-            return gtk::glib::Propagation::Stop;
-        }
-        gtk::glib::Propagation::Proceed
-    });
-    dialog.add_controller(keys);
+    super::close_on_escape(&dialog);
     dialog.present();
 }

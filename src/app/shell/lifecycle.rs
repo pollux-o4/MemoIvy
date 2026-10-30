@@ -274,7 +274,7 @@ pub(in crate::app) fn save_002_close_failure_and_idle_timer() {
     let created = pending.borrow().notebook.notes()[0].id();
     assert!(pending.borrow().views.windows[&created].view.is_editable());
     assert!(!pending.borrow().views.library.window.is_visible());
-    commands::delete_note(&pending, created);
+    commands::delete_notes(&pending, vec![created]);
     assert_eq!(close_library(&pending), glib::Propagation::Stop);
     until(|| !pending.borrow().timer_active);
     assert!(pending.borrow().notebook.notes().is_empty());

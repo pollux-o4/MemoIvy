@@ -49,7 +49,7 @@ fn find(widget: &Widget, matches: &impl Fn(&Widget) -> bool) -> Option<Widget> {
 }
 
 pub(super) fn named(widget: &Widget, name: &str) -> Option<Widget> {
-    find(widget, &|w| w.widget_name() == name)
+    crate::app::shared::find_named(widget, name)
 }
 
 pub(super) fn button_with_class(widget: &Widget, class: &str) -> Option<gtk::Button> {

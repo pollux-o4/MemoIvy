@@ -98,17 +98,7 @@ fn focused_control(v: &CanvasView) -> Option<String> {
 }
 
 fn restore_focus(widget: &gtk::Widget, name: &str) -> bool {
-    if widget.widget_name() == name {
-        return widget.grab_focus();
-    }
-    let mut child = widget.first_child();
-    while let Some(w) = child {
-        if restore_focus(&w, name) {
-            return true;
-        }
-        child = w.next_sibling();
-    }
-    false
+    crate::app::shared::find_named(widget, name).is_some_and(|widget| widget.grab_focus())
 }
 
 fn row_label(text: &str) -> Label {
@@ -145,6 +135,7 @@ fn dot(color: &str) -> GtkBox {
 }
 
 fn build(v: &Rc<CanvasView>, id: Uuid, nodes: &[NodeView]) {
+    v.widgets.connect_menu.borrow_mut().take();
     while let Some(child) = v.widgets.inspector.first_child() {
         v.widgets.inspector.remove(&child);
     }
@@ -340,6 +331,7 @@ fn connect_menu(v: &Rc<CanvasView>, note: &NodeView, nodes: &[NodeView]) -> gtk:
     }
     let menu = gtk::MenuButton::new();
     menu.set_widget_name("canvas-control-connect");
+    *v.widgets.connect_menu.borrow_mut() = Some(menu.clone());
     menu.add_css_class("panel-row");
     menu.set_tooltip_text(Some("다음 메모 연결 · Ctrl+L"));
     let contents = GtkBox::new(Orientation::Horizontal, 8);
