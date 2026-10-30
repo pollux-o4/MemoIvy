@@ -10,11 +10,23 @@ use std::{f64::consts::TAU, rc::Rc};
 use uuid::Uuid;
 
 type Rgba = (f64, f64, f64, f64);
-const ACCENT: (f64, f64, f64) = (0.04, 0.42, 1.);
-const GUIDE: (f64, f64, f64) = (1., 0.27, 0.42);
-const DONE: (f64, f64, f64) = (0.2, 0.68, 0.42);
 const GRID: f64 = 24.;
 const MIN_DOT_GAP: f64 = 16.;
+
+#[allow(deprecated)]
+fn token(v: &CanvasView, name: &str) -> (f64, f64, f64) {
+    let color = v
+        .widgets
+        .surface
+        .style_context()
+        .lookup_color(name)
+        .expect("installed application color token");
+    (
+        f64::from(color.red()),
+        f64::from(color.green()),
+        f64::from(color.blue()),
+    )
+}
 
 struct Palette {
     background: (f64, f64, f64),
@@ -154,6 +166,7 @@ fn draw_grid(v: &CanvasView, cr: &cairo::Context, width: f64, height: f64, dot: 
 }
 
 fn draw_edges(v: &CanvasView, cr: &cairo::Context, width: f64, height: f64, edge: Rgba) {
+    let accent = token(v, "lsm_accent");
     let camera = v.session.camera.get();
     let visible = Rect::new(
         camera.x,
@@ -193,7 +206,7 @@ fn draw_edges(v: &CanvasView, cr: &cairo::Context, width: f64, height: f64, edge
                 });
             let curve = if intro < 1. { head(p, intro) } else { p };
             let color: Rgba = if active.is_some() || highlighted {
-                (ACCENT.0, ACCENT.1, ACCENT.2, 0.95)
+                (accent.0, accent.1, accent.2, 0.95)
             } else {
                 edge
             };
@@ -208,36 +221,45 @@ fn draw_edges(v: &CanvasView, cr: &cairo::Context, width: f64, height: f64, edge
             if let Some((_, start)) = active {
                 let elapsed = start.elapsed().as_secs_f64();
                 let (t, alpha) = motion::pulse_sample(elapsed, animated);
-                comet(cr, p, t, alpha, animated);
+                comet(cr, p, t, alpha, animated, accent);
             }
         }
     }
 }
 
 /// 신호 머리와 잦아드는 꼬리. 모션 줄이기에서는 머리만 도착점에 표시한다.
-fn comet(cr: &cairo::Context, p: Curve, t: f64, alpha: f64, animated: bool) {
+fn comet(
+    cr: &cairo::Context,
+    p: Curve,
+    t: f64,
+    alpha: f64,
+    animated: bool,
+    accent: (f64, f64, f64),
+) {
     let tail = if animated { 9 } else { 0 };
     for i in (0..=tail).rev() {
         let back = (t - i as f64 * 0.018).max(0.);
         let (x, y) = point(p, back);
         let fall = 1. - i as f64 / 10.;
-        cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, alpha * 0.55 * fall * fall);
+        cr.set_source_rgba(accent.0, accent.1, accent.2, alpha * 0.55 * fall * fall);
         cr.arc(x, y, 1.5 + 2.5 * fall, 0., TAU);
         let _ = cr.fill();
     }
     let (x, y) = point(p, t);
-    cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, alpha * 0.16);
+    cr.set_source_rgba(accent.0, accent.1, accent.2, alpha * 0.16);
     cr.arc(x, y, 13., 0., TAU);
     let _ = cr.fill();
     cr.set_source_rgba(1., 1., 1., alpha);
     cr.arc(x, y, 5.5, 0., TAU);
     let _ = cr.fill();
-    cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, alpha);
+    cr.set_source_rgba(accent.0, accent.1, accent.2, alpha);
     cr.arc(x, y, 4., 0., TAU);
     let _ = cr.fill();
 }
 
 fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
+    let accent = token(v, "lsm_accent");
+    let guide_color = token(v, "lsm_danger");
     let camera = v.session.camera.get();
     let animated = v.widgets.window.settings().is_gtk_enable_animations();
     cr.save().expect("cairo save");
@@ -252,7 +274,7 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
         }
     }
     for guide in v.session.guides.borrow().iter() {
-        cr.set_source_rgba(GUIDE.0, GUIDE.1, GUIDE.2, 0.9);
+        cr.set_source_rgba(guide_color.0, guide_color.1, guide_color.2, 0.9);
         cr.set_line_width(hair);
         match *guide {
             Guide::Vertical { x, y0, y1 } => {
@@ -271,9 +293,9 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
             rect: Some(rect), ..
         } => {
             rounded(cr, *rect, 3. * hair);
-            cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, 0.1);
+            cr.set_source_rgba(accent.0, accent.1, accent.2, 0.1);
             let _ = cr.fill_preserve();
-            cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, 0.75);
+            cr.set_source_rgba(accent.0, accent.1, accent.2, 0.75);
             cr.set_line_width(hair);
             let _ = cr.stroke();
         }
@@ -283,7 +305,7 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
                     Some(goal) => path(start, goal),
                     None => free_curve((start[0] + CARD_WIDTH, start[1] + CARD_HEIGHT / 2.), *end),
                 };
-                cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, 0.95);
+                cr.set_source_rgba(accent.0, accent.1, accent.2, 0.95);
                 cr.set_line_width(2. * hair.max(0.75));
                 cr.set_line_cap(cairo::LineCap::Round);
                 cr.set_line_join(cairo::LineJoin::Round);
@@ -296,7 +318,7 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
             }
             if let Some(rect) = target.and_then(|id| v.shown_rect(id)) {
                 rounded(cr, grow(rect, 4.), 18.);
-                cr.set_source_rgba(ACCENT.0, ACCENT.1, ACCENT.2, 0.9);
+                cr.set_source_rgba(accent.0, accent.1, accent.2, 0.9);
                 cr.set_line_width(2.);
                 let _ = cr.stroke();
             }
@@ -307,6 +329,8 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
 }
 
 fn arrivals(v: &CanvasView, cr: &cairo::Context, id: Uuid, alpha: f64, elapsed: f64) {
+    let accent = token(v, "lsm_accent");
+    let done = token(v, "lsm_success");
     let nodes = v.session.nodes.borrow();
     let Some(node) = nodes.iter().find(|n| n.id == id) else {
         return;
@@ -316,9 +340,9 @@ fn arrivals(v: &CanvasView, cr: &cairo::Context, id: Uuid, alpha: f64, elapsed: 
         if let Some(rect) = v.shown_rect(*target) {
             rounded(cr, grow(rect, grown), 16. + grown);
             let (r, g, b) = if nodes.iter().any(|n| n.id == *target && n.done) {
-                DONE
+                done
             } else {
-                ACCENT
+                accent
             };
             cr.set_source_rgba(r, g, b, alpha * 0.85);
             cr.set_line_width(2.5);
