@@ -3,3 +3,4 @@ pub(super) mod board;
 pub(super) mod card;
 pub(super) mod card_root;
 pub(super) mod paint;
+pub(super) mod preview;

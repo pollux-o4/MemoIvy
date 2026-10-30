@@ -43,6 +43,7 @@ pub(in crate::app) struct AppState {
     pub refresh_at: Option<Instant>,
     pub closing: Closing,
     pub timer_active: bool,
+    pub delete_queue: Vec<Uuid>,
 }
 impl AppState {
     pub fn new(notebook: Notebook, library: LibraryView) -> State {
@@ -56,6 +57,7 @@ impl AppState {
             refresh_at: None,
             closing: Closing::None,
             timer_active: false,
+            delete_queue: Vec::new(),
         }))
     }
     pub fn save_failed(&mut self, error: &str) {

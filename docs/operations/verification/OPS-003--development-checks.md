@@ -31,6 +31,9 @@
   - `timeout 45s dbus-run-session -- xvfb-run -a python3 tools/behavior/fmt_001_live_ui_smoke.py`.
   - 실제 GTK 앱에서 선택·원문 복사·줄 경계 삭제·undo·체크 클릭/키보드·창 크기·안전한 링크 제스처·저장·재열기를 검증한다. 링크는 임시 URI 핸들러를 사용한다.
   - 화면 캡처는 기본 `/tmp/lsm-live-preview`, 변경은 LSM_ARTIFACT_DIR. 어두운 테마는 `GTK_THEME=Adwaita:dark`로 별도 실행한다.
+- FMT-003·CANVAS-004 링크 미리보기·목록 표식·보드 단축키
+  - FMT-001과 같은 환경에서 `timeout 90s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/behavior/fmt_003_canvas_004_ui_smoke.py`. `GTK_THEME=Adwaita:dark`로 반복한다.
+  - 줄 간격 클릭, 링크 머무르기·입력·Esc·키보드 열기·카드가 뜬 채 닫기, 삭제 취소·수락, 완료 단축키를 확인한다. Broadway는 팝오버 그림자 여백만큼 위치가 어긋나므로 위치 판단은 X11에서 한다.
 - FOCUS-001 입력 소유권
   - FMT-001과 같은 환경에서 `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/focus_001_ui_smoke.py`.
   - 마우스 창 전환 5회, 메모 저장 내용과 검색어 불변을 확인한다. 실제 Wayland·한글 IME 검증과 구분한다.

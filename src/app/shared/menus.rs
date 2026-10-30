@@ -59,7 +59,13 @@ pub(in crate::app) fn source_row(toggle: &gtk::CheckButton) {
 }
 
 /// NOTE-002 삭제 확인. 기본 동작은 취소이며 Esc·닫기도 취소다.
-fn confirm_delete(parent: &ApplicationWindow, state: &State, id: Uuid) {
+/// `name`을 주면 어떤 메모를 지우는지 함께 보여 준다.
+pub(in crate::app) fn confirm_delete(
+    parent: &ApplicationWindow,
+    state: &State,
+    ids: Vec<Uuid>,
+    name: Option<String>,
+) {
     let dialog = gtk::Window::builder()
         .transient_for(parent)
         .modal(true)
@@ -72,11 +78,28 @@ fn confirm_delete(parent: &ApplicationWindow, state: &State, id: Uuid) {
     dialog.set_titlebar(Some(&GtkBox::new(Orientation::Horizontal, 0)));
     let body = GtkBox::new(Orientation::Vertical, 6);
     body.add_css_class("confirm-body");
-    let title = Label::new(Some("이 메모를 삭제할까요?"));
+    let question = match ids.len() {
+        1 => "이 메모를 삭제할까요?".to_owned(),
+        count => format!("메모 {count}개를 삭제할까요?"),
+    };
+    let title = Label::new(Some(&question));
     title.set_xalign(0.);
     title.add_css_class("confirm-title");
     body.append(&title);
-    let detail = Label::new(Some("삭제한 메모는 복구할 수 없습니다."));
+    if let Some(name) = name {
+        let subject = Label::new(Some(&name));
+        subject.set_xalign(0.);
+        subject.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        subject.set_max_width_chars(36);
+        subject.add_css_class("confirm-subject");
+        body.append(&subject);
+    }
+    let detail = Label::new(Some(if ids.len() > 1 {
+        "삭제한 메모는 복구할 수 없습니다. 내용과 연결이 모두 사라져요."
+    } else {
+        "삭제한 메모는 복구할 수 없습니다."
+    }));
+    detail.set_wrap(true);
     detail.set_xalign(0.);
     detail.add_css_class("confirm-detail");
     body.append(&detail);
@@ -101,7 +124,7 @@ fn confirm_delete(parent: &ApplicationWindow, state: &State, id: Uuid) {
     let st = state.clone();
     let weak = dialog.downgrade();
     accept.connect_clicked(move |_| {
-        commands::delete_note(&st, id);
+        commands::delete_notes(&st, ids.clone());
         if let Some(dialog) = weak.upgrade() {
             dialog.close();
         }
@@ -137,7 +160,7 @@ fn popover_for(state: &State, _app: &Application, id: Uuid) -> gtk::Popover {
         if let Some(popover) = close.upgrade() {
             popover.popdown();
         }
-        confirm_delete(&parent, &st, id);
+        confirm_delete(&parent, &st, vec![id], None);
     });
     body.append(&delete);
     pop.set_child(Some(&body));

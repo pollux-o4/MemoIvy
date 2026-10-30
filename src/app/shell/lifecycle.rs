@@ -133,11 +133,18 @@ fn tick(state: &State) -> glib::ControlFlow {
             NotebookEvent::SaveFailed(error) | NotebookEvent::OperationFailed(error) => {
                 let mut s = state.borrow_mut();
                 s.views.library.add.set_sensitive(true);
+                // 남은 삭제는 멈춘다. 편집 잠금은 save_failed가 푼다.
+                s.delete_queue.clear();
                 s.save_failed(&error.to_string());
             }
         }
     }
     if received {
+        // 앞선 삭제의 저장까지 끝난 뒤에만 다음을 시작한다. 그래야 저장 실패에서 남은 삭제가 실제로 멈춘다.
+        // 닫기 판단보다 먼저 시작해 대기열이 남았는데 저장됨으로 보이지 않게 한다.
+        if matches!(state.borrow().notebook.status(), SaveStatus::Saved) {
+            commands::next_delete(state);
+        }
         crate::app::canvas::update_status(state);
     }
     let mut s = state.borrow_mut();

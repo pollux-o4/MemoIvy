@@ -1,7 +1,7 @@
 use crate::app::shell::state::State;
 use gtk::{gdk, glib, prelude::*, ApplicationWindow, Box as GtkBox, Label, Orientation};
 
-const HELP_MAX_HEIGHT: i32 = 640;
+const HELP_MAX_HEIGHT: i32 = 680;
 
 /// 안내 한 줄: 뜻, Markdown 입력 문법(서식만), 키.
 type Row = (&'static str, &'static str, &'static [&'static str]);
@@ -34,7 +34,7 @@ const NOTES: &[Section] = &[
     (
         "메모 편집",
         &[
-            ("체크 상태 변경", "", &["Ctrl+Enter"]),
+            ("체크 변경 · 링크 열기", "", &["Ctrl+Enter"]),
             ("원문 보기", "", &["Ctrl+Shift+M"]),
             ("실행 취소", "", &["Ctrl+Z"]),
             ("다시 실행", "", &["Ctrl+Shift+Z"]),
@@ -50,6 +50,9 @@ const CANVAS: &[Section] = &[
             ("선택에 더하기", "", &["Shift+누르기"]),
             ("모두 선택", "", &["Ctrl+A"]),
             ("선택 해제", "", &["Esc"]),
+            ("선택한 메모 삭제", "", &["Delete", "Backspace"]),
+            ("완료 표시", "", &["Ctrl+Enter"]),
+            ("다음 메모 연결", "", &["Ctrl+L"]),
             ("이동", "", &["방향키"]),
             ("크게 이동", "", &["Shift+방향키"]),
         ],

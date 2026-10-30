@@ -6,7 +6,7 @@ use crate::{
     persistence::{CanvasEdit, CanvasNode},
     presentation::markdown,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 use uuid::Uuid;
 
 pub(super) use super::model::placement::{CARD_HEIGHT, CARD_WIDTH};
@@ -26,6 +26,10 @@ pub(super) struct NodeView {
     pub next: Vec<Uuid>,
     pub done: bool,
     pub tasks: (usize, usize),
+    pub title_marker: Option<markdown::LineMarker>,
+    pub lines: Rc<Vec<markdown::PreviewLine>>,
+    /// 요약에 담지 않은 나머지 내용 줄 수.
+    pub remaining: usize,
 }
 
 impl NodeView {
@@ -47,7 +51,15 @@ pub(super) fn rect_at(position: [f64; 2]) -> Rect {
 
 /// 본문이 그대로면 요약을 다시 파싱하지 않는다. 입력마다 전체 메모를 읽지 않기 위한 캐시다.
 #[derive(Default)]
-pub(super) struct SummaryCache(HashMap<Uuid, (String, markdown::Summary, (usize, usize))>);
+pub(super) struct SummaryCache(HashMap<Uuid, CachedSummary>);
+
+#[derive(Default)]
+struct CachedSummary {
+    text: String,
+    summary: markdown::Summary,
+    tasks: (usize, usize),
+    lines: Rc<Vec<markdown::PreviewLine>>,
+}
 
 pub(super) fn nodes(state: &AppState, cache: &mut SummaryCache) -> Vec<NodeView> {
     cache
@@ -60,22 +72,27 @@ pub(super) fn nodes(state: &AppState, cache: &mut SummaryCache) -> Vec<NodeView>
         .enumerate()
         .map(|(index, note)| {
             let entry = cache.0.entry(note.id()).or_default();
-            if entry.0 != note.text() || entry.0.is_empty() {
-                *entry = (
-                    note.text().to_owned(),
-                    markdown::summary(note.text()),
-                    markdown::task_progress(note.text()),
-                );
+            if entry.text != note.text() || entry.text.is_empty() {
+                let summary = markdown::summary(note.text());
+                *entry = CachedSummary {
+                    text: note.text().to_owned(),
+                    lines: Rc::new(summary.lines.clone()),
+                    summary,
+                    tasks: markdown::task_progress(note.text()),
+                };
             }
             NodeView {
                 id: note.id(),
-                title: entry.1.title.clone(),
-                preview: entry.1.preview.clone(),
+                title: entry.summary.title.clone(),
+                preview: entry.summary.preview.clone(),
                 color: note.color().to_owned(),
                 position: note.canvas().position.unwrap_or_else(|| slot(index)),
                 next: note.canvas().next.clone(),
                 done: note.canvas().done,
-                tasks: entry.2,
+                tasks: entry.tasks,
+                title_marker: entry.summary.title_marker.clone(),
+                lines: entry.lines.clone(),
+                remaining: entry.summary.remaining,
             }
         })
         .collect()

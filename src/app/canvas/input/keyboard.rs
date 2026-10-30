@@ -77,8 +77,28 @@ fn handle(v: &Rc<CanvasView>, key: gdk::Key, modifiers: gdk::ModifierType) -> bo
     if key == gdk::Key::Escape {
         return escape(v);
     }
+    if !ctrl
+        && !alt
+        && !shift
+        && matches!(
+            key,
+            gdk::Key::Delete | gdk::Key::KP_Delete | gdk::Key::BackSpace
+        )
+    {
+        // 보드에 글자 입력 위젯이 없어 패널 버튼에 포커스가 있어도 선택을 지운다.
+        if v.session.selection.borrow().is_empty() {
+            return false;
+        }
+        v.delete_selected();
+        return true;
+    }
     if ctrl && !alt {
         return match key.to_lower() {
+            gdk::Key::Return | gdk::Key::KP_Enter => {
+                v.toggle_selected_done();
+                true
+            }
+            gdk::Key::l => connect_menu(v),
             gdk::Key::z if shift => {
                 v.redo();
                 true
@@ -148,6 +168,28 @@ fn handle(v: &Rc<CanvasView>, key: gdk::Key, modifiers: gdk::ModifierType) -> bo
         }
         _ => false,
     }
+}
+
+/// 선택한 메모의 다음 메모 목록을 연다. 후보가 없거나 다중 선택이면 하지 않는다.
+fn connect_menu(v: &Rc<CanvasView>) -> bool {
+    if v.session.selection.borrow().single().is_none() {
+        return false;
+    }
+    let mut stack = vec![v.widgets.inspector.clone().upcast::<gtk::Widget>()];
+    while let Some(widget) = stack.pop() {
+        if widget.widget_name() == "canvas-control-connect" {
+            if let Some(menu) = widget.downcast_ref::<gtk::MenuButton>() {
+                menu.popup();
+                return true;
+            }
+        }
+        let mut child = widget.first_child();
+        while let Some(next) = child {
+            child = next.next_sibling();
+            stack.push(next);
+        }
+    }
+    false
 }
 
 /// 화면 밖이라 숨겨진 카드까지 읽는 순서대로 포커스를 옮긴다. 끝에 닿으면 도구 막대로 넘긴다.

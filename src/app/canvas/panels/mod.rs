@@ -15,6 +15,7 @@ pub(super) struct Actions {
     pub zoom_out: Button,
     pub zoom_in: Button,
     pub fit: Button,
+    pub delete: Button,
     pub commands: Vec<(Button, Command)>,
     pub empty_add: Button,
 }
@@ -63,6 +64,7 @@ pub(super) fn build(state: &State) -> Floating {
             zoom_out: dock.zoom_out,
             zoom_in: dock.zoom_in,
             fit: dock.fit,
+            delete: align.delete,
             commands: align.commands,
             empty_add,
         },

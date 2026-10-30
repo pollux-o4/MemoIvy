@@ -3,7 +3,20 @@ popover.lsm-menu { background: transparent; }
 popover.lsm-menu > arrow { background: transparent; border: 0; min-width: 0; min-height: 0; }
 popover.lsm-menu > contents { padding: 0; border-radius: 12px; background: @lsm_raised; color: @lsm_text; border: 0; box-shadow: 0 0 0 1px @lsm_hairline, 0 4px 12px @lsm_shadow, 0 16px 40px @lsm_shadow; transform: none; opacity: 1; transition: transform 170ms cubic-bezier(.2, .9, .3, 1.08), opacity 110ms ease-out; }
 popover.lsm-menu.opening > contents { transform: scale(.96) translateY(-4px); opacity: 0; transition: none; }
+popover.lsm-menu.closing > contents { opacity: 0; transform: translateY(-2px); transition: transform 90ms ease-in, opacity 90ms ease-in; }
 .menu-body { padding: 5px; }
+/* 링크 미리보기: 목적지가 먼저 읽히는 작은 카드 */
+.link-body { padding: 12px 12px 10px; }
+.link-badge { min-width: 30px; min-height: 30px; border-radius: 8px; background: alpha(@lsm_accent, .14); color: @lsm_accent; font-weight: 700; }
+.link-title { font-weight: 600; }
+.link-address { color: @lsm_muted; font-size: .86em; }
+.link-warning { padding: 5px 8px; border-radius: 7px; background: @lsm_danger_hover; color: @lsm_danger; font-size: .84em; }
+.link-action { min-height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @lsm_text; font-size: .88em; font-weight: 500; transition: background-color 100ms ease-out, color 100ms ease-out; }
+.link-action:hover { background-color: @lsm_hover; }
+.link-action:active { background-color: @lsm_press; }
+.link-action.primary { background-color: @lsm_accent; color: @lsm_on_accent; }
+.link-action.primary:hover { background-color: shade(@lsm_accent, 1.08); }
+.link-action.confirmed { color: @lsm_success; }
 .menu-row { padding: 0 8px; min-height: 30px; border-radius: 7px; border: 0; background: transparent; background-image: none; box-shadow: none; color: @lsm_text; font-weight: 400; transition: background-color 90ms ease-out, color 90ms ease-out; }
 .menu-row:hover { background-color: @lsm_accent; color: @lsm_on_accent; }
 .menu-row:hover .menu-row.two-line { padding-top: 5px; padding-bottom: 5px; }
@@ -41,6 +54,7 @@ checkbutton.menu-row:checked:hover { background-color: @lsm_accent; color: @lsm_
 .lsm-confirm, .lsm-confirm > decoration { background: @lsm_raised; color: @lsm_text; border-radius: 14px; }
 .confirm-body { padding: 20px; }
 .confirm-title { font-weight: 600; font-size: 1.04em; }
+.confirm-subject { font-weight: 500; }
 .confirm-detail { color: @lsm_muted; font-size: .92em; }
 .confirm-cancel, .confirm-accept { min-height: 32px; border: 0; border-radius: 9px; background-image: none; box-shadow: none; font-weight: 500; transition: background-color 110ms ease-out; }
 .confirm-cancel { background-color: @lsm_keycap; color: @lsm_text; }

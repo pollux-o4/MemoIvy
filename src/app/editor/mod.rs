@@ -1,4 +1,6 @@
 mod formatting;
+mod link_preview;
+mod list_edit;
 pub(in crate::app) mod live_editor;
 use crate::app::{
     shared::{header, menu_for, COLORS},
@@ -46,12 +48,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     actions.append(&canvas);
     actions.append(&palette);
     let view = TextView::new();
-    view.set_wrap_mode(gtk::WrapMode::WordChar);
-    view.set_left_margin(20);
-    view.set_right_margin(20);
-    view.set_top_margin(18);
-    view.set_bottom_margin(20);
-    view.set_pixels_below_lines(4);
+    live_editor::configure(&view);
     view.buffer().set_text(note.text());
     let scroll = ScrolledWindow::builder()
         .vexpand(true)

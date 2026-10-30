@@ -141,6 +141,7 @@ pub(super) struct AlignBar {
     pub root: Revealer,
     pub count: Label,
     pub distribute: [Button; 2],
+    pub delete: Button,
     pub commands: Vec<(Button, Command)>,
 }
 
@@ -207,6 +208,10 @@ pub(super) fn align_bar() -> AlignBar {
         bar.append(&button);
         commands.push((button, command));
     }
+    bar.append(&divider());
+    let delete = icon_button(icons::TRASH, "선택한 메모 삭제 · Delete");
+    delete.add_css_class("danger");
+    bar.append(&delete);
     let root = Revealer::new();
     root.set_transition_type(gtk::RevealerTransitionType::Crossfade);
     root.set_transition_duration(160);
@@ -218,6 +223,7 @@ pub(super) fn align_bar() -> AlignBar {
         root,
         count,
         distribute: [across, down],
+        delete,
         commands,
     }
 }
@@ -231,6 +237,7 @@ pub(super) fn wire(v: &Rc<CanvasView>, actions: Actions) {
             }
         });
     };
+    on(&actions.delete, |v| v.delete_selected());
     on(&actions.undo, |v| v.undo());
     on(&actions.redo, |v| v.redo());
     on(&actions.zoom_out, |v| {

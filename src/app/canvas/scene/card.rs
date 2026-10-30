@@ -1,19 +1,22 @@
 use super::super::{input, port, port::NodeView, CanvasView};
-use super::card_root::CardRoot;
-use crate::presentation::icons;
+use super::{card_root::CardRoot, preview};
+use crate::presentation::{icons, markdown};
 use gtk::{prelude::*, Box as GtkBox, Button, Label, Orientation};
 use std::{cell::RefCell, rc::Rc};
 use uuid::Uuid;
 
 pub(in super::super) const PORT_SIZE: f64 = 18.;
+const PREVIEW_ROWS: i32 = 3;
 
 pub(in super::super) struct Card {
     pub root: CardRoot,
+    title_marker: Label,
     title: Label,
-    preview: Label,
+    preview: preview::Preview,
     links: GtkBox,
     link_count: Label,
     tasks: Label,
+    more: Label,
     done: Button,
     shown: RefCell<Option<NodeView>>,
 }
@@ -26,6 +29,8 @@ impl Card {
         root.set_size_request(port::CARD_WIDTH as i32, port::CARD_HEIGHT as i32);
 
         let head = GtkBox::new(Orientation::Horizontal, 6);
+        let title_marker = preview::marker_label();
+        head.append(&title_marker);
         let title = Label::new(None);
         title.set_xalign(0.);
         title.set_hexpand(true);
@@ -46,18 +51,10 @@ impl Card {
         head.append(&done);
         root.append(&head);
 
-        let preview = Label::new(None);
-        preview.set_xalign(0.);
-        preview.set_yalign(0.);
-        preview.set_wrap(true);
-        preview.set_wrap_mode(gtk::pango::WrapMode::WordChar);
-        preview.set_lines(3);
-        preview.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        preview.set_max_width_chars(1);
-        preview.set_hexpand(true);
-        preview.set_vexpand(true);
-        preview.add_css_class("card-preview");
-        root.append(&preview);
+        let preview = preview::Preview::new();
+        preview.root.set_hexpand(true);
+        preview.root.set_vexpand(true);
+        root.append(&preview.root);
 
         let meta = GtkBox::new(Orientation::Horizontal, 10);
         meta.add_css_class("card-meta");
@@ -68,16 +65,22 @@ impl Card {
         meta.append(&links);
         let tasks = Label::new(None);
         meta.append(&tasks);
+        let more = Label::new(None);
+        more.set_hexpand(true);
+        more.set_xalign(1.);
+        meta.append(&more);
         root.append(&meta);
 
         input::card::attach(v, &root, id);
         Self {
             root,
+            title_marker,
             title,
             preview,
             links,
             link_count,
             tasks,
+            more,
             done,
             shown: RefCell::new(None),
         }
@@ -95,7 +98,17 @@ impl Card {
         }
         self.root.add_css_class(&node.color);
         self.title.set_text(node.display_title());
-        self.preview.set_text(&node.preview);
+        preview::set_marker(&self.title_marker, node.title_marker.as_ref(), 0);
+        let (rows, unseen) = markdown::fit_preview(&node.lines, PREVIEW_ROWS);
+        self.preview.set(&rows);
+        let unseen = unseen + node.remaining;
+        self.more.set_visible(unseen > 0);
+        self.more.set_text(&format!("외 {unseen}줄"));
+        if matches!(node.title_marker, Some(markdown::LineMarker::Task(true))) {
+            self.title.add_css_class("line-done");
+        } else {
+            self.title.remove_css_class("line-done");
+        }
         if node.title.is_empty() {
             self.title.add_css_class("placeholder");
         } else {
@@ -139,4 +152,23 @@ impl Card {
 #[cfg(test)]
 pub(in super::super) fn title_text(card: &Card) -> String {
     card.title.text().to_string()
+}
+
+#[cfg(test)]
+pub(in super::super) fn more_text(card: &Card) -> Option<String> {
+    card.more.is_visible().then(|| card.more.text().to_string())
+}
+
+#[cfg(test)]
+pub(in super::super) fn title_marker_classes(card: &Card) -> Vec<String> {
+    card.title_marker
+        .css_classes()
+        .iter()
+        .map(|c| c.to_string())
+        .collect()
+}
+
+#[cfg(test)]
+pub(in super::super) fn preview_rows(card: &Card) -> Vec<(String, String)> {
+    card.preview.shown_rows()
 }

@@ -4,12 +4,18 @@
 .memo textview text selection { background-color: alpha(@lsm_accent, .28); }
 .memo .status { color: @note_muted; }
 .memo .lsm-action { color: @note_text; }
-.memo.yellow, .memo.yellow .md-checkbox, .header.yellow { background: @note_yellow; }
-.memo.pink, .memo.pink .md-checkbox, .header.pink { background: @note_pink; }
-.memo.blue, .memo.blue .md-checkbox, .header.blue { background: @note_blue; }
-.memo.green, .memo.green .md-checkbox, .header.green { background: @note_green; }
-.memo.purple, .memo.purple .md-checkbox, .header.purple { background: @note_purple; }
+.memo.yellow, .header.yellow { background: @note_yellow; }
+.memo.pink, .header.pink { background: @note_pink; }
+.memo.blue, .header.blue { background: @note_blue; }
+.memo.green, .header.green { background: @note_green; }
+.memo.purple, .header.purple { background: @note_purple; }
 .header.yellow, .header.pink, .header.blue, .header.green, .header.purple { color: @note_text; }
 .header.yellow .window-action, .header.pink .window-action, .header.blue .window-action, .header.green .window-action, .header.purple .window-action { color: alpha(@note_text, .68); }
-.md-checkbox { padding: 0; margin: 0; min-width: 18px; min-height: 18px; }
-.md-checkbox check { min-width: 14px; min-height: 14px; }
+/* 표식 칸: 체크박스·기호는 본문 첫 줄 가운데에 맞춘다 */
+.md-checkbox { padding: 0; margin: 0; min-width: 0; min-height: 0; background: transparent; border: 0; box-shadow: none; }
+.md-checkbox check { min-width: 13px; min-height: 13px; margin: 0; padding: 0; border-radius: 5px; border: 1.5px solid alpha(@note_text, .46); background: transparent; background-image: none; box-shadow: none; color: transparent; -gtk-icon-size: 11px; transition: background-color 120ms ease-out, border-color 120ms ease-out, transform 140ms cubic-bezier(.2, .9, .3, 1.3); }
+.md-checkbox:hover check { border-color: @lsm_accent; background-color: alpha(@lsm_accent, .12); }
+.md-checkbox:active check { transform: scale(.9); }
+.md-checkbox check:checked { background-color: @lsm_accent; border-color: @lsm_accent; color: @lsm_on_accent; }
+.md-checkbox:hover check:checked { background-color: shade(@lsm_accent, 1.08); }
+.md-bullet { color: @note_muted; font-weight: 700; }

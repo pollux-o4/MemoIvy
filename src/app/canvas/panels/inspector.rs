@@ -1,5 +1,5 @@
-use super::super::{port, port::NodeView, CanvasView};
-use crate::presentation::icons;
+use super::super::{port, port::NodeView, scene::preview::Preview, CanvasView};
+use crate::presentation::{icons, markdown};
 use gtk::{
     prelude::*, Box as GtkBox, Button, Label, Orientation, Revealer, ScrolledWindow, Switch,
 };
@@ -7,6 +7,7 @@ use std::{fmt::Write as _, rc::Rc};
 use uuid::Uuid;
 
 const PANEL_WIDTH: i32 = 252;
+const PREVIEW_ROWS: i32 = 5;
 
 pub(super) fn shell() -> (Revealer, GtkBox) {
     let inspector = GtkBox::new(Orientation::Vertical, 12);
@@ -77,6 +78,10 @@ fn fingerprint(id: Uuid, nodes: &[NodeView]) -> String {
             "|{}{}{}{}{}{:?}",
             node.id, node.title, node.preview, node.color, node.done, node.next
         );
+        // 체크 상태는 요약 글자에 드러나지 않는다.
+        if node.id == id {
+            let _ = write!(key, "{:?}{:?}", node.title_marker, node.lines);
+        }
     }
     key
 }
@@ -175,16 +180,11 @@ fn build(v: &Rc<CanvasView>, id: Uuid, nodes: &[NodeView]) {
     });
     head.append(&close);
     v.widgets.inspector.append(&head);
-    if !note.preview.is_empty() {
-        let preview = Label::new(Some(&note.preview));
-        preview.set_wrap(true);
-        preview.set_wrap_mode(gtk::pango::WrapMode::WordChar);
-        preview.set_lines(3);
-        preview.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        preview.set_max_width_chars(1);
-        preview.set_xalign(0.);
-        preview.add_css_class("panel-muted");
-        v.widgets.inspector.append(&preview);
+    if !note.lines.is_empty() {
+        let preview = Preview::new();
+        preview.root.add_css_class("panel-muted");
+        preview.set(&markdown::fit_preview(&note.lines, PREVIEW_ROWS).0);
+        v.widgets.inspector.append(&preview.root);
     }
 
     let group = GtkBox::new(Orientation::Vertical, 0);
@@ -200,6 +200,7 @@ fn build(v: &Rc<CanvasView>, id: Uuid, nodes: &[NodeView]) {
     let done_row = GtkBox::new(Orientation::Horizontal, 8);
     done_row.add_css_class("panel-row");
     done_row.add_css_class("static");
+    done_row.set_tooltip_text(Some("완료 상태 변경 · Ctrl+Enter"));
     done_row.append(&icons::image(icons::CHECK));
     done_row.append(&row_label("완료"));
     let done = Switch::new();
@@ -253,6 +254,20 @@ fn build(v: &Rc<CanvasView>, id: Uuid, nodes: &[NodeView]) {
         }
         v.widgets.inspector.append(&group);
     }
+
+    let group = GtkBox::new(Orientation::Vertical, 0);
+    group.add_css_class("panel-group");
+    let delete = action_row(icons::TRASH, "삭제…", "canvas-control-delete");
+    delete.add_css_class("destructive");
+    delete.set_tooltip_text(Some("이 메모 삭제 · Delete"));
+    let weak = Rc::downgrade(v);
+    delete.connect_clicked(move |_| {
+        if let Some(v) = weak.upgrade() {
+            v.delete_selected();
+        }
+    });
+    group.append(&delete);
+    v.widgets.inspector.append(&group);
 }
 
 fn visit_button(v: &Rc<CanvasView>, target: &NodeView) -> Button {
@@ -326,6 +341,7 @@ fn connect_menu(v: &Rc<CanvasView>, note: &NodeView, nodes: &[NodeView]) -> gtk:
     let menu = gtk::MenuButton::new();
     menu.set_widget_name("canvas-control-connect");
     menu.add_css_class("panel-row");
+    menu.set_tooltip_text(Some("다음 메모 연결 · Ctrl+L"));
     let contents = GtkBox::new(Orientation::Horizontal, 8);
     contents.append(&icons::image(icons::ADD));
     contents.append(&row_label("연결 추가"));

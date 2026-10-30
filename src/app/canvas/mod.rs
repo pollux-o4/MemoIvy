@@ -502,6 +502,60 @@ impl CanvasView {
         }
     }
 
+    /// 선택 전체의 완료를 한 번에 바꾼다. 하나라도 미완료면 모두 완료, 전부 완료면 모두 해제.
+    fn toggle_selected_done(self: &Rc<Self>) {
+        let selected: Vec<_> = self
+            .session
+            .nodes
+            .borrow()
+            .iter()
+            .filter(|n| self.session.selection.borrow().contains(n.id))
+            .map(|n| (n.id, n.done, !n.next.is_empty()))
+            .collect();
+        if selected.is_empty() {
+            return;
+        }
+        let done = selected.iter().any(|(_, done, _)| !done);
+        self.mutate(|notes| {
+            for (id, _, _) in &selected {
+                port::set_done(notes, *id, done);
+            }
+        });
+        if done {
+            for (id, was_done, linked) in selected {
+                if linked && !was_done {
+                    self.signal(id);
+                }
+            }
+        }
+    }
+
+    /// NOTE-002: 복구할 수 없으므로 취소가 기본인 확인을 거친다.
+    fn delete_selected(self: &Rc<Self>) {
+        let ids: Vec<Uuid> = self
+            .session
+            .nodes
+            .borrow()
+            .iter()
+            .filter(|n| self.session.selection.borrow().contains(n.id))
+            .map(|n| n.id)
+            .collect();
+        let Some(st) = self.state.upgrade() else {
+            return;
+        };
+        if ids.is_empty()
+            || !self.session.interaction.borrow().is_idle()
+            || st.borrow().notebook.busy()
+        {
+            return;
+        }
+        let title = match ids.as_slice() {
+            [id] => self.node(*id).map(|n| n.display_title().to_owned()),
+            _ => None,
+        };
+        crate::app::shared::confirm_delete(&self.widgets.window, &st, ids, title);
+    }
+
     fn connect_nodes(self: &Rc<Self>, from: Uuid, to: Uuid) {
         if !port::can_connect(&self.session.nodes.borrow(), from, to) {
             return;

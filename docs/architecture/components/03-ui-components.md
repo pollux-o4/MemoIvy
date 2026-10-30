@@ -4,7 +4,7 @@
 flowchart TB
     run["앱 조립 · run"] --> shell["shell · commands / views / lifecycle / state"]
     shell --> library["library · 목록·cards"]
-    shell --> editor["editor · 편집·live_editor·formatting"]
+    shell --> editor["editor · 편집·live_editor·link_preview·formatting"]
     shell --> canvas["canvas · CanvasView"]
     library -->|명령| shell
     editor -->|명령| shell

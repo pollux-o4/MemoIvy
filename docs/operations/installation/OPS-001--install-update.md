@@ -1,9 +1,9 @@
 # OPS-001 · 설치·업데이트
 
-- 전제: Ubuntu, Rust, GTK 4.6 이상 개발 패키지, SVG 로더, C 컴파일러.
+- 전제: Ubuntu, mise, GTK 4.10 이상.
   - Rust 선택은 `.mise.toml`, 크레이트·GTK 기능은 Cargo manifest가 원본이다.
-- 시스템 의존성
-  - `sudo apt install build-essential pkg-config libgtk-4-dev librsvg2-common zenity`
+- 환경 준비: `mise bootstrap` — 선언된 apt 패키지와 Rust를 설치한다. apt 패키지 설치에는 sudo 권한이 필요하다.
+  - GTK 버전은 배포판 패키지를 따른다. `pkg-config --modversion gtk4`로 확인한다.
 - 실행
   - 개발 실행: `mise run dev`.
   - 빌드: `mise run build` (`cargo build --release --locked`).

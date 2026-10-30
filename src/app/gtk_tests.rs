@@ -9,5 +9,9 @@ fn fmt_001_live_editor_preserves_source_selection_undo_and_preedit() {
     super::shell::lifecycle::save_002_close_failure_and_idle_timer();
     super::shared::focus::tests::focus_001_releases_and_restores_input_owner();
     super::canvas::tests::canvas_001_widget_flow_and_recovery();
+    super::canvas::tests::canvas_004_markers_shortcuts_and_delete();
+    super::editor::live_editor::tests::fmt_003_list_layout_and_hit_testing();
+    super::editor::live_editor::tests::fmt_003_typing_flow();
+    super::editor::live_editor::tests::fmt_003_link_preview_lifecycle();
     super::editor::live_editor::tests::fmt_001_live_editor_preserves_source_selection_undo_and_preedit();
 }
