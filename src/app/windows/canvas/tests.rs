@@ -6,6 +6,7 @@ use crate::{
         store::{Note, Store},
     },
 };
+use model::layout::Align;
 use std::collections::HashMap;
 
 fn drain() {
@@ -15,17 +16,36 @@ fn drain() {
     }
 }
 
-fn button(root: &GtkBox, label: &str) -> Button {
-    let mut child = root.first_child();
-    while let Some(widget) = child {
-        if let Ok(b) = widget.clone().downcast::<Button>() {
-            if b.label().as_deref() == Some(label) {
-                return b;
-            }
-        }
-        child = widget.next_sibling();
+fn settle(ms: u64) {
+    for _ in 0..ms / 5 {
+        drain();
+        std::thread::sleep(std::time::Duration::from_millis(5));
     }
-    panic!("missing control: {label}");
+}
+
+fn named(widget: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
+    if widget.widget_name() == name {
+        return Some(widget.clone());
+    }
+    let mut child = widget.first_child();
+    while let Some(w) = child {
+        if let Some(found) = named(&w, name) {
+            return Some(found);
+        }
+        child = w.next_sibling();
+    }
+    None
+}
+
+fn connect_through_menu(v: &Rc<CanvasView>, target: Uuid) {
+    let menu = named(v.inspector.upcast_ref(), "canvas-control-connect")
+        .and_downcast::<gtk::MenuButton>()
+        .expect("connection menu");
+    let popover = menu.popover().expect("connection list");
+    let row = named(popover.upcast_ref(), &format!("canvas-connect-{target}"))
+        .and_downcast::<Button>()
+        .expect("candidate row");
+    row.emit_clicked();
 }
 
 fn capture(v: &Rc<CanvasView>) {
@@ -36,18 +56,14 @@ fn capture(v: &Rc<CanvasView>) {
     let settings = v.window.settings();
     let animated = settings.is_gtk_enable_animations();
     let dark = settings.is_gtk_application_prefer_dark_theme();
-    let zoom = v.zoom.get();
     settings.set_gtk_enable_animations(false);
     v.fit();
     for (name, is_dark) in [("light", false), ("dark", true)] {
         settings.set_gtk_application_prefer_dark_theme(is_dark);
-        if let Some(id) = v.selected.get() {
+        if let Some(id) = v.selection.borrow().single() {
             v.signal(id);
         }
-        for _ in 0..20 {
-            drain();
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
+        settle(100);
         let paintable = gtk::WidgetPaintable::new(Some(&v.window));
         let snapshot = gtk::Snapshot::new();
         paintable.snapshot(&snapshot, v.window.width() as f64, v.window.height() as f64);
@@ -57,9 +73,8 @@ fn capture(v: &Rc<CanvasView>) {
             .save_to_png(std::path::Path::new(&dir).join(format!("canvas-{name}.png")))
             .unwrap();
     }
-    v.pulse.set(None);
+    v.motion.borrow_mut().pulse = None;
     settings.set_gtk_application_prefer_dark_theme(dark);
-    super::motion::transition(v, [zoom, 0., 0.]);
     settings.set_gtk_enable_animations(animated);
 }
 
@@ -75,10 +90,10 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     let library = ApplicationWindow::new(&app);
     let mut notes = vec![Note::new(), Note::new(), Note::new()];
     for (i, n) in notes.iter_mut().enumerate() {
-        n.text = format!("메모 {i}\n한글과 긴 제목도 보존합니다");
-        n.canvas.position = Some([64. + i as f64 * 320., 64.]);
+        n.text = format!("# 메모 {i}\n한글과 긴 제목도 보존합니다");
+        n.canvas.position = Some([64. + i as f64 * 320., 64. + i as f64 * 7.]);
     }
-    let (a, b) = (notes[0].id, notes[1].id);
+    let (a, b, c) = (notes[0].id, notes[1].id, notes[2].id);
     let state = Rc::new(RefCell::new(AppState {
         store: Store {
             path: path.clone(),
@@ -104,17 +119,30 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     open(&state, &app, Some(a));
     drain();
     let v = state.borrow().canvas.clone().unwrap();
-    v.window.hide();
+    v.window.set_visible(false);
     gtk::prelude::WidgetExt::unrealize(&v.window);
     v.window.set_default_size(820, 620);
     v.window.present();
     for _ in 0..200 {
         drain();
-        if (760..=840).contains(&v.window.width()) {
+        if (760..=840).contains(&v.window.width()) && v.surface.width() > 0 {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
+    settle(50);
+    // 화면 밖 카드는 측정에서 빠지고 다시 들어오면 나타난다.
+    scene::board::set_camera(
+        &v,
+        Camera {
+            x: 5000.,
+            y: 5000.,
+            zoom: 1.,
+        },
+    );
+    scene::board::set_camera(&v, Camera::default());
+    assert!(v.cards.borrow()[&a].root.get_visible());
+    settle(50);
     assert!(
         (760..=840).contains(&v.window.width()),
         "small window must not be forced wide: {}",
@@ -122,29 +150,51 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     );
     assert_eq!(v.summary.text(), "메모 3 · 연결 0");
     assert!(
+        scene::card::title_text(&v.cards.borrow()[&a]) == "메모 0",
+        "cards hide markdown markers"
+    );
+    for card in v.cards.borrow().values() {
+        let Some(box_size) = card.root.compute_bounds(&v.world) else {
+            continue;
+        };
+        assert_eq!(f64::from(box_size.height()), port::CARD_HEIGHT);
+        assert_eq!(f64::from(box_size.width()), port::CARD_WIDTH);
+    }
+    assert!(
         v.inspector.width() < 350,
         "selection must not consume the board: {}",
         v.inspector.width()
     );
+
+    // 확대 전환은 기존 위젯을 유지하고 저장을 만들지 않는다.
     super::motion::tests::canvas_002_viewport(&v);
-    button(&v.inspector, "연결 추가").emit_clicked();
+    scene::board::set_camera(&v, Camera::default());
+
+    connect_through_menu(&v, b);
     assert_eq!(state.borrow().store.notes[0].canvas.next, vec![b]);
+    let before_noop = v.history.borrow().len();
+    v.connect_nodes(a, b);
+    v.connect_nodes(a, a);
+    assert_eq!(
+        v.history.borrow().len(),
+        before_noop,
+        "rejected links leave no undo step"
+    );
     capture(&v);
-    let mut child = v.inspector.first_child();
-    let checkbox = loop {
-        let w = child.expect("completion control");
-        if let Ok(check) = w.clone().downcast::<gtk::CheckButton>() {
-            break check;
-        }
-        child = w.next_sibling();
-    };
-    checkbox.grab_focus();
-    checkbox.set_active(true);
+
+    // 완료는 대상에 전파되지 않고, 포커스를 유지하며, 되돌릴 수 있다.
+    let done = named(v.inspector.upcast_ref(), "canvas-control-done")
+        .and_downcast::<gtk::Switch>()
+        .expect("completion control");
+    done.grab_focus();
+    done.set_active(true);
+    settle(10);
     assert_eq!(
         gtk::prelude::GtkWindowExt::focus(&v.window)
             .unwrap()
             .widget_name(),
-        "canvas-control-done"
+        "canvas-control-done",
+        "rebuilding the panel keeps keyboard focus"
     );
     assert!(state.borrow().store.notes[0].canvas.done);
     assert!(
@@ -152,48 +202,117 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
         "signal never completes the target"
     );
     state.borrow_mut().store.notes[0].text = "원본 수정 📝".into();
-    v.undo.emit_clicked();
+    v.undo();
     assert!(!state.borrow().store.notes[0].canvas.done);
     assert_eq!(
         state.borrow().store.notes[0].text,
         "원본 수정 📝",
         "canvas undo preserves source edits"
     );
+    v.redo();
+    assert!(state.borrow().store.notes[0].canvas.done, "redo reapplies");
+    v.undo();
     assert_eq!(state.borrow().store.notes[0].canvas.next, vec![b]);
-    let card = v.fixed.first_child().unwrap();
-    let handle = card.first_child().unwrap();
-    handle.grab_focus();
-    let controllers = handle.observe_controllers();
-    let keys = (0..controllers.n_items())
-        .find_map(|i| {
+
+    // 다중 선택 정렬: 배치만 바꾸고 한 번의 되돌리기로 복구한다.
+    let settings = v.window.settings();
+    let animated = settings.is_gtk_enable_animations();
+    settings.set_gtk_enable_animations(false);
+    let widget = v.cards.borrow()[&a].root.clone();
+    v.selection.borrow_mut().set([a, b, c]);
+    v.sync_selection();
+    assert!(v.align_bar.reveals_child());
+    assert!(
+        !v.panel.reveals_child(),
+        "multi-selection hides the single-note panel"
+    );
+    assert_eq!(v.align_count.text(), "3개 선택");
+    assert!(v.distribute.iter().all(|button| button.is_sensitive()));
+    input::keyboard::run(&v, input::keyboard::Command::Align(Align::Top));
+    {
+        let s = state.borrow();
+        assert!(s
+            .store
+            .notes
+            .iter()
+            .all(|n| n.canvas.position.unwrap()[1] == 64.));
+    }
+    assert_eq!(
+        v.cards.borrow()[&a].root,
+        widget,
+        "layout changes keep the same widget"
+    );
+    v.undo();
+    assert_eq!(
+        state.borrow().store.notes[2].canvas.position,
+        Some([704., 78.])
+    );
+    settings.set_gtk_enable_animations(animated);
+
+    // 방향키 이동은 선택 전체에 적용되고 스프링 중에도 목표는 즉시 저장된다.
+    v.selection.borrow_mut().set([a]);
+    v.sync_selection();
+    v.cards.borrow()[&a].root.grab_focus();
+    let controllers = v.window.observe_controllers();
+    let stopped = (0..controllers.n_items())
+        .filter_map(|i| {
             controllers
                 .item(i)
                 .and_downcast::<gtk::EventControllerKey>()
         })
-        .unwrap();
-    let stopped: bool = keys.emit_by_name(
-        "key-pressed",
-        &[
-            &gtk::gdk::Key::Right,
-            &0u32,
-            &gtk::gdk::ModifierType::empty(),
-        ],
-    );
+        .filter(|c| c.propagation_phase() == gtk::PropagationPhase::Capture)
+        .any(|keys| {
+            keys.emit_by_name::<bool>(
+                "key-pressed",
+                &[
+                    &gtk::gdk::Key::Right,
+                    &0u32,
+                    &gtk::gdk::ModifierType::empty(),
+                ],
+            )
+        });
     assert!(stopped);
     assert_eq!(
         state.borrow().store.notes[0].canvas.position,
         Some([80., 64.])
     );
-    drain();
-    assert!(
-        gtk::prelude::GtkWindowExt::focus(&v.window).is_some(),
-        "rebuilding cards retains keyboard focus"
+    settle(20);
+    assert_eq!(
+        gtk::prelude::GtkWindowExt::focus(&v.window).map(|w| w.widget_name().to_string()),
+        Some(a.to_string()),
+        "the card itself holds keyboard focus while it moves"
     );
-    v.undo.emit_clicked();
+    let stopped = (0..controllers.n_items())
+        .filter_map(|i| {
+            controllers
+                .item(i)
+                .and_downcast::<gtk::EventControllerKey>()
+        })
+        .filter(|c| c.propagation_phase() == gtk::PropagationPhase::Capture)
+        .any(|keys| {
+            keys.emit_by_name::<bool>(
+                "key-pressed",
+                &[&gtk::gdk::Key::Tab, &0u32, &gtk::gdk::ModifierType::empty()],
+            )
+        });
+    assert!(stopped, "Tab stays on the board while cards remain");
+    settle(20);
+    assert_eq!(
+        v.selection.borrow().single(),
+        Some(b),
+        "Tab moves focus and selection to the next card"
+    );
+    v.cards.borrow()[&a].root.grab_focus();
+    settle(20);
+    v.undo();
     assert_eq!(
         state.borrow().store.notes[0].canvas.position,
         Some([64., 64.])
     );
+    settings.set_gtk_enable_animations(false);
+    settle(20);
+    settings.set_gtk_enable_animations(animated);
+
     controller::dispatch(&mut state.borrow_mut());
     for _ in 0..200 {
         if let Some((_, result)) = state.borrow_mut().queue.poll() {
@@ -205,14 +324,18 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     let loaded = Store::load(path).unwrap();
     assert_eq!(loaded.notes.len(), 3);
     assert_eq!(loaded.notes[0].canvas.next, vec![b]);
+
+    // 삭제된 메모는 되살리지 않는다.
     crate::persistence::canvas::remove(&mut state.borrow_mut().store.notes, b);
     v.render();
-    v.undo.emit_clicked();
+    assert_eq!(v.cards.borrow().len(), 2);
+    v.undo();
     assert_eq!(state.borrow().store.notes.len(), 2);
     assert!(
         state.borrow().store.notes[0].canvas.next.is_empty(),
         "undo must not restore deleted targets"
     );
+
     let failed_path = dir.path().join("blocked");
     std::fs::create_dir(&failed_path).unwrap();
     state.borrow_mut().queue = SaveQueue::new(failed_path);
@@ -229,10 +352,16 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     assert!(v.retry.is_visible());
     assert!(v.status.text().contains("실패"));
     assert_eq!(state.borrow().store.notes[0].text, "원본 수정 📝");
+
     state.borrow_mut().store.notes.clear();
     v.render();
     assert_eq!(v.summary.text(), "메모 0 · 연결 0");
-    assert!(v.fixed.first_child().is_none());
+    assert!(v.empty.is_visible());
+    assert!(v.cards.borrow().is_empty());
+    assert_eq!(
+        v.world.first_child().as_ref(),
+        Some(v.port_handle.upcast_ref())
+    );
     v.window.close();
     assert!(!v.window.is_visible());
     v.destroy();
