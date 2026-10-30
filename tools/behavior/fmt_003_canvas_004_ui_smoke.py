@@ -1,3 +1,4 @@
+from lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, OPEN_CANVAS)
 # 검증: FMT-003, CANVAS-004. 합성 데이터로 링크 미리보기·목록 표식·캔버스 단축키를 실제 입력으로 확인한다.
 import json
 import os
@@ -8,9 +9,6 @@ import time
 import uuid
 from PIL import ImageChops, ImageGrab
 
-x = os.environ.get('LSM_XDOTOOL', 'xdotool')
-clip = os.environ.get('LSM_XCLIP', 'xclip')
-binary = os.environ.get('LSM_BINARY', 'target/debug/linux-sticky-memo')
 artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-markers'))
 artifacts.mkdir(parents=True, exist_ok=True)
 linked = '# 링크 메모\n[예시 이름](https://example.com/path) 뒤\n\n- [ ] 할 일\n- 기호\n1. 번호\n**굵게** 끝\n'
@@ -18,33 +16,12 @@ ids = [str(uuid.uuid4()) for _ in range(5)]
 texts = [linked, '캔버스 A\n- [ ] 첫째\n- [x] 둘째', '캔버스 B\n1. 번호', '캔버스 C', '캔버스 D']
 
 
-def call(*args):
-    return sp.check_output([x, *args], text=True, timeout=5).strip()
-
-
-def wait_window(title):
-    for _ in range(120):
-        result = sp.run([x, 'search', '--onlyvisible', '--name', title], capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.splitlines()[-1]
-        time.sleep(.05)
-    raise AssertionError('window missing: ' + title)
-
-
-def key(*keys):
-    call('key', '--clearmodifiers', *keys)
-    time.sleep(.15)
-
-
-def move(window, px, py):
-    call('mousemove', '--window', window, str(px), str(py))
-
-
-def click(window, px, py):
-    move(window, px, py)
-    call('click', '1')
-    time.sleep(.2)
-
+LINKED_NOTE = (150, 190)
+BULLET_BODY = (49, 182)
+LINK_START = (50, 114)
+LINK_TEXT = (60, 114)
+OUTSIDE_PREVIEW = (400, 340)
+PREVIEW_OPEN = (122, 193)
 
 def grab():
     return ImageGrab.grab(xdisplay=os.environ['DISPLAY'])
@@ -55,26 +32,16 @@ def changed(before, box):
 
 
 with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
-    env = dict(os.environ, GDK_BACKEND='x11', GDK_DEBUG='no-portals', GSK_RENDERER='cairo', GTK_USE_PORTAL='0',
-               GIO_USE_VFS='local', GTK_A11Y='none', XDG_CURRENT_DESKTOP='Openbox', XDG_DATA_HOME=tmp, XDG_CONFIG_HOME=tmp + '/config')
-    path = Path(tmp) / 'linux-sticky-memo/notes.json'
-    path.parent.mkdir()
-    path.write_text(json.dumps([
+    env = environment(tmp)
+    path = write_notes(tmp, [
         dict(id=id, text=text, color='yellow', modified=1, canvas=dict(position=[64 + 300 * i, 64], next=[], done=False))
         for i, (id, text) in enumerate(zip(ids, texts))
-    ]))
+    ])
     # 임시 URI 핸들러가 외부 브라우저 대신 주소를 기록한다.
-    apps = Path(tmp) / 'applications'
-    apps.mkdir()
-    capture = Path(tmp) / 'capture_uri.py'
-    uri_log = Path(tmp) / 'uri.txt'
-    capture.write_text('import sys\nfrom pathlib import Path\nPath(' + repr(str(uri_log)) + ').write_text(sys.argv[1])\n')
-    (apps / 'lsm-uri-test.desktop').write_text('[Desktop Entry]\nType=Application\nName=LSM URI test\nExec=/usr/bin/python3 ' + str(capture) + ' %u\nMimeType=x-scheme-handler/https;\n')
-    Path(env['XDG_CONFIG_HOME']).mkdir()
-    # 화면 비교가 커서 깜박임에 흔들리지 않게 한다.
-    (Path(env['XDG_CONFIG_HOME']) / 'gtk-4.0').mkdir()
-    (Path(env['XDG_CONFIG_HOME']) / 'gtk-4.0/settings.ini').write_text('[Settings]\ngtk-cursor-blink=false\n')
-    (Path(env['XDG_CONFIG_HOME']) / 'mimeapps.list').write_text('[Default Applications]\nx-scheme-handler/https=lsm-uri-test.desktop;\n')
+    uri_log = uri_handler(tmp, env)
+    config = Path(env['XDG_CONFIG_HOME']) / 'gtk-4.0'
+    config.mkdir()
+    (config / 'settings.ini').write_text('[Settings]\ngtk-cursor-blink=false\n')
     log = open(artifacts / 'markers-app.log', 'w')
     wm = sp.Popen([os.environ.get('LSM_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
     app = None
@@ -84,9 +51,9 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         library = wait_window('^스티키 메모$')
         call('windowmove', library, '0', '0')
         call('windowfocus', library)
-        move(library, 150, 190)
+        move(library, *LINKED_NOTE)
         time.sleep(.2)
-        click(library, 150, 190)
+        click(library, *LINKED_NOTE)
         note = wait_window('^메모$')
         call('windowmove', note, '500', '60')
         call('windowsize', note, '500', '420')
@@ -126,7 +93,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         key('ctrl+End')
         # 표식이 있는 항목의 본문 맨 앞을 누르고 입력해도 목록 문법 앞에 들어가지 않는다.
         # 왼쪽 여백 20 + 표식 칸 24 + 창 그림자 4 → 본문 시작 x≈48. y≈182가 '- 기호' 줄이다.
-        click(note, 49, 182)
+        click(note, *BULLET_BODY)
         time.sleep(.2)
         call('type', '--delay', '20', 'Q')
         time.sleep(.4)
@@ -141,7 +108,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         box = (500, 150, 1000, 400)
         # 제목 줄(약 84) 다음 줄이 링크다. 링크 위치는 왼쪽 여백 바로 뒤다.
         before = grab()
-        move(note, 50, 114)
+        move(note, *LINK_START)
         time.sleep(.1)
         assert not changed(before, box), 'card must wait for hover intent'
         time.sleep(.6)
@@ -159,7 +126,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         time.sleep(.6)
         assert not changed(before, box), 'card stays away until the pointer moves'
         # Esc는 포인터를 옮기지 않고 닫는다.
-        move(note, 60, 114)
+        move(note, *LINK_TEXT)
         time.sleep(.7)
         shown = grab()
         key('Escape')
@@ -181,22 +148,22 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         time.sleep(.3)
         key('ctrl+End')
         # Esc로 닫은 링크는 포인터가 벗어났다 와야 다시 뜬다.
-        move(note, 400, 340)
+        move(note, *OUTSIDE_PREVIEW)
         time.sleep(.5)
-        move(note, 50, 114)
+        move(note, *LINK_START)
         time.sleep(.8)
         # 사람처럼 카드 위로 옮긴 뒤 누른다. 카드가 포인터를 받아 유지되는지도 함께 본다.
-        move(note, 122, 193)
+        move(note, *PREVIEW_OPEN)
         time.sleep(.5)
-        click(note, 122, 193)
+        click(note, *PREVIEW_OPEN)
         time.sleep(.2)
         copied = sp.check_output([clip, '-selection', 'clipboard', '-o'], text=True, timeout=5)
         assert copied == 'https://example.com/path', 'copy from the card: ' + copied
-        move(note, 400, 340)
+        move(note, *OUTSIDE_PREVIEW)
         time.sleep(.5)
         # 카드가 떠 있는 채로 창을 닫아도 앱이 멈추지 않는다.
         before = grab()
-        move(note, 60, 114)
+        move(note, *LINK_TEXT)
         time.sleep(.7)
         assert changed(before, box), 'card is up before closing'
         key('ctrl+w')
@@ -206,7 +173,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
 
         # 캔버스
         call('windowfocus', library)
-        click(library, 300, 24)
+        click(library, *OPEN_CANVAS)
         canvas = wait_window('^메모 캔버스$')
         call('windowmove', canvas, '0', '0')
         call('windowsize', canvas, '1380', '760')

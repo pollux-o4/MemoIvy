@@ -1,3 +1,4 @@
+from lsm_driver import (call, wait_window, key, clip, binary, environment, write_notes)
 # 검증: KEY-001, FMT-002, SAVE-001. 합성 메모만 사용하며 xdotool·xclip·Pillow가 필요하다.
 import json
 import os
@@ -7,36 +8,9 @@ import tempfile
 import time
 import uuid
 
-x = os.environ.get('LSM_XDOTOOL', 'xdotool')
-clip = os.environ.get('LSM_XCLIP', 'xclip')
-binary = os.environ.get('LSM_BINARY', 'target/debug/linux-sticky-memo')
 artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-keyboard'))
 artifacts.mkdir(parents=True, exist_ok=True)
 original = '기존 메모'
-
-
-def call(*args):
-    return sp.check_output([x, *args], text=True, timeout=5).strip()
-
-
-def wait_window(title):
-    for _ in range(120):
-        result = sp.run([x, 'search', '--onlyvisible', '--name', title], capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.splitlines()[-1]
-        time.sleep(.05)
-    raise AssertionError('window missing: ' + title)
-
-
-def key(*keys):
-    call('key', '--clearmodifiers', *keys)
-    time.sleep(.15)
-
-
-def click(note, px, py):
-    call('mousemove', '--window', note, str(px), str(py))
-    call('click', '1')
-    time.sleep(.2)
 
 
 def copied_source():
@@ -46,11 +20,8 @@ def copied_source():
 
 
 with tempfile.TemporaryDirectory(prefix='lsm-live-') as tmp:
-    env = dict(os.environ, GDK_BACKEND='x11', GDK_DEBUG='no-portals', GSK_RENDERER='cairo',
-               GTK_USE_PORTAL='0', XDG_CONFIG_HOME=tmp+'/config', GIO_USE_VFS='local', GTK_A11Y='none', XDG_CURRENT_DESKTOP='Openbox', XDG_DATA_HOME=tmp)
-    path = Path(tmp) / 'linux-sticky-memo/notes.json'
-    path.parent.mkdir()
-    path.write_text(json.dumps([dict(id=str(uuid.uuid4()), text=original, color='yellow', modified=1)]))
+    env = environment(tmp)
+    path = write_notes(tmp, [dict(id=str(uuid.uuid4()), text=original, color='yellow', modified=1)])
     log = open(artifacts / 'app.log', 'w')
     wm = sp.Popen([os.environ.get('LSM_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
     app = None

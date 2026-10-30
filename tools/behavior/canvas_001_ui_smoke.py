@@ -1,3 +1,4 @@
+from lsm_driver import (call, wait_window, key, click, x, clip, binary, environment, write_notes, OPEN_CANVAS)
 # 검증: CANVAS-001·CANVAS-002. 합성 데이터의 실제 포인터·키보드·재시작 검사.
 import json
 import os
@@ -7,36 +8,9 @@ import tempfile
 import time
 import uuid
 
-x = os.environ.get('LSM_XDOTOOL', 'xdotool')
-clip = os.environ.get('LSM_XCLIP', 'xclip')
-binary = os.environ.get('LSM_BINARY', 'target/debug/linux-sticky-memo')
 artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-keyboard'))
 artifacts.mkdir(parents=True, exist_ok=True)
 original = '기존 메모'
-
-
-def call(*args):
-    return sp.check_output([x, *args], text=True, timeout=5).strip()
-
-
-def wait_window(title):
-    for _ in range(120):
-        result = sp.run([x, 'search', '--onlyvisible', '--name', title], capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.splitlines()[-1]
-        time.sleep(.05)
-    raise AssertionError('window missing: ' + title)
-
-
-def key(*keys):
-    call('key', '--clearmodifiers', *keys)
-    time.sleep(.15)
-
-
-def click(note, px, py):
-    call('mousemove', '--window', note, str(px), str(py))
-    call('click', '1')
-    time.sleep(.2)
 
 
 def copied_source():
@@ -45,12 +19,20 @@ def copied_source():
     return sp.check_output([clip, '-selection', 'clipboard', '-o'], text=True, timeout=5)
 
 
+FIRST_CARD = (184, 142)
+MARQUEE_START = (40, 20)
+FIRST_CARD_HOVER = (240, 160)
+FIRST_PORT = (380, 172)
+FIRST_CARD_EDGE = (380, 142)
+SECOND_CHECK = (617, 87)
+SECOND_CARD = (520, 142)
+VIEW_CENTER = (580, 403)
+
+
 with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
-    env = dict(os.environ,GDK_BACKEND='x11',GDK_DEBUG='no-portals',GSK_RENDERER='cairo',GTK_USE_PORTAL='0',GIO_USE_VFS='local',GTK_A11Y='none',XDG_DATA_HOME=tmp,XDG_CONFIG_HOME=tmp+'/config')
-    path=Path(tmp)/'linux-sticky-memo/notes.json'
-    path.parent.mkdir()
+    env = environment(tmp)
     ids=[str(uuid.uuid4()) for _ in range(2)]
-    path.write_text(json.dumps([dict(id=id,text='A very long shared title '+str(i)+'\nUnique context '+str(i),color=['yellow','blue'][i],modified=1,canvas=dict(position=[64+320*i,64],next=[],done=False)) for i,id in enumerate(ids)]))
+    path = write_notes(tmp, [dict(id=id,text='A very long shared title '+str(i)+'\nUnique context '+str(i),color=['yellow','blue'][i],modified=1,canvas=dict(position=[64+320*i,64],next=[],done=False)) for i,id in enumerate(ids)])
     log=open(artifacts/'canvas-app.log','w')
     wm=sp.Popen([os.environ.get('LSM_OPENBOX','openbox'),'--sm-disable'],env=env,stdout=log,stderr=log)
     app=None
@@ -59,15 +41,15 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         app=sp.Popen([binary],env=env,stdout=log,stderr=log)
         library=wait_window('^스티키 메모$')
         call('windowfocus',library)
-        click(library,300,24)
+        click(library, *OPEN_CANVAS)
         canvas=wait_window('^메모 캔버스$')
         call('windowmove',canvas,'0','0')
         call('windowfocus',canvas)
         time.sleep(.5)
         # 첫 화면은 두 카드 중심을 창 가운데에 맞춘다(100%). 월드 → 창 좌표 변환.
         center=[344,142]
-        at=lambda wx,wy:(wx-center[0]+580,wy-center[1]+403)
-        click(canvas,*at(184,142))
+        at=lambda wx,wy:(wx-center[0]+VIEW_CENTER[0],wy-center[1]+VIEW_CENTER[1])
+        click(canvas,*at(*FIRST_CARD))
         key('Right')
         time.sleep(.6)
         data=json.loads(path.read_text())
@@ -82,19 +64,19 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         time.sleep(.8)
         center[0]=360
         # 카드 전체 끌기.
-        call('mousemove','--window',canvas,*map(str,at(184,142)))
+        call('mousemove','--window',canvas,*map(str,at(*FIRST_CARD)))
         call('mousedown','1')
         for dx,dy in [(20,10),(40,20),(60,30)]:
-            call('mousemove','--window',canvas,*map(str,at(184+dx,142+dy)));time.sleep(.06)
+            call('mousemove','--window',canvas,*map(str,at(FIRST_CARD[0]+dx,FIRST_CARD[1]+dy)));time.sleep(.06)
         call('mouseup','1')
         time.sleep(.6)
         data=json.loads(path.read_text())
         assert data[0]['canvas']['position']==[140,94],data
         # 빈 곳 끌기 범위 선택 + 위쪽 맞춤 + 되돌리기·다시 실행.
-        call('mousemove','--window',canvas,*map(str,at(40,20)))
+        call('mousemove','--window',canvas,*map(str,at(*MARQUEE_START)))
         call('mousedown','1')
         for dx,dy in [(200,100),(500,200),(700,260)]:
-            call('mousemove','--window',canvas,*map(str,at(40+dx,20+dy)));time.sleep(.06)
+            call('mousemove','--window',canvas,*map(str,at(MARQUEE_START[0]+dx,MARQUEE_START[1]+dy)));time.sleep(.06)
         call('mouseup','1')
         time.sleep(.3)
         key('alt+w')
@@ -108,8 +90,8 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         key('Escape')
         time.sleep(.2)
         # 연결 점 끌기로 연결, 맞춤선 없이 놓기.
-        call('mousemove','--window',canvas,*map(str,at(240,160)));time.sleep(.2)
-        call('mousemove','--window',canvas,*map(str,at(380,172)))
+        call('mousemove','--window',canvas,*map(str,at(*FIRST_CARD_HOVER)));time.sleep(.2)
+        call('mousemove','--window',canvas,*map(str,at(*FIRST_PORT)))
         call('mousedown','1')
         for wx in (420,480,520):
             call('mousemove','--window',canvas,*map(str,at(wx,142)));time.sleep(.06)
@@ -118,15 +100,15 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         data=json.loads(path.read_text())
         assert data[0]['canvas']['next']==[ids[1]],data
         # 카드의 완료 표시는 드래그에 먹히지 않고 눌린다.
-        click(canvas,*at(380,142))
+        click(canvas,*at(*FIRST_CARD_EDGE))
         time.sleep(.3)
-        click(canvas,*at(617,87))
+        click(canvas,*at(*SECOND_CHECK))
         time.sleep(.6)
         data=json.loads(path.read_text())
         assert data[1]['canvas']['done'] is True,data
         assert data[1]['canvas']['position']==[400,64],data
         # 두 번 눌러 원본 열기.
-        call('mousemove','--window',canvas,*map(str,at(520,142)))
+        call('mousemove','--window',canvas,*map(str,at(*SECOND_CARD)))
         call('click','--repeat','2','--delay','70','1')
         note=wait_window('^메모$')
         key('ctrl+w')
