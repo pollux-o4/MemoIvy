@@ -15,7 +15,6 @@ use std::{
 const GUTTER: i32 = 24;
 const CHECK_BOX: i32 = 20;
 const BULLET_BOX: i32 = 16;
-const BULLETS: [&str; 3] = ["•", "◦", "▪"];
 const HANG_FIX_LIMIT: i32 = 6;
 
 struct TaskWidget {

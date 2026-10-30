@@ -1,12 +1,11 @@
 //! 카드·패널이 함께 쓰는 구조화된 미리보기. 체크·기호·번호를 잃지 않고 읽기 전용으로 그린다.
 //! 일반 문단 메모는 행 하나뿐이라 카드 수가 많아도 위젯이 크게 늘지 않는다.
-use crate::presentation::markdown::{LineMarker, PreviewLine, PreviewRow};
+use crate::presentation::markdown::{LineMarker, PreviewLine, PreviewRow, BULLETS};
 use gtk::{pango, prelude::*, Box as GtkBox, Label, Orientation};
 use std::cell::RefCell;
 
 const DEPTH_INDENT: i32 = 12;
 const MAX_DEPTH: usize = 2;
-const BULLETS: [&str; 3] = ["•", "◦", "▪"];
 
 /// 표식 칸. 체크는 CSS 상자, 기호·번호는 글자 하나로 그린다.
 pub(in super::super) fn marker_label() -> Label {

@@ -88,7 +88,7 @@ impl LiveEditor {
             widgets.push(label);
         }
         for (label, item) in widgets.iter().zip(&bullets) {
-            label.set_text(BULLETS[item.depth.min(BULLETS.len() - 1)]);
+            label.set_text(markdown::BULLETS[item.depth.min(markdown::BULLETS.len() - 1)]);
             let rect = view.iter_location(&buffer.iter_at_offset(item.content.start));
             label.set_size_request(BULLET_BOX, rect.height());
             label.set_visible(true);
