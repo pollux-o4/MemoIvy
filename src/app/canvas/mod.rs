@@ -1,4 +1,5 @@
-//! 메모 캔버스 프런트엔드 모듈. 외부에는 `open`·`refresh`·`update_status`·`CanvasView::destroy`만 공개한다.
+//! 메모 캔버스 프런트엔드 모듈. 화면 API는 `open`·`refresh`·`update_status`·`CanvasView::destroy`다.
+//! 초기 배치·빈자리 계산은 shell 명령에서 사용하는 보조 진입점이다.
 //!
 //! - `model`: GTK 없는 규칙 (카메라·정렬·선택·스프링)
 //! - `scene`: 보드 위 그림과 카드 위젯

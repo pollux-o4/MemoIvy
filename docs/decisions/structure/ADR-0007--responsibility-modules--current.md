@@ -4,4 +4,4 @@
 - 대안: 단일 파일 유지, 책임별 모듈 분리.
 - 결정: UI 관심사와 저장 조율을 분리하고 테마 판정·색상 목록·실패 표시를 각각 한 원본에 둔다.
 - 이유: 변경할 때 읽어야 하는 범위를 줄이고 정책 불일치를 방지한다.
-- 결과: controller는 Mediator, GTK 신호는 Observer, 생성·삭제 Operation은 Command 역할을 맡는다. AppState는 GTK 뷰와 조율 모듈이 공유한다.
+- 결과: shell은 창 조율, Notebook은 저장 정책과 생성·삭제를 맡는다. AppState는 Notebook과 Views를 묶으며 기능은 shell 명령으로 연결한다. 경계 강제는 ADR-0010을 따른다.

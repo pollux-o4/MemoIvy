@@ -58,3 +58,54 @@ fn adr_0010_canvas_model_stays_pure() {
         }
     }
 }
+
+#[test]
+fn adr_0010_frontend_uses_only_the_notebook_boundary() {
+    for (path, code) in sources("src/app") {
+        for forbidden in [
+            "SaveQueue",
+            "Store::",
+            "save_queue",
+            ".revision",
+            ".transaction(",
+        ] {
+            assert!(
+                !code.contains(forbidden),
+                "{path} bypasses Notebook: {forbidden}"
+            );
+        }
+    }
+    let exports =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/persistence/mod.rs"))
+            .unwrap();
+    assert!(
+        exports
+            .lines()
+            .filter(|line| line.contains("mod "))
+            .all(|line| !line.trim_start().starts_with("pub")),
+        "backend implementation modules must remain private"
+    );
+}
+
+#[test]
+fn adr_0010_features_coordinate_through_the_shell() {
+    for feature in ["library", "editor", "canvas", "shared"] {
+        for (path, code) in sources(&format!("src/app/{feature}")) {
+            for sibling in ["library", "editor", "canvas"] {
+                if sibling == feature {
+                    continue;
+                }
+                for forbidden in [
+                    format!("{sibling}::"),
+                    format!("app::{sibling}"),
+                    format!("super::{sibling}"),
+                ] {
+                    assert!(
+                        !code.contains(&forbidden),
+                        "{path} reaches sibling {sibling}; use shell commands/views"
+                    );
+                }
+            }
+        }
+    }
+}

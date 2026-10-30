@@ -2,30 +2,19 @@
 
 ```mermaid
 flowchart LR
-    subgraph main["GTK main thread"]
-        load["Store::load"]
-        state["메모·캔버스 원본 · Store.notes"]
-        controller["controller"]
-        queue["SaveQueue · revision / durable"]
-    end
-    subgraph worker["단일 worker thread"]
-        writer["순차 작업 루프"]
-        save["store::save"]
-    end
-    file[("notes.json")]
-    load -->|읽기| file
-    load -->|검증한 메모| state
-    graph["그래프 검증·연결·삭제 정리 · canvas"] --> state
-    controller -->|snapshot 구성| state
-    controller -->|dispatch·poll| queue
-    queue -->|mpsc snapshot| writer
-    writer --> save
-    save -->|동기화·원자 교체| file
-    writer -->|mpsc 결과| queue
-    controller -->|결과 반영| state
+    shell["프런트 shell"] -->|변경·flush·tick| notebook["Notebook · 원본·디바운스·트랜잭션"]
+    notebook -->|읽기 전용 Note·이벤트·상태| shell
+    notebook --> graph["note / links · 불변식"]
+    notebook --> queue["SaveQueue · revision / durable"]
+    queue -->|mpsc snapshot| writer["단일 writer thread"]
+    writer --> store["store · 원자 저장"]
+    store --> file[("notes.json")]
+    file -->|검증된 로드| notebook
+    writer -->|결과| queue
 ```
 
-- Note.canvas는 위치·다음 메모 UUID·완료 상태를 담는다. 그래프 검증은 로드·저장 경계에서 수행하고 메모 삭제는 참조 연결을 같은 transaction에서 제거한다.
-- 로드는 시작 시 GTK 스레드, 쓰기는 worker에서 수행한다.
-- 일반 저장은 revision, 생성·삭제 결과는 transaction 표식으로 구분한다.
-- 스레드·저장 조율 근거: ADR-0004. 내구성 계약: DATA-002. 정상 닫기·실패 복구: SAVE-001, SAVE-002.
+- Notebook은 GTK 스레드에서 사용하되 GTK 타입을 받지 않는다. writer·채널·revision은 비공개다.
+- 생성·삭제는 파일 쓰기 성공 후 원본에 반영하고, 진행 중 다른 편집을 병합해 최신 스냅샷을 저장한다.
+- 본문·색상은 300ms 디바운스·1초 상한을 적용한다. flush는 즉시 저장을 요청하며 실패 후 재시도도 맡는다.
+- 프런트는 `needs_tick`이 참일 때만 결과를 폴링하고, 오류 문구와 창 닫기는 직접 처리한다.
+- 저장 형식·단일 writer·내구성 계약: DATA-001, DATA-002, ADR-0004. 정상 닫기·실패 복구: SAVE-001, SAVE-002.
