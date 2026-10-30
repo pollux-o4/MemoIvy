@@ -97,14 +97,10 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
 }
 
 fn wait_notebook(state: &State) {
-    for _ in 0..1000 {
+    until(|| {
         state.borrow_mut().notebook.tick(std::time::Instant::now());
-        if !state.borrow().notebook.needs_tick() {
-            return;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(1));
-    }
-    panic!("notebook writer timed out");
+        !state.borrow().notebook.needs_tick()
+    });
 }
 
 fn connect_through_menu(v: &Rc<CanvasView>, target: Uuid) {
