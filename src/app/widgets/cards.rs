@@ -1,15 +1,43 @@
-use super::menu_for;
+use super::lazy_menu_for;
 use crate::app::{state::State, windows::open_note};
 use crate::persistence::store::Note;
+use crate::presentation::icons;
 use gtk::{prelude::*, Application, Box as GtkBox, Button, Label, Orientation};
+use std::{
+    cell::Cell,
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
+
+thread_local! { static SHOWN: Cell<u64> = const { Cell::new(0) }; }
+
+fn list_key(notes: &[Note], query: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    query.hash(&mut hasher);
+    for note in notes {
+        note.id.hash(&mut hasher);
+        note.text.hash(&mut hasher);
+        note.color.hash(&mut hasher);
+        note.modified.hash(&mut hasher);
+    }
+    hasher.finish()
+}
 
 pub(in crate::app) fn refresh(state: &State, app: &Application) {
     let s = state.borrow();
+    let query = s.search.text().to_string();
+    // 캔버스 배치만 바뀌면 목록은 그대로다. 다시 만들면 스크롤·호버가 끊긴다.
+    let key = list_key(&s.store.notes, &query);
+    if SHOWN.with(|shown| shown.replace(key)) == key {
+        drop(s);
+        crate::app::windows::canvas::refresh(state);
+        return;
+    }
     while let Some(child) = s.list.first_child() {
         s.list.remove(&child);
     }
-    let query = s.search.text().to_string();
     let notes = search_notes(&s.store.notes, &query);
+    s.count.set_visible(!(notes.is_empty() && query.is_empty()));
     s.count.set_text(&format!(
         "{} {}개",
         if query.is_empty() {
@@ -22,9 +50,9 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
     if notes.is_empty() {
         let empty = GtkBox::new(Orientation::Vertical, 8);
         empty.set_margin_top(80);
-        let image = gtk::Image::from_icon_name("document-new-symbolic");
-        image.set_pixel_size(36);
-        empty.append(&image);
+        if query.is_empty() {
+            empty.append(&icons::illustration(icons::LIBRARY_EMPTY, 96, 80));
+        }
         let title = Label::new(Some(if query.is_empty() {
             "첫 메모를 남겨 보세요"
         } else {
@@ -45,22 +73,14 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         let card = GtkBox::new(Orientation::Vertical, 0);
         card.add_css_class("card");
         card.add_css_class(&note.color);
-        let strip = GtkBox::new(Orientation::Horizontal, 0);
-        strip.add_css_class("strip");
-        card.append(&strip);
         let row = GtkBox::new(Orientation::Horizontal, 0);
         let contents = GtkBox::new(Orientation::Vertical, 6);
-        let mut lines = note.text.lines().skip_while(|l| l.trim().is_empty());
-        lines.next();
-        let title = match note_title(&note.text) {
+        let summary = crate::presentation::markdown::summary(&note.text);
+        let title = match summary.title.as_str() {
             "" => "빈 메모",
             title => title,
         };
-        let preview = lines
-            .map(str::trim)
-            .filter(|x| !x.is_empty())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let preview = summary.preview;
         let t = Label::new(Some(title));
         t.set_xalign(0.);
         t.set_ellipsize(gtk::pango::EllipsizeMode::End);
@@ -88,7 +108,7 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         let id = note.id;
         open.connect_clicked(move |_| open_note(&st, &a, id));
         row.append(&open);
-        let menu = menu_for(state, app, note.id);
+        let menu = lazy_menu_for(state, app, note.id);
         menu.set_valign(gtk::Align::Start);
         row.append(&menu);
         card.append(&row);

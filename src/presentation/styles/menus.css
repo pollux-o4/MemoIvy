@@ -1,0 +1,50 @@
+/* 팝오버 메뉴 · 화살표 없는 둥근 표면, 짧은 확대·페이드 등장 */
+popover.lsm-menu { background: transparent; }
+popover.lsm-menu > arrow { background: transparent; border: 0; min-width: 0; min-height: 0; }
+popover.lsm-menu > contents { padding: 0; border-radius: 12px; background: @lsm_raised; color: @lsm_text; border: 0; box-shadow: 0 0 0 1px @lsm_hairline, 0 4px 12px @lsm_shadow, 0 16px 40px @lsm_shadow; transform: none; opacity: 1; transition: transform 170ms cubic-bezier(.2, .9, .3, 1.08), opacity 110ms ease-out; }
+popover.lsm-menu.opening > contents { transform: scale(.96) translateY(-4px); opacity: 0; transition: none; }
+.menu-body { padding: 5px; }
+.menu-row { padding: 0 8px; min-height: 30px; border-radius: 7px; border: 0; background: transparent; background-image: none; box-shadow: none; color: @lsm_text; font-weight: 400; transition: background-color 90ms ease-out, color 90ms ease-out; }
+.menu-row:hover { background-color: @lsm_accent; color: @lsm_on_accent; }
+.menu-row:hover .menu-row.two-line { padding-top: 5px; padding-bottom: 5px; }
+.menu-hint { color: alpha(@lsm_on_accent, .78); }
+.menu-row:active { background-color: shade(@lsm_accent, .92); }
+.menu-row.destructive { color: @lsm_danger; }
+.menu-row.destructive:hover { background-color: @lsm_danger_fill; color: white; }
+checkbutton.menu-row { padding: 0 8px; }
+checkbutton.menu-row check { min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; opacity: 0; -gtk-icon-size: 0; }
+checkbutton.menu-row:checked { background-color: alpha(@lsm_accent, .13); color: @lsm_accent; font-weight: 600; }
+checkbutton.menu-row:checked:hover { background-color: @lsm_accent; color: @lsm_on_accent; }
+.menu-hint { color: @lsm_muted; font-size: .84em; font-weight: 400; }
+.menu-divider { margin: 4px 8px; min-height: 1px; background: @lsm_hairline; }
+.help-body { padding: 12px 14px; }
+.help-key { font-weight: 500; font-size: .92em; }
+
+.palette-body { padding: 10px 12px 12px; }
+.swatch { min-width: 26px; min-height: 26px; border-radius: 999px; padding: 0; color: @note_text; font-weight: 700; font-size: .8em; border: 1px solid alpha(#000000, .1); background-image: none; box-shadow: none; transition: box-shadow 120ms ease-out, transform 120ms ease-out; }
+.swatch:hover { transform: scale(1.1); }
+.swatch:checked { box-shadow: 0 0 0 2px @lsm_raised, 0 0 0 4px @lsm_accent; }
+.swatch.yellow { background-color: @note_yellow; }
+.swatch.pink { background-color: @note_pink; }
+.swatch.blue { background-color: @note_blue; }
+.swatch.green { background-color: @note_green; }
+.swatch.purple { background-color: @note_purple; }
+
+.lsm-help, .lsm-help > decoration { background: @lsm_raised; color: @lsm_text; border-radius: 14px; }
+.lsm-help > windowhandle { background: @lsm_raised; background-image: none; box-shadow: none; border: 0; }
+.help-bar { padding: 6px 10px 0; }
+.help-sheet { padding: 12px 28px 26px; }
+.help-section { font-weight: 600; font-size: .84em; color: @lsm_muted; margin-bottom: 3px; }
+.lsm-help .help-key { background: @lsm_keycap; border-radius: 5px; padding: 1px 7px; font-size: .82em; color: @lsm_text; }
+.help-syntax { color: @lsm_muted; font-family: monospace; font-size: .82em; }
+
+.lsm-confirm, .lsm-confirm > decoration { background: @lsm_raised; color: @lsm_text; border-radius: 14px; }
+.confirm-body { padding: 20px; }
+.confirm-title { font-weight: 600; font-size: 1.04em; }
+.confirm-detail { color: @lsm_muted; font-size: .92em; }
+.confirm-cancel, .confirm-accept { min-height: 32px; border: 0; border-radius: 9px; background-image: none; box-shadow: none; font-weight: 500; transition: background-color 110ms ease-out; }
+.confirm-cancel { background-color: @lsm_keycap; color: @lsm_text; }
+.confirm-cancel:hover { background-color: @lsm_press; }
+.confirm-accept { background-color: @lsm_danger_fill; color: white; font-weight: 600; }
+.confirm-accept:hover { background-color: shade(@lsm_danger_fill, 1.1); }
+.confirm-accept:active { background-color: shade(@lsm_danger_fill, .9); }

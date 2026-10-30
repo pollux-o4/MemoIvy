@@ -1,10 +1,9 @@
-use crate::presentation::{icons, theme::watch as dark};
+use crate::presentation::icons;
 use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, Orientation};
 
 // shortcut: 창 위치 복원·항상 위 고정은 대상 세션 지원을 미확인, 해당 기능 요청과 대상 세션 확정 시 검토.
 pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox, GtkBox) {
     window.add_css_class("lsm-window");
-    dark(window.upcast_ref());
     window.connect_notify_local(Some("maximized"), |w, _| {
         if w.is_maximized() {
             w.add_css_class("maximized");
@@ -14,7 +13,6 @@ pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox
     });
     let bar = GtkBox::new(Orientation::Horizontal, 0);
     bar.add_css_class("header");
-    dark(bar.upcast_ref());
     let controls = GtkBox::new(Orientation::Horizontal, 0);
     for (symbol, class, tip) in [
         (icons::CLOSE, "close", "닫기"),
@@ -22,7 +20,7 @@ pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox
         (icons::MAXIMIZE, "max", "최대화"),
     ] {
         let b = Button::new();
-        b.set_child(Some(&icons::image(symbol, false)));
+        b.set_child(Some(&icons::image(symbol)));
         b.add_css_class("window-action");
         b.add_css_class(class);
         b.set_tooltip_text(Some(tip));
@@ -47,14 +45,11 @@ pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox
                 } else {
                     "최대화"
                 };
-                button.set_child(Some(&icons::image(
-                    if w.is_maximized() {
-                        icons::RESTORE
-                    } else {
-                        icons::MAXIMIZE
-                    },
-                    false,
-                )));
+                button.set_child(Some(&icons::image(if w.is_maximized() {
+                    icons::RESTORE
+                } else {
+                    icons::MAXIMIZE
+                })));
                 button.set_tooltip_text(Some(tip));
                 button.update_property(&[gtk::accessible::Property::Label(tip)]);
             });
@@ -65,7 +60,7 @@ pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox
     center.add_css_class("header-title");
     center.set_hexpand(true);
     center.set_ellipsize(gtk::pango::EllipsizeMode::End);
-    let actions = GtkBox::new(Orientation::Horizontal, 2);
+    let actions = GtkBox::new(Orientation::Horizontal, 6);
     let layout = gtk::CenterBox::new();
     layout.set_hexpand(true);
     layout.set_start_widget(Some(&controls));

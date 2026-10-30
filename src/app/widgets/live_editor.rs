@@ -404,6 +404,8 @@ pub(in crate::app) fn attach(view: &TextView) -> CheckButton {
                 .find(|link| link.range.contains(&offset))
             {
                 let window = view.root().and_downcast::<gtk::Window>();
+                // shortcut: FMT-001 링크 제스처를 유지, UriLauncher 전환 시 임시 핸들러 검증과 함께 교체.
+                #[allow(deprecated)]
                 gtk::show_uri(window.as_ref(), &link.url, gdk::CURRENT_TIME);
                 gesture.set_state(gtk::EventSequenceState::Claimed);
             }

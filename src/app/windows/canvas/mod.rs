@@ -76,7 +76,6 @@ pub(in crate::app) fn open(state: &State, app: &Application, selected: Option<Uu
     actions.append(&add);
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.add_css_class("canvas-root");
-    crate::presentation::theme::watch(root.upcast_ref());
     let toolbar = GtkBox::new(Orientation::Horizontal, 8);
     toolbar.add_css_class("canvas-toolbar");
     let summary = Label::new(None);

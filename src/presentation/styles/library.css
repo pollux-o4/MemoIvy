@@ -1,0 +1,18 @@
+/* 메모 목록 */
+.library { background: @lsm_bg; color: @lsm_text; }
+.lsm-search { min-height: 32px; border-radius: 9px; background: alpha(@lsm_text, .055); background-image: none; color: @lsm_text; border: 0; box-shadow: none; padding: 0 8px; transition: background-color 140ms ease-out, box-shadow 140ms ease-out; }
+.lsm-search:focus-within { background: @lsm_surface; box-shadow: 0 0 0 2px alpha(@lsm_accent, .55); }
+.lsm-search > text { background: transparent; border: 0; outline: none; box-shadow: none; }
+.count, .empty-sub { color: @lsm_muted; font-size: .84em; }
+.preview { color: @lsm_muted; font-size: .9em; }
+.card { border-radius: 12px; margin-bottom: 10px; border: 0; color: @note_text; box-shadow: inset 0 0 0 1px alpha(#000000, .045), 0 1px 2px @lsm_shadow; transition: box-shadow 160ms ease-out, transform 160ms cubic-bezier(.2, .9, .3, 1.1); }
+.card:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .045), 0 4px 14px @lsm_shadow; transform: translateY(-1px); }
+.card.yellow { background: @note_yellow; }
+.card.pink { background: @note_pink; }
+.card.blue { background: @note_blue; }
+.card.green { background: @note_green; }
+.card.purple { background: @note_purple; }
+.card .preview { color: @note_muted; }
+.card-open { background: transparent; background-image: none; border: 0; box-shadow: none; padding: 12px 14px; color: @note_text; border-radius: 12px; }
+.card .icon-button { margin: 6px 6px 0 0; opacity: .5; color: @note_text; }
+.card:hover .icon-button, .card .icon-button:focus-within, .card .icon-button:checked { opacity: 1; }

@@ -1,0 +1,15 @@
+/* 편집 창 · 머리글과 본문이 같은 색으로 이어진다 */
+.memo { color: @note_text; transition: background-color 180ms ease-out; }
+.memo textview, .memo textview text { background: transparent; color: inherit; caret-color: @lsm_accent; }
+.memo textview text selection { background-color: alpha(@lsm_accent, .28); }
+.memo .status { color: @note_muted; }
+.memo .lsm-action { color: @note_text; }
+.memo.yellow, .memo.yellow .md-checkbox, .header.yellow { background: @note_yellow; }
+.memo.pink, .memo.pink .md-checkbox, .header.pink { background: @note_pink; }
+.memo.blue, .memo.blue .md-checkbox, .header.blue { background: @note_blue; }
+.memo.green, .memo.green .md-checkbox, .header.green { background: @note_green; }
+.memo.purple, .memo.purple .md-checkbox, .header.purple { background: @note_purple; }
+.header.yellow, .header.pink, .header.blue, .header.green, .header.purple { color: @note_text; }
+.header.yellow .window-action, .header.pink .window-action, .header.blue .window-action, .header.green .window-action, .header.purple .window-action { color: alpha(@note_text, .68); }
+.md-checkbox { padding: 0; margin: 0; min-width: 18px; min-height: 18px; }
+.md-checkbox check { min-width: 14px; min-height: 14px; }

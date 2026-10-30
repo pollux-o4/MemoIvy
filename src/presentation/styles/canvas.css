@@ -1,0 +1,77 @@
+/* 캔버스 · 전면 보드 위 떠 있는 도구와 카드 */
+.canvas-root { background: @lsm_bg; color: @lsm_text; }
+.floating { background: @lsm_raised; color: @lsm_text; border-radius: 13px; box-shadow: 0 0 0 1px @lsm_hairline, 0 2px 6px @lsm_shadow, 0 12px 32px @lsm_shadow; }
+.canvas-dock, .canvas-align { padding: 4px; }
+.canvas-dock { transition: box-shadow 200ms ease-out; }
+.canvas-dock.failed { box-shadow: 0 0 0 1.5px @lsm_danger, 0 2px 6px @lsm_shadow, 0 12px 32px @lsm_shadow; }
+.canvas-dock.failed .canvas-status { color: @lsm_danger; font-weight: 600; }
+.canvas-summary, .canvas-status { color: @lsm_muted; font-size: .84em; }
+
+.tool, .tool > button { min-width: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; background-image: none; box-shadow: none; color: @lsm_text; transition: background-color 110ms ease-out, opacity 110ms ease-out, transform 110ms ease-out; }
+.tool > button { color: inherit; }
+.tool:hover, .tool > button:hover { background-color: @lsm_hover; }
+.tool:active, .tool > button:active { background-color: @lsm_press; transform: scale(.94); }
+.tool > button:checked { background-color: @lsm_press; }
+.tool:disabled { opacity: .32; }
+.tool.small { min-width: 26px; min-height: 26px; color: @lsm_muted; }
+.tool.small:hover { background-color: @lsm_danger_hover; color: @lsm_danger; }
+.zoom-value { min-width: 46px; font-size: .84em; font-weight: 500; }
+.tool-divider { min-width: 1px; margin: 7px 4px; background: @lsm_hairline; }
+.tool-text { min-height: 26px; padding: 0 10px; border: 0; border-radius: 8px; background: @lsm_danger_fill; background-image: none; color: white; font-size: .84em; font-weight: 600; box-shadow: none; }
+
+/* 카드 */
+.canvas-card { padding: 13px 14px 11px; border-radius: 14px; color: @note_text; box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 1px 2px @lsm_shadow, 0 6px 18px @lsm_shadow; opacity: 1; transform: none; transition: box-shadow 170ms ease-out, opacity 170ms ease-out, transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out; outline: 2px solid transparent; outline-offset: 3px; }
+.canvas-card.yellow { background: @note_yellow; }
+.canvas-card.pink { background: @note_pink; }
+.canvas-card.blue { background: @note_blue; }
+.canvas-card.green { background: @note_green; }
+.canvas-card.purple { background: @note_purple; }
+.canvas-card:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 2px 4px @lsm_shadow, 0 10px 26px @lsm_shadow; }
+.canvas-card.selected { outline-color: @lsm_accent; }
+.canvas-card.dragging { transform: scale(1.018); box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 6px 12px @lsm_shadow, 0 22px 44px @lsm_shadow_deep; }
+.canvas-card.entering { opacity: 0; transform: scale(.92); transition: none; }
+.canvas-card.done { opacity: .84; }
+.canvas-card.done .card-title { text-decoration-line: line-through; text-decoration-color: alpha(@note_text, .5); }
+.card-title.placeholder { color: @note_muted; font-weight: 500; }
+.card-preview { color: @note_muted; font-size: .88em; transition: opacity 180ms ease-out; }
+.card-meta { color: @note_muted; font-size: .8em; min-height: 18px; transition: opacity 180ms ease-out; }
+.card-meta drawingarea { min-width: 16px; min-height: 16px; }
+.far .card-preview, .far .card-meta { opacity: 0; }
+.far .canvas-card { box-shadow: inset 0 0 0 1px alpha(#000000, .05); transition: none; }
+.tiny .card-title, .tiny .card-done { opacity: 0; }
+.card-done { min-width: 20px; min-height: 20px; padding: 0; margin: -1px -2px 0 0; border-radius: 999px; border: 1.5px solid alpha(@note_text, .34); background: transparent; background-image: none; box-shadow: none; color: transparent; opacity: 0; transition: opacity 130ms ease-out, background-color 130ms ease-out, border-color 130ms ease-out, transform 130ms cubic-bezier(.2, .9, .3, 1.3); }
+.canvas-card:hover .card-done, .canvas-card.selected .card-done, .canvas-card.done .card-done { opacity: 1; }
+.card-done:hover { border-color: @lsm_success; color: @lsm_success; transform: scale(1.08); }
+.canvas-card.done .card-done { background: @lsm_success; border-color: transparent; color: white; }
+
+.canvas-port { min-width: 18px; min-height: 18px; border-radius: 999px; background: @lsm_raised; box-shadow: 0 0 0 1.5px @lsm_accent, 0 2px 6px @lsm_shadow; transition: transform 130ms cubic-bezier(.2, .9, .3, 1.3), background-color 110ms ease-out; }
+.canvas-port:hover { background: @lsm_accent; transform: scale(1.22); }
+
+/* 선택 패널 */
+.canvas-panel { background: @lsm_raised; }
+.canvas-panel > viewport { background: transparent; }
+.canvas-inspector { padding: 14px; }
+.tool.small.panel-close { margin: -4px -4px 0 0; }
+.tool.small.panel-close:hover { background-color: @lsm_hover; color: @lsm_text; }
+.panel-title { font-weight: 600; font-size: 1.02em; }
+.panel-muted { color: @lsm_muted; font-size: .88em; }
+.panel-section { color: @lsm_muted; font-size: .8em; font-weight: 600; margin: 4px 0 -6px 4px; }
+.panel-hint { color: @lsm_muted; font-size: .84em; padding: 8px 10px; }
+.panel-group { border-radius: 10px; background: alpha(@lsm_text, .04); padding: 3px; }
+.panel-row, .panel-row > button { padding: 0 7px; min-height: 30px; border-radius: 7px; border: 0; background: transparent; background-image: none; box-shadow: none; color: @lsm_text; font-weight: 400; transition: background-color 100ms ease-out; }
+.panel-row > button { padding: 0 7px; }
+menubutton.panel-row { padding: 0; }
+.panel-row:hover, .panel-row > button:hover { background-color: @lsm_hover; }
+.panel-row:active, .panel-row > button:active, .panel-row > button:checked { background-color: @lsm_press; }
+.panel-row.static:hover { background: transparent; }
+.panel-row:disabled { opacity: .4; }
+.panel-row drawingarea { color: @lsm_muted; }
+.color-dot { min-width: 10px; min-height: 10px; border-radius: 999px; }
+.color-dot.yellow { background: @dot_yellow; }
+.color-dot.pink { background: @dot_pink; }
+.color-dot.blue { background: @dot_blue; }
+.color-dot.green { background: @dot_green; }
+.color-dot.purple { background: @dot_purple; }
+
+.canvas-empty-title { font-size: 1.14em; font-weight: 600; }
+.canvas-empty-sub { color: @lsm_muted; font-size: .92em; }

@@ -8,13 +8,15 @@ use crate::persistence::{
     save_queue::SaveQueue,
     store::{Note, Store},
 };
-use crate::presentation::{icons, theme::watch as dark};
+use crate::presentation::icons;
 use gtk::{
     glib, prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
     ScrolledWindow, SearchEntry,
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+// shortcut: MessageDialog는 동기 응답 흐름을 그대로 쓰려고 유지, AlertDialog 전환 시 NOTE-002 응답 경로와 함께 교체.
+#[allow(deprecated)]
 pub(in crate::app) fn build(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
@@ -26,7 +28,7 @@ pub(in crate::app) fn build(app: &Application) {
     let (_, actions) = header(&window, "스티키 메모");
     let add = Button::new();
     let add_contents = GtkBox::new(Orientation::Horizontal, 4);
-    add_contents.append(&icons::image(icons::ADD, true));
+    add_contents.append(&icons::image(icons::ADD));
     add_contents.append(&Label::new(Some("새 메모")));
     add.set_child(Some(&add_contents));
     add.add_css_class("new-note");
@@ -59,7 +61,6 @@ pub(in crate::app) fn build(app: &Application) {
     };
     let outer = GtkBox::new(Orientation::Vertical, 16);
     outer.add_css_class("library");
-    dark(outer.upcast_ref());
     outer.set_margin_start(20);
     outer.set_margin_end(20);
     outer.set_margin_top(16);
@@ -144,7 +145,7 @@ pub(in crate::app) fn build(app: &Application) {
             if s.windows.is_empty() {
                 return glib::Propagation::Proceed;
             }
-            w.hide();
+            w.set_visible(false);
             return glib::Propagation::Stop;
         }
         s.closing_library = true;

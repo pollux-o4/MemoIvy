@@ -53,6 +53,62 @@ pub(crate) fn safe_link(url: &str) -> bool {
 }
 
 /// GTK offsets count characters; the parser reports UTF-8 byte ranges.
+#[derive(Debug, Default, PartialEq)]
+pub(crate) struct Summary {
+    pub title: String,
+    pub preview: String,
+}
+
+const PREVIEW_CHARS: usize = 240;
+
+/// 카드에 보일 요약. 서식 기호를 뺀 첫 줄을 제목, 나머지를 미리보기로 쓴다.
+/// 카드에 보일 만큼만 읽어 긴 문서에서도 비용이 일정하다.
+pub(crate) fn summary(text: &str) -> Summary {
+    let mut lines = text.lines().map(plain_line).filter(|line| !line.is_empty());
+    let title = lines.next().unwrap_or_default();
+    let mut preview = String::new();
+    for line in lines {
+        if !preview.is_empty() {
+            preview.push(' ');
+        }
+        preview.push_str(&line);
+        if preview.chars().count() >= PREVIEW_CHARS {
+            break;
+        }
+    }
+    Summary { title, preview }
+}
+
+pub(crate) fn task_progress(text: &str) -> (usize, usize) {
+    let tasks = parse(text).tasks;
+    (
+        tasks.iter().filter(|task| task.checked).count(),
+        tasks.len(),
+    )
+}
+
+fn plain_line(line: &str) -> String {
+    let source = line.trim();
+    let mut out = String::new();
+    for event in Parser::new_ext(
+        source,
+        Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS,
+    ) {
+        match event {
+            Event::Text(text) | Event::Code(text) => out.push_str(&text),
+            Event::SoftBreak | Event::HardBreak => out.push(' '),
+            _ => {}
+        }
+    }
+    let out = out.trim();
+    let only_markers = source.chars().all(|c| !c.is_alphanumeric());
+    if out.is_empty() && !only_markers {
+        source.to_owned()
+    } else {
+        out.to_owned()
+    }
+}
+
 pub(crate) fn parse(text: &str) -> Document {
     let mut offsets = vec![0; text.len() + 1];
     let mut count = 0;
@@ -200,6 +256,17 @@ fn label_end(raw: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn canvas_001_summary_hides_markup_and_counts_tasks() {
+        let summary =
+            summary("\n# 출시 **계획**\n- [x] 범위\n- [ ] [노트](https://e.com)\n---\n`코드`");
+        assert_eq!(summary.title, "출시 계획");
+        assert_eq!(summary.preview, "범위 노트 코드");
+        assert_eq!(task_progress("- [x] 범위\n- [ ] 노트\n일반"), (1, 2));
+        assert_eq!(super::summary("").title, "");
+        assert_eq!(super::summary("<b>raw</b>").title, "raw");
+    }
 
     fn slice(text: &str, range: Range<i32>) -> String {
         text.chars()

@@ -83,7 +83,7 @@ fn process_result(st: &State, a: &Application) {
                     if s.queue.clean() {
                         s.error.set_visible(false);
                         for editor in s.windows.values() {
-                            editor.show_status("자동 저장됨", false);
+                            editor.show_status("저장됨", false);
                         }
                     } else if s.operation.is_none() {
                         dispatch(&mut s);
@@ -144,7 +144,7 @@ fn tick(st: &State, a: &Application) -> glib::ControlFlow {
             if st.borrow().windows.is_empty() {
                 library.close();
             } else {
-                library.hide();
+                library.set_visible(false);
                 for editor in st.borrow().windows.values() {
                     editor.view.set_editable(true);
                 }

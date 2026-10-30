@@ -4,7 +4,7 @@ use crate::app::{
     widgets::{header, menu_for, refresh},
 };
 use crate::persistence::store;
-use crate::presentation::{icons, theme::watch as dark};
+use crate::presentation::icons;
 use gtk::{
     glib, prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
     ScrolledWindow, TextView,
@@ -36,23 +36,22 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     super::shortcuts::attach(&window, state);
     let (header_bar, actions) = header(&window, "메모");
     header_bar.add_css_class(&note.color);
-    dark(header_bar.upcast_ref());
     let outer = GtkBox::new(Orientation::Vertical, 0);
     outer.add_css_class("memo");
     outer.add_css_class(&note.color);
-    dark(outer.upcast_ref());
     let palette = gtk::MenuButton::new();
-    palette.set_child(Some(&icons::image(icons::PALETTE, false)));
+    palette.set_child(Some(&icons::image(icons::PALETTE)));
     palette.update_property(&[gtk::accessible::Property::Label("메모 색상")]);
     palette.set_tooltip_text(Some("메모 색상"));
     palette.add_css_class("icon-button");
     let pop = gtk::Popover::new();
     let choices = GtkBox::new(Orientation::Vertical, 8);
-    choices.set_margin_top(12);
-    choices.set_margin_bottom(12);
-    choices.set_margin_start(12);
-    choices.set_margin_end(12);
-    choices.append(&Label::new(Some("메모 색상")));
+    choices.add_css_class("menu-body");
+    choices.add_css_class("palette-body");
+    let choices_title = Label::new(Some("메모 색상"));
+    choices_title.set_xalign(0.);
+    choices_title.add_css_class("menu-hint");
+    choices.append(&choices_title);
     let colors = GtkBox::new(Orientation::Horizontal, 6);
     let mut group: Option<gtk::ToggleButton> = None;
     for (name, title) in store::COLORS {
@@ -95,6 +94,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     }
     choices.append(&colors);
     pop.set_child(Some(&choices));
+    crate::app::widgets::menu_popover(&pop);
     palette.set_popover(Some(&pop));
     let canvas = Button::with_label("캔버스");
     canvas.add_css_class("lsm-action");
@@ -119,32 +119,25 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     let source = crate::app::widgets::format_editor(&view);
     let menu = menu_for(state, app, id);
     let popover = menu.popover().unwrap();
-    let delete = popover.child().unwrap();
-    popover.set_child(None::<&gtk::Widget>);
-    let options = GtkBox::new(Orientation::Vertical, 8);
-    options.set_margin_top(8);
-    options.set_margin_bottom(8);
-    options.set_margin_start(8);
-    options.set_margin_end(8);
-    options.append(&source);
-    let shortcuts = Button::with_label("단축키 · F1");
-    shortcuts.add_css_class("lsm-action");
+    let options = popover.child().and_downcast::<GtkBox>().unwrap();
+    crate::app::widgets::source_row(&source);
+    let shortcuts =
+        crate::app::widgets::menu_row(icons::KEYBOARD, "단축키·서식 도움말", Some("F1"));
     let weak = window.downgrade();
+    let popup = popover.downgrade();
     shortcuts.connect_clicked(move |_| {
+        if let Some(popover) = popup.upgrade() {
+            popover.popdown();
+        }
         if let Some(window) = weak.upgrade() {
             super::shortcuts::help(&window);
         }
     });
-    options.append(&shortcuts);
-    let help = gtk::Expander::new(Some("서식 도움말"));
-    let help_text = Label::new(Some("# 제목 · ## 소제목\n**굵게** · *기울임* · ~~취소선~~\n- 목록 · 1. 번호 목록\n- [ ] 할 일 · - [x] 완료\n[링크 이름](https://example.com)\n체크: 클릭 / Ctrl+Enter\n링크: Ctrl+클릭\n원문: Ctrl+Shift+M"));
-    help_text.set_xalign(0.);
-    help_text.set_margin_top(8);
-    help.set_child(Some(&help_text));
-    options.append(&help);
-    options.append(&gtk::Separator::new(Orientation::Horizontal));
-    options.append(&delete);
-    popover.set_child(Some(&options));
+    options.insert_child_after(&source, None::<&gtk::Widget>);
+    options.insert_child_after(&shortcuts, Some(&source));
+    let divider = gtk::Separator::new(Orientation::Horizontal);
+    divider.add_css_class("menu-divider");
+    options.insert_child_after(&divider, Some(&shortcuts));
     let popup = popover.downgrade();
     source.connect_toggled(move |_| {
         if let Some(popover) = popup.upgrade() {
@@ -153,7 +146,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     });
     actions.append(&menu);
     outer.append(&scroll);
-    let status = Label::new(Some("자동 저장됨"));
+    let status = Label::new(Some("저장됨"));
     status.set_xalign(0.);
     status.set_wrap(true);
     status.add_css_class("status");
