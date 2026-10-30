@@ -24,6 +24,16 @@ pub(super) fn card(v: &Rc<CanvasView>, note: &Note, index: usize) -> GtkBox {
         "⠿  드래그로 이동"
     });
     handle.add_css_class("canvas-handle");
+    let weak = Rc::downgrade(v);
+    let focus = gtk::EventControllerFocus::new();
+    focus.connect_enter(move |_| {
+        if let Some(v) = weak.upgrade() {
+            if v.selected.get() != Some(id) {
+                v.select(id);
+            }
+        }
+    });
+    handle.add_controller(focus);
     handle.update_property(&[gtk::accessible::Property::Label(&format!(
         "{} · 선택 및 이동",
         note.text

@@ -153,6 +153,19 @@ fn build(v: &Rc<CanvasView>) {
         dropdown.update_property(&[gtk::accessible::Property::Label("연결할 다음 메모")]);
         dropdown.set_size_request(200, -1);
         v.inspector.append(&dropdown);
+        let context = Label::new(None);
+        context.set_wrap(true);
+        context.set_max_width_chars(22);
+        context.set_xalign(0.);
+        let descriptions: Vec<String> = candidates.iter().map(|n| n.text.clone()).collect();
+        context.set_text(&descriptions[0]);
+        let detail = context.clone();
+        dropdown.connect_selected_notify(move |d| {
+            if let Some(text) = descriptions.get(d.selected() as usize) {
+                detail.set_text(text);
+            }
+        });
+        v.inspector.append(&context);
         let connect = Button::with_label("연결 추가");
         connect.set_widget_name("canvas-control-connect");
         let ids: Vec<_> = candidates.iter().map(|n| n.id).collect();
@@ -195,7 +208,26 @@ fn build(v: &Rc<CanvasView>) {
         label.set_max_width_chars(16);
         label.set_hexpand(true);
         label.set_xalign(0.);
-        row.append(&label);
+        let visit = Button::new();
+        visit.set_child(Some(&label));
+        visit.set_tooltip_text(Some("다음 메모 선택"));
+        visit.update_property(&[gtk::accessible::Property::Label(&format!(
+            "다음 메모 선택: {}",
+            target
+                .text
+                .lines()
+                .find(|s| !s.trim().is_empty())
+                .unwrap_or("빈 메모")
+        ))]);
+        let weak = Rc::downgrade(v);
+        let destination = *next;
+        visit.connect_clicked(move |_| {
+            if let Some(v) = weak.upgrade() {
+                v.select(destination);
+                v.reveal();
+            }
+        });
+        row.append(&visit);
         let remove = Button::with_label("×");
         remove.set_widget_name(&format!("canvas-control-remove-{next}"));
         remove.set_tooltip_text(Some("이 연결 해제 · 메모는 유지"));

@@ -38,3 +38,4 @@
   - 브라우저 시각 검증: `gtk4-broadwayd -a 127.0.0.1 -p 8085 :5` 실행 후, 합성 XDG_DATA_HOME으로 `GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 cargo run --locked`. 브라우저에서 로컬 포트를 연다.
   - 네이티브 화면 캡처: `LSM_CANVAS_ARTIFACT_DIR=/tmp/lsm-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
   - 실제 포인터로 선택·드래그·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.
+  - 실제 캔버스 조작: SAVE-001 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/canvas_001_ui_smoke.py`. `GTK_THEME=Adwaita:dark`로 반복한다. 범위·사용자 연구와의 구분은 UX-001을 따른다.
