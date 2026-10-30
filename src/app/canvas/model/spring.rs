@@ -26,12 +26,14 @@ impl Spring {
     }
 
     pub fn advance(&mut self, elapsed: f64) {
-        let steps = (elapsed.clamp(0., 1.) / STEP).ceil() as usize;
+        let elapsed = elapsed.clamp(0., 1.);
+        let steps = (elapsed / STEP).ceil() as usize;
+        let step = elapsed / steps.max(1) as f64;
         for _ in 0..steps {
             let acceleration =
                 self.stiffness * (self.target - self.value) - self.damping * self.velocity;
-            self.velocity += acceleration * STEP;
-            self.value += self.velocity * STEP;
+            self.velocity += acceleration * step;
+            self.value += self.velocity * step;
         }
         if self.settled() {
             self.value = self.target;
@@ -73,6 +75,34 @@ mod tests {
             spring.value > position,
             "the card keeps travelling for a moment instead of snapping back"
         );
+    }
+
+    #[test]
+    fn canvas_002_high_refresh_jitter_preserves_elapsed_time() {
+        let simulate = |hz: usize, jitter: bool| {
+            let mut spring = Spring::new(0., 100., 0.34, 1., 0.);
+            for frame in 0..hz / 2 {
+                let factor = if jitter {
+                    if frame % 2 == 0 {
+                        0.8
+                    } else {
+                        1.2
+                    }
+                } else {
+                    1.
+                };
+                spring.advance(factor / hz as f64);
+            }
+            spring.value
+        };
+        let reference = simulate(120, false);
+        for hz in [60, 120, 144] {
+            let actual = simulate(hz, true);
+            assert!(
+                (actual - reference).abs() < 0.05,
+                "{hz}Hz jitter advances by real elapsed time: {actual} vs {reference}"
+            );
+        }
     }
 
     #[test]

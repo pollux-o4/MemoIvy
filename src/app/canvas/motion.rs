@@ -15,7 +15,41 @@ pub(super) const LINK_SECONDS: f64 = 0.28;
 const CAMERA_RESPONSE: f64 = 0.34;
 const CARD_RESPONSE: f64 = 0.36;
 const CARD_DAMPING: f64 = 0.84;
-const INERTIA_FRICTION: f64 = 4.5;
+const INERTIA_FRICTION: f64 = 12.;
+const INERTIA_START_SPEED: f64 = 120.;
+const INERTIA_STOP_SPEED: f64 = 40.;
+const INERTIA_MAX_SPEED: f64 = 1200.;
+
+#[derive(Clone, Copy)]
+struct Coast {
+    velocity: (f64, f64),
+}
+
+impl Coast {
+    fn new((vx, vy): (f64, f64)) -> Option<Self> {
+        let speed = vx.hypot(vy);
+        if !speed.is_finite() || speed < INERTIA_START_SPEED {
+            return None;
+        }
+        let scale = (INERTIA_MAX_SPEED / speed).min(1.);
+        Some(Self {
+            velocity: (vx * scale, vy * scale),
+        })
+    }
+
+    fn advance(self, elapsed: f64) -> (Option<Self>, (f64, f64)) {
+        let (vx, vy) = self.velocity;
+        let remaining = (vx.hypot(vy) / INERTIA_STOP_SPEED).ln() / INERTIA_FRICTION;
+        let dt = elapsed.max(0.).min(remaining);
+        let decay = (-INERTIA_FRICTION * dt).exp();
+        let distance = (1. - decay) / INERTIA_FRICTION;
+        let next = (elapsed < remaining).then_some(Self {
+            velocity: (vx * decay, vy * decay),
+        });
+        (next, (vx * distance, vy * distance))
+    }
+}
+
 const AUTOPAN_EDGE: f64 = 36.;
 const AUTOPAN_SPEED: f64 = 900.;
 const PANEL_INSET: f64 = 284.;
@@ -24,7 +58,7 @@ const PANEL_INSET: f64 = 284.;
 pub(super) struct MotionState {
     camera: Option<[Spring; 3]>,
     cards: HashMap<Uuid, [Spring; 2]>,
-    inertia: Option<(f64, f64)>,
+    inertia: Option<Coast>,
     pub(super) pulse: Option<(Uuid, Instant)>,
     pub(super) link: Option<(Uuid, Uuid, Instant)>,
     last: Option<Instant>,
@@ -146,11 +180,11 @@ pub(super) fn stop_card(v: &CanvasView, id: Uuid) {
 }
 
 pub(super) fn inertia(v: &Rc<CanvasView>, velocity: (f64, f64)) {
-    if !animated(v) || velocity.0.hypot(velocity.1) < 60. {
-        return;
+    let coast = animated(v).then(|| Coast::new(velocity)).flatten();
+    v.motion.borrow_mut().inertia = coast;
+    if coast.is_some() {
+        start(v);
     }
-    v.motion.borrow_mut().inertia = Some(velocity);
-    start(v);
 }
 
 pub(super) fn signal(v: &Rc<CanvasView>, id: Uuid) {
@@ -214,14 +248,18 @@ fn start(v: &Rc<CanvasView>) {
         return;
     }
     motion.running = true;
-    motion.last = None;
+    let began = Instant::now();
+    let began_clock = glib::monotonic_time();
+    motion.last = Some(began);
     drop(motion);
     let weak = Rc::downgrade(v);
-    v.widgets.surface.add_tick_callback(move |_, _| {
+    v.widgets.surface.add_tick_callback(move |_, clock| {
         let Some(v) = weak.upgrade() else {
             return glib::ControlFlow::Break;
         };
-        if advance(&v, Instant::now()) {
+        let elapsed =
+            std::time::Duration::from_micros((clock.frame_time() - began_clock).max(0) as u64);
+        if advance(&v, began + elapsed) {
             glib::ControlFlow::Continue
         } else {
             v.motion.borrow_mut().running = false;
@@ -237,7 +275,7 @@ pub(super) fn advance(v: &Rc<CanvasView>, now: Instant) -> bool {
     let mut motion = v.motion.borrow_mut();
     let elapsed = motion
         .last
-        .map_or(1. / 60., |last| now.duration_since(last).as_secs_f64());
+        .map_or(0., |last| now.saturating_duration_since(last).as_secs_f64());
     motion.last = Some(now);
 
     let mut camera = None;
@@ -259,12 +297,30 @@ pub(super) fn advance(v: &Rc<CanvasView>, now: Instant) -> bool {
             motion.camera = None;
         }
     }
-    if let Some((vx, vy)) = motion.inertia {
-        let current = camera.unwrap_or(v.session.camera.get());
-        camera = Some(current.panned(vx * elapsed, vy * elapsed));
-        let decay = (-INERTIA_FRICTION * elapsed).exp();
-        let (vx, vy) = (vx * decay, vy * decay);
-        motion.inertia = (vx.hypot(vy) >= 20. && !reduced).then_some((vx, vy));
+    if let Some(coast) = motion.inertia {
+        if reduced {
+            motion.inertia = None;
+        } else {
+            let current = camera.unwrap_or(v.session.camera.get());
+            let (mut next, (dx, dy)) = coast.advance(elapsed);
+            let candidate = current.panned(dx, dy);
+            let kept = v.keep_camera(candidate);
+            if let Some(coast) = &mut next {
+                if kept.x != candidate.x {
+                    coast.velocity.0 = 0.;
+                }
+                if kept.y != candidate.y {
+                    coast.velocity.1 = 0.;
+                }
+                if coast.velocity.0.hypot(coast.velocity.1) <= INERTIA_STOP_SPEED {
+                    next = None;
+                }
+            }
+            motion.inertia = next;
+            if kept != current {
+                camera = Some(kept);
+            }
+        }
     }
 
     let mut moved = Vec::with_capacity(motion.cards.len());
@@ -367,6 +423,50 @@ pub(in crate::app) mod tests {
     use std::time::Duration;
 
     #[test]
+    fn canvas_002_coast_is_short_bounded_and_refresh_independent() {
+        let simulate = |hz: usize, jitter: bool| {
+            let mut coast = Coast::new((1000., 0.));
+            let (mut x, mut time) = (0., 0.);
+            let mut frame = 0;
+            while let Some(current) = coast {
+                let factor = if jitter {
+                    if frame % 2 == 0 {
+                        0.8
+                    } else {
+                        1.2
+                    }
+                } else {
+                    1.
+                };
+                let elapsed = factor / hz as f64;
+                let (next, delta) = current.advance(elapsed);
+                x += delta.0;
+                time += elapsed;
+                coast = next;
+                frame += 1;
+                assert!(time < 0.35, "coast must promptly stop at {hz}Hz");
+            }
+            x
+        };
+        for hz in [60, 120, 144] {
+            for jitter in [false, true] {
+                assert!((simulate(hz, jitter) - 80.).abs() < 1e-8);
+            }
+        }
+        assert!(
+            Coast::new((100., 0.)).is_none(),
+            "gentle release has no added tail"
+        );
+        assert!(Coast::new((f64::NAN, 0.)).is_none());
+        let (next, distance) = Coast::new((100_000., 0.)).unwrap().advance(1.);
+        assert!(next.is_none());
+        assert!(
+            distance.0 < 100.,
+            "fast flick or stalled frame cannot launch the board"
+        );
+    }
+
+    #[test]
     fn canvas_002_signal_is_bounded_and_reduced_motion_is_static() {
         assert_eq!(ease(-1.), 0.);
         assert_eq!(ease(2.), 1.);
@@ -404,6 +504,60 @@ pub(in crate::app) mod tests {
         camera_to(v, goal(1.));
         assert_eq!(v.session.camera.get().zoom, 1.);
         assert!(v.motion.borrow().camera.is_none());
+        settings.set_gtk_enable_animations(true);
+        scene::board::set_camera(v, goal(1.));
+        inertia(v, (1000., 0.));
+        let release = Instant::now();
+        v.motion.borrow_mut().last = None;
+        assert!(advance(v, release));
+        assert_eq!(
+            v.session.camera.get().x,
+            0.,
+            "no assumed 60Hz step on first frame"
+        );
+        let mut active = true;
+        for frame in 1..=42 {
+            active = advance(v, release + Duration::from_secs_f64(frame as f64 / 120.));
+        }
+        assert!(!active, "trackpad coast must finish within 350ms at 120Hz");
+        assert!(
+            v.session.camera.get().x < 110.,
+            "trackpad coast must stay within 110 screen pixels"
+        );
+        inertia(v, (1000., 0.));
+        let controllers = v.widgets.surface.observe_controllers();
+        let scroll = (0..controllers.n_items())
+            .find_map(|i| {
+                controllers
+                    .item(i)
+                    .and_downcast::<gtk::EventControllerScroll>()
+            })
+            .unwrap();
+        scroll.emit_by_name::<()>("scroll-begin", &[]);
+        assert!(
+            v.motion.borrow().inertia.is_none(),
+            "finger contact interrupts inertia before the next delta"
+        );
+        stop_camera(v);
+        scene::board::set_camera(v, goal(1.).panned(1e9, 0.));
+        inertia(v, (1000., 0.));
+        let edge = Instant::now();
+        v.motion.borrow_mut().last = Some(edge);
+        assert!(
+            !advance(v, edge + Duration::from_secs_f64(1. / 120.)),
+            "blocked coast stops at the board boundary"
+        );
+        scene::board::set_camera(v, goal(1.));
+        inertia(v, (1000., 0.));
+        settings.set_gtk_enable_animations(false);
+        v.motion.borrow_mut().last = Some(edge);
+        assert!(!advance(v, edge + Duration::from_secs_f64(1. / 120.)));
+        assert_eq!(
+            v.session.camera.get().x,
+            0.,
+            "reduced motion cancels coast without one last jump"
+        );
+        stop_camera(v);
         settings.set_gtk_enable_animations(original);
     }
 }

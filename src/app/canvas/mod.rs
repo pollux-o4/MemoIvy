@@ -282,7 +282,11 @@ impl CanvasView {
 
     fn queue_camera(self: &Rc<Self>, camera: Camera) {
         // 입력 좌표는 즉시 누적하고 카드·변환 갱신은 프레임당 한 번만 한다.
-        self.session.camera.set(self.keep_camera(camera));
+        let camera = self.keep_camera(camera);
+        if camera == self.session.camera.get() {
+            return;
+        }
+        self.session.camera.set(camera);
         if self.session.camera_queued.replace(true) {
             return;
         }

@@ -38,16 +38,27 @@ pub(in super::super) fn attach(v: &Rc<CanvasView>) {
 
 fn attach_scroll(v: &Rc<CanvasView>) {
     let scroll = gtk::EventControllerScroll::new(ScrollFlags::BOTH_AXES | ScrollFlags::KINETIC);
+    let panning = Rc::new(Cell::new(false));
+    let weak = Rc::downgrade(v);
+    let began_panning = panning.clone();
+    scroll.connect_scroll_begin(move |_| {
+        began_panning.set(false);
+        if let Some(v) = weak.upgrade() {
+            motion::stop_camera(&v);
+        }
+    });
+    let is_panning = panning.clone();
     let weak = Rc::downgrade(v);
     scroll.connect_scroll(move |controller, dx, dy| {
         let Some(v) = weak.upgrade() else {
             return glib::Propagation::Proceed;
         };
         let wheel = controller.unit() == gdk::ScrollUnit::Wheel;
-        if controller
+        let zooming = controller
             .current_event_state()
-            .contains(gdk::ModifierType::CONTROL_MASK)
-        {
+            .contains(gdk::ModifierType::CONTROL_MASK);
+        is_panning.set(!zooming);
+        if zooming {
             let strength = if wheel { WHEEL_ZOOM } else { TOUCHPAD_ZOOM };
             let camera = v.session.camera.get();
             motion::stop_camera(&v);
@@ -67,7 +78,8 @@ fn attach_scroll(v: &Rc<CanvasView>) {
     let weak = Rc::downgrade(v);
     scroll.connect_decelerate(move |controller, vx, vy| {
         if let Some(v) = weak.upgrade() {
-            if controller.unit() != gdk::ScrollUnit::Wheel {
+            if panning.replace(false) && controller.unit() != gdk::ScrollUnit::Wheel {
+                // shortcut: GTK 4.22 구현은 초당 속도(문서는 ms 표기), GTK 업그레이드 시 scroll_history_finish 단위 재확인.
                 motion::inertia(&v, (vx, vy));
             }
         }

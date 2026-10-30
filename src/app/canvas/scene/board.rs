@@ -18,8 +18,8 @@ pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
     v.session.camera.set(camera);
     let transform = gtk::gsk::Transform::new()
         .translate(&gtk::graphene::Point::new(
-            (-camera.x * camera.zoom).round() as f32,
-            (-camera.y * camera.zoom).round() as f32,
+            (-camera.x * camera.zoom) as f32,
+            (-camera.y * camera.zoom) as f32,
         ))
         .scale(camera.zoom as f32, camera.zoom as f32);
     v.widgets

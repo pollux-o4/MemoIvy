@@ -68,6 +68,22 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
             "one-shot callback must stop at idle"
         );
     }
+    v.queue_camera(Camera {
+        x: 0.25,
+        y: 0.125,
+        zoom: 1.,
+    });
+    settle(50);
+    let (tx, ty) = v
+        .widgets
+        .stage
+        .child_transform(&v.widgets.world)
+        .unwrap()
+        .to_translate();
+    assert!(
+        (tx + 0.25).abs() < 0.001 && (ty + 0.125).abs() < 0.001,
+        "high-refresh slow movement must preserve subpixel translation: {tx}, {ty}"
+    );
     // 대기 중 다른 조작이 카메라를 바꿔도 오래된 스크롤 위치를 재생하지 않는다.
     scroll.emit_by_name::<bool>("scroll", &[&0.25, &0.125]);
     scene::board::set_camera(v, Camera::default());
