@@ -3,9 +3,10 @@ use std::ops::Range;
 
 pub(crate) fn safe_link(url: &str) -> bool {
     !url.chars().any(char::is_control)
-        && ["https://", "http://", "mailto:"]
-            .iter()
-            .any(|prefix| url.to_ascii_lowercase().starts_with(prefix))
+        && ["https://", "http://", "mailto:"].iter().any(|prefix| {
+            url.get(..prefix.len())
+                .is_some_and(|scheme| scheme.eq_ignore_ascii_case(prefix))
+        })
 }
 
 /// http(s) 주소 문자열을 링크로 본다. 한글 조사가 바로 붙는 일이 많아 비ASCII에서 끝낸다.
