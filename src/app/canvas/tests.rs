@@ -437,9 +437,12 @@ pub(in crate::app) fn perf_002_frames() {
         .collect();
     let state = AppState::fixture(path, &app, notes);
     let library = state.borrow().views.library.window.clone();
+    // 실제 시작처럼 목록을 먼저 준비해 첫 카드 생성 비용이 프레임 표본에 섞이지 않게 한다.
+    crate::app::shell::views::refresh_all(&state, &app);
     open(&state, &app, None);
     settle(600);
     let v = state.borrow().views.canvas.clone().unwrap();
+    // shortcut: Xvfb 소프트웨어 렌더링은 변경 전에도 PERF-002 절대 기준 미달, 실제 GPU 환경 확보 시 재측정.
     let measure = |name: &str, seconds: f64, step: &mut dyn FnMut(f64)| {
         let frames = Rc::new(RefCell::new(Vec::<Instant>::new()));
         let log = frames.clone();
