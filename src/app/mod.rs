@@ -5,6 +5,8 @@ mod gtk_tests;
 mod library;
 mod shared;
 mod shell;
+#[cfg(test)]
+mod test_support;
 
 use gtk::{prelude::*, Application};
 

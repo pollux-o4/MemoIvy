@@ -1,4 +1,5 @@
 use super::*;
+use crate::app::test_support::{button_with_class, drain, named, settle, until};
 use crate::{
     app::shell::state::AppState,
     persistence::{Note, Notebook, SaveStatus},
@@ -59,7 +60,7 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
             0,
             "scroll must wait for the frame before updating widgets"
         );
-        settle(50);
+        until(|| !v.session.camera_queued.get());
         assert!((v.session.camera.get().x - expected.0).abs() < 0.001);
         assert!((v.session.camera.get().y - expected.1).abs() < 0.001);
         assert_eq!(updates.get(), 1);
@@ -73,7 +74,7 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
         y: 0.125,
         zoom: 1.,
     });
-    settle(50);
+    until(|| !v.session.camera_queued.get());
     let (tx, ty) = v
         .widgets
         .stage
@@ -102,34 +103,6 @@ fn wait_notebook(state: &State) {
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
     panic!("notebook writer timed out");
-}
-
-fn drain() {
-    let context = gtk::glib::MainContext::default();
-    while context.pending() {
-        context.iteration(false);
-    }
-}
-
-fn settle(ms: u64) {
-    for _ in 0..ms / 5 {
-        drain();
-        std::thread::sleep(std::time::Duration::from_millis(5));
-    }
-}
-
-fn named(widget: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
-    if widget.widget_name() == name {
-        return Some(widget.clone());
-    }
-    let mut child = widget.first_child();
-    while let Some(w) = child {
-        if let Some(found) = named(&w, name) {
-            return Some(found);
-        }
-        child = w.next_sibling();
-    }
-    None
 }
 
 fn connect_through_menu(v: &Rc<CanvasView>, target: Uuid) {
@@ -227,14 +200,7 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     gtk::prelude::WidgetExt::unrealize(&v.widgets.window);
     v.widgets.window.set_default_size(820, 620);
     v.widgets.window.present();
-    for _ in 0..200 {
-        drain();
-        if (760..=840).contains(&v.widgets.window.width()) && v.widgets.surface.width() > 0 {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(5));
-    }
-    settle(50);
+    until(|| (760..=840).contains(&v.widgets.window.width()) && v.widgets.surface.width() > 0);
     touchpad_burst(&v);
     // 화면 밖 카드는 측정에서 빠지고 다시 들어오면 나타난다.
     scene::board::set_camera(
@@ -247,7 +213,18 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     );
     scene::board::set_camera(&v, Camera::default());
     assert!(v.widgets.cards.borrow()[&a].root.get_visible());
-    settle(50);
+    until(|| {
+        v.widgets.cards.borrow().values().all(|card| {
+            !card.root.get_visible()
+                || card
+                    .root
+                    .compute_bounds(&v.widgets.world)
+                    .is_some_and(|bounds| {
+                        f64::from(bounds.height()) == port::CARD_HEIGHT
+                            && f64::from(bounds.width()) == port::CARD_WIDTH
+                    })
+        })
+    });
     assert!(
         (760..=840).contains(&v.widgets.window.width()),
         "small window must not be forced wide: {}",
@@ -296,7 +273,10 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
         .expect("completion control");
     done.grab_focus();
     done.set_active(true);
-    settle(10);
+    until(|| {
+        gtk::prelude::GtkWindowExt::focus(&v.widgets.window)
+            .is_some_and(|w| w.widget_name() == "canvas-control-done")
+    });
     assert_eq!(
         gtk::prelude::GtkWindowExt::focus(&v.widgets.window)
             .unwrap()
@@ -394,7 +374,10 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
         state.borrow().notebook.notes()[0].canvas().position,
         Some([80., 64.])
     );
-    settle(20);
+    until(|| {
+        gtk::prelude::GtkWindowExt::focus(&v.widgets.window)
+            .is_some_and(|w| w.widget_name() == a.to_string())
+    });
     assert_eq!(
         gtk::prelude::GtkWindowExt::focus(&v.widgets.window).map(|w| w.widget_name().to_string()),
         Some(a.to_string()),
@@ -510,29 +493,9 @@ fn confirm_dialog(v: &CanvasView) -> Option<gtk::Window> {
         })
 }
 
-fn button_with_class(widget: &gtk::Widget, class: &str) -> Option<Button> {
-    if widget.has_css_class(class) {
-        return widget.clone().downcast::<Button>().ok();
-    }
-    let mut child = widget.first_child();
-    while let Some(w) = child {
-        if let Some(found) = button_with_class(&w, class) {
-            return Some(found);
-        }
-        child = w.next_sibling();
-    }
-    None
-}
-
 fn run_shell(state: &State) {
     crate::app::shell::lifecycle::wake(state);
-    for _ in 0..600 {
-        settle(5);
-        if !state.borrow().timer_active {
-            return;
-        }
-    }
-    panic!("shell timer did not stop");
+    until(|| !state.borrow().timer_active);
 }
 
 pub(in crate::app) fn canvas_004_markers_shortcuts_and_delete() {

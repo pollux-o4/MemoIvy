@@ -31,6 +31,7 @@ pub(in crate::app) fn watch(window: &ApplicationWindow) {
 #[cfg(test)]
 pub(in crate::app) mod tests {
     use super::*;
+    use crate::app::test_support::until;
 
     // Called by the display test on its GTK thread.
     pub(in crate::app) fn focus_001_releases_and_restores_input_owner() {
@@ -42,13 +43,7 @@ pub(in crate::app) mod tests {
         let entry = gtk::SearchEntry::new();
         window.set_child(Some(&entry));
         window.present();
-        let context = gtk::glib::MainContext::default();
-        for _ in 0..50 {
-            while context.pending() {
-                context.iteration(false);
-            }
-            std::thread::sleep(std::time::Duration::from_millis(2));
-        }
+        until(|| entry.is_drawable());
         entry.grab_focus();
         let saved = SavedFocus::new(None);
         assert!(gtk::prelude::GtkWindowExt::focus(&window).is_some());

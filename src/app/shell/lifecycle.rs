@@ -195,17 +195,7 @@ fn tick(state: &State) -> glib::ControlFlow {
 #[cfg(test)]
 pub(in crate::app) fn save_002_close_failure_and_idle_timer() {
     use super::state::AppState;
-    fn until(done: impl Fn() -> bool) {
-        let end = Instant::now() + Duration::from_secs(3);
-        let context = glib::MainContext::default();
-        while !done() {
-            while context.pending() {
-                context.iteration(false);
-            }
-            assert!(Instant::now() < end, "lifecycle timed out");
-            std::thread::sleep(Duration::from_millis(1));
-        }
-    }
+    use crate::app::test_support::until;
     let app = gtk::Application::builder()
         .application_id("io.github.lsm.LifecycleTest")
         .build();

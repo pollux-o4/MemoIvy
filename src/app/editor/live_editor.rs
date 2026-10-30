@@ -599,14 +599,8 @@ fn attach_editor(view: &TextView) -> (CheckButton, Rc<LiveEditor>) {
 #[cfg(test)]
 pub(in crate::app) mod tests {
     use super::*;
+    use crate::app::test_support::{count, drain, find_checkbox, settle, until};
     use std::time::Instant;
-
-    fn drain() {
-        let context = glib::MainContext::default();
-        while context.pending() {
-            context.iteration(false);
-        }
-    }
 
     fn text(buffer: &TextBuffer) -> String {
         buffer
@@ -632,34 +626,15 @@ pub(in crate::app) mod tests {
             .child(&scroll)
             .build();
         window.present();
-        settle(120);
+        until(|| view.is_mapped() && view.width() > 0 && view.height() > 0);
         (window, view, source, editor)
-    }
-
-    /// 부하가 걸린 테스트에서도 지연 뒤의 상태를 기다린다.
-    #[track_caller]
-    fn until(done: &dyn Fn() -> bool) {
-        for _ in 0..600 {
-            if done() {
-                return;
-            }
-            settle(5);
-        }
-        assert!(done(), "preview state timed out");
-    }
-
-    fn settle(ms: u64) {
-        for _ in 0..ms / 5 {
-            drain();
-            std::thread::sleep(std::time::Duration::from_millis(5));
-        }
-        drain();
     }
 
     /// 숨긴 표식이 있는 줄의 모든 지점을 눌러도 GTK가 중단되지 않아야 한다.
     /// 줄 아래 간격을 다시 쓰면 이 검사가 프로세스 중단으로 실패한다.
     pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
-        let text = "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
+        let text =
+            "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
         let (window, view, source, _editor) = shown_window(text);
         let buffer = view.buffer();
         buffer.place_cursor(&buffer.iter_at_offset(0));
@@ -722,15 +697,6 @@ pub(in crate::app) mod tests {
         let adjustment = view.vadjustment().unwrap();
         adjustment.set_value(adjustment.upper() / 2.);
         settle(120);
-        fn count(widget: &gtk::Widget, class: &str) -> usize {
-            let mut total = usize::from(widget.is_visible() && widget.has_css_class(class));
-            let mut child = widget.first_child();
-            while let Some(next) = child {
-                total += count(&next, class);
-                child = next.next_sibling();
-            }
-            total
-        }
         assert_eq!(count(view.upcast_ref(), "md-checkbox"), 200);
         assert_eq!(count(view.upcast_ref(), "md-bullet"), 200);
         buffer.set_text(text);
@@ -900,8 +866,7 @@ pub(in crate::app) mod tests {
         editor.preview.hover(None, anchor);
         assert!(editor.preview.is_shown(), "grace period to reach the card");
         until(&|| !editor.preview.is_shown());
-        settle(150);
-        assert!(!editor.preview.card_is_visible());
+        until(|| !editor.preview.card_is_visible());
         // Esc는 포인터를 옮기지 않고 닫는다.
         until(&|| {
             // 창 관리자 없는 환경에서는 포커스가 흔들려 예약이 취소될 수 있다.
@@ -980,8 +945,7 @@ pub(in crate::app) mod tests {
         settle(750);
         assert!(!editor.preview.is_shown(), "dismissed stays dismissed");
         buffer.place_cursor(&buffer.end_iter());
-        settle(30);
-        settle(150);
+        drain();
         // 조합 중에는 뜨지 않는다.
         buffer.place_cursor(&buffer.iter_at_offset(2));
         view.emit_preedit_changed("한");
@@ -1024,19 +988,6 @@ pub(in crate::app) mod tests {
             !buffer.can_undo(),
             "display updates must not enter undo history"
         );
-        fn find_checkbox(widget: &gtk::Widget) -> Option<gtk::CheckButton> {
-            if let Some(button) = widget.downcast_ref::<gtk::CheckButton>() {
-                return Some(button.clone());
-            }
-            let mut child = widget.first_child();
-            while let Some(widget) = child {
-                if let Some(button) = find_checkbox(&widget) {
-                    return Some(button);
-                }
-                child = widget.next_sibling();
-            }
-            None
-        }
         let checkbox = find_checkbox(view.upcast_ref()).unwrap();
         buffer.place_cursor(&buffer.end_iter());
         drain();
