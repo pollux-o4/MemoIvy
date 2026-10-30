@@ -496,6 +496,7 @@ mod tests {
         gtk::init().expect("FMT-001 requires a display; run under xvfb-run");
         crate::app::windows::focus::tests::focus_001_releases_and_restores_input_owner();
         crate::app::windows::canvas::tests::canvas_001_widget_flow_and_recovery();
+        crate::app::windows::canvas::tests::perf_002_frames();
         let view = TextView::new();
         let buffer = view.buffer();
         let original =

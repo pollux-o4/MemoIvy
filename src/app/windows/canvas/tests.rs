@@ -369,3 +369,128 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     drain();
     assert!(app.windows().is_empty());
 }
+
+/// PERF-002 프레임 측정. 릴리스 빌드에서 `LSM_CANVAS_PERF=1`일 때만 실행한다.
+pub(in crate::app) fn perf_002_frames() {
+    if std::env::var("LSM_CANVAS_PERF").is_err() {
+        return;
+    }
+    use std::time::Instant;
+    crate::presentation::install();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.json");
+    let app = Application::builder()
+        .application_id("io.github.lsm.CanvasPerf")
+        .build();
+    app.register(None::<&gtk::gio::Cancellable>).unwrap();
+    let library = ApplicationWindow::new(&app);
+    let mut notes: Vec<Note> = (0..300).map(|_| Note::new()).collect();
+    let ids: Vec<Uuid> = notes.iter().map(|n| n.id).collect();
+    for (i, n) in notes.iter_mut().enumerate() {
+        n.text = format!("# 메모 {i}\n- [x] 완료\n{}", "본문 내용 ".repeat(90));
+        n.canvas.position = Some([(i % 20) as f64 * 300., (i / 20) as f64 * 200.]);
+        if i % 3 != 0 && i < 299 {
+            n.canvas.next.push(ids[i + 1]);
+        }
+    }
+    let state = Rc::new(RefCell::new(AppState {
+        store: Store {
+            path: path.clone(),
+            notes,
+        },
+        queue: SaveQueue::new(path),
+        canvas: None,
+        windows: HashMap::new(),
+        list: GtkBox::new(Orientation::Vertical, 0),
+        count: Label::new(None),
+        search: gtk::SearchEntry::new(),
+        error: Label::new(None),
+        library: library.clone(),
+        changed_at: None,
+        first_change: None,
+        refresh_at: None,
+        closing: Vec::new(),
+        closing_library: false,
+        bypass: false,
+        operation: None,
+        add: Button::new(),
+    }));
+    open(&state, &app, None);
+    settle(600);
+    let v = state.borrow().canvas.clone().unwrap();
+    let measure = |name: &str, seconds: f64, step: &mut dyn FnMut(f64)| {
+        let frames = Rc::new(RefCell::new(Vec::<Instant>::new()));
+        let log = frames.clone();
+        let tick = v.surface.add_tick_callback(move |_, _| {
+            log.borrow_mut().push(Instant::now());
+            gtk::glib::ControlFlow::Continue
+        });
+        let begin = Instant::now();
+        let context = gtk::glib::MainContext::default();
+        while begin.elapsed().as_secs_f64() < seconds {
+            step(begin.elapsed().as_secs_f64());
+            context.iteration(true);
+        }
+        tick.remove();
+        let frames = frames.borrow();
+        let mut gaps: Vec<f64> = frames
+            .windows(2)
+            .map(|w| w[1].duration_since(w[0]).as_secs_f64() * 1000.)
+            .collect();
+        gaps.sort_by(f64::total_cmp);
+        let p = |q: f64| gaps[((gaps.len() - 1) as f64 * q) as usize];
+        println!(
+            "PERF-002 {name}: frames={} fps={:.0} p50={:.1}ms p95={:.1}ms max={:.1}ms",
+            gaps.len(),
+            gaps.len() as f64 / seconds,
+            p(0.5),
+            p(0.95),
+            p(1.)
+        );
+    };
+    scene::board::set_camera(&v, Camera::default());
+    settle(100);
+    measure("pan-100%", 2., &mut |t| {
+        scene::board::set_camera(
+            &v,
+            Camera {
+                x: t * 300.,
+                y: t * 120.,
+                zoom: 1.,
+            },
+        );
+    });
+    measure("zoom-sweep", 2., &mut |t| {
+        let zoom = 0.1 + (t / 2.) * 0.9;
+        scene::board::set_camera(&v, Camera { x: 0., y: 0., zoom });
+    });
+    let fit = Camera {
+        x: 0.,
+        y: 0.,
+        zoom: 0.2,
+    };
+    measure("pan-20%", 2., &mut |t| {
+        scene::board::set_camera(&v, Camera { x: t * 300., ..fit });
+    });
+    scene::board::set_camera(&v, Camera::default());
+    v.selection.borrow_mut().set(ids.iter().copied());
+    v.sync_selection();
+    input::keyboard::run(&v, input::keyboard::Command::Flow);
+    measure("flow-300-cards", 1.2, &mut |_| {});
+    v.undo();
+    let camera = v.camera.get();
+    let surface = gtk::cairo::ImageSurface::create(gtk::cairo::Format::ARgb32, 1920, 1080).unwrap();
+    let cr = gtk::cairo::Context::new(&surface).unwrap();
+    let began = Instant::now();
+    for _ in 0..30 {
+        scene::paint::draw_backdrop(&v, &cr, 1920., 1080.);
+    }
+    println!(
+        "PERF-002 backdrop-1080p: {:.2}ms per paint (zoom {:.2})",
+        began.elapsed().as_secs_f64() * 1000. / 30.,
+        camera.zoom
+    );
+    v.destroy();
+    library.destroy();
+    drain();
+}
