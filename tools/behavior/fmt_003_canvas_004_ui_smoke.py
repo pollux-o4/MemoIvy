@@ -22,6 +22,8 @@ LINK_START = (50, 114)
 LINK_TEXT = (60, 114)
 OUTSIDE_PREVIEW = (400, 340)
 PREVIEW_OPEN = (122, 193)
+LINE_GAP_SWEEP_X = 300
+LINE_GAP_SWEEP_Y = range(60, 300, 3)
 
 def grab():
     return ImageGrab.grab(xdisplay=os.environ['DISPLAY'])
@@ -63,8 +65,8 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         time.sleep(.4)
         grab().crop((500, 60, 1000, 480)).save(artifacts / 'markers-editor.png')
         # 숨긴 표식이 있는 줄의 모든 높이를 눌러도 앱이 죽지 않는다(줄 아래 간격 회귀).
-        for py in range(60, 300, 3):
-            click(note, 300, py)
+        for py in LINE_GAP_SWEEP_Y:
+            click(note, LINE_GAP_SWEEP_X, py)
             assert app.poll() is None, f'crash when clicking y={py}'
         key('ctrl+End')
         # 쓰는 흐름: 표식은 공백까지 치면 바로 렌더링되고 Enter로 이어지며 빈 항목에서 끝난다.
