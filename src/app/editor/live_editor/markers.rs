@@ -23,6 +23,7 @@ impl LiveEditor {
         while widgets.len() < document.tasks.len() {
             let button = gtk::CheckButton::new();
             button.add_css_class("md-checkbox");
+            button.set_cursor_from_name(Some("default"));
             button.set_focusable(false);
             button.set_tooltip_text(Some("완료 상태 변경 · Ctrl+Enter"));
             let offset = Rc::new(Cell::new(0));

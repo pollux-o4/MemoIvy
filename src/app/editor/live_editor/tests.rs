@@ -43,6 +43,23 @@ pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
         "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
     let (window, view, source, _editor) = shown_window(text);
     let buffer = view.buffer();
+    // TextView가 text 커서를 쓰는 실제 조건에서도 체크는 화살표로 구분한다.
+    view.set_cursor_from_name(Some("text"));
+    let checkbox = find_checkbox(view.upcast_ref()).unwrap();
+    let mut cursor_owner = Some(checkbox.clone().upcast::<gtk::Widget>());
+    let cursor = loop {
+        let widget =
+            cursor_owner.expect("checkbox cursor must resolve through its widget ancestry");
+        if let Some(cursor) = widget.cursor() {
+            break cursor;
+        }
+        cursor_owner = widget.parent();
+    };
+    assert_eq!(
+        cursor.name().as_deref(),
+        Some("default"),
+        "checkbox must not inherit the editor I-beam"
+    );
     buffer.place_cursor(&buffer.iter_at_offset(0));
     settle(60);
     for y in 0..view.height() {
@@ -116,6 +133,111 @@ pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
         .tags()
         .iter()
         .all(|t| !t.is_left_margin_set()));
+    window.destroy();
+    drain();
+    checkbox_pointer_targets();
+}
+
+/// 실제 앱 CSS·줄바꿈·중첩·스크롤·확대 글꼴에서도 체크의 표면과 클릭 대상이 일치한다.
+fn checkbox_pointer_targets() {
+    crate::presentation::install();
+    let original = format!(
+        "- [ ] {}\n  - [ ] 중첩 항목\n{}",
+        "긴 본문 ".repeat(24),
+        "- [ ] 다음 항목\n".repeat(30)
+    );
+    let (window, view, source, editor) = shown_window(&original);
+    let buffer = view.buffer();
+    view.set_cursor_from_name(Some("text"));
+    let picked_checkbox = |x: f64, y: f64, button: &CheckButton| {
+        view.pick(x, y, gtk::PickFlags::DEFAULT)
+            .is_some_and(|picked| {
+                picked == *button.upcast_ref::<gtk::Widget>() || picked.is_ancestor(button)
+            })
+    };
+    let verify = |index: usize| {
+        let button = editor.widgets.tasks.borrow()[index].button.clone();
+        let bounds = button.compute_bounds(&view).unwrap();
+        assert_eq!(
+            button.cursor().and_then(|cursor| cursor.name()).as_deref(),
+            Some("default")
+        );
+        assert!(
+            bounds.width() >= CHECK_BOX as f32 && bounds.width() <= GUTTER as f32,
+            "target stays in marker gutter: {bounds:?}"
+        );
+        assert!(bounds.height() > 0.);
+        let check = button.first_child().unwrap();
+        assert!(
+            check.width() >= 13 && check.height() >= 13,
+            "visual checkbox retains a square surface"
+        );
+        let x = f64::from(bounds.x() + bounds.width() / 2.);
+        let y = f64::from(bounds.y() + bounds.height() / 2.);
+        assert!(
+            picked_checkbox(x, y, &button),
+            "native check target follows rendered marker"
+        );
+        assert!(
+            !picked_checkbox(f64::from(bounds.x() + GUTTER as f32 + 2.), y, &button),
+            "body text is outside check target"
+        );
+        button
+    };
+    let first = verify(0);
+    verify(1);
+    let toggles = Rc::new(Cell::new(0));
+    let seen = toggles.clone();
+    buffer.connect_insert_text(move |_, _, inserted| {
+        if inserted == "x" {
+            seen.set(seen.get() + 1);
+        }
+    });
+    assert!(first.activate());
+    until(|| text(&buffer).starts_with("- [x] "));
+    assert_eq!(
+        toggles.get(),
+        1,
+        "native activation changes the source exactly once"
+    );
+    buffer.undo();
+    until(|| text(&buffer) == original);
+    let start = editor.document.borrow().items[0].content.start;
+    buffer.select_range(
+        &buffer.iter_at_offset(start),
+        &buffer.iter_at_offset(start + 2),
+    );
+    drain();
+    assert_eq!(text(&buffer), original, "selection leaves source unchanged");
+    source.set_active(true);
+    until(|| !first.is_visible());
+    source.set_active(false);
+    until(|| first.is_visible() && editor.layout.frames.get() == 0);
+    // 글꼴 확대는 GTK 논리 좌표의 히트 영역도 다시 계산해야 한다.
+    let css = gtk::CssProvider::new();
+    css.load_from_data("textview.checkbox-target-test { font-size: 24px; }");
+    gtk::style_context_add_provider_for_display(
+        &view.display(),
+        &css,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+    );
+    view.add_css_class("checkbox-target-test");
+    buffer.place_cursor(&buffer.start_iter());
+    editor.schedule();
+    until(|| editor.layout.frames.get() == 0 && !editor.pending.get());
+    verify(0);
+    let target = editor.document.borrow().items[10].content.start;
+    buffer.place_cursor(&buffer.iter_at_offset(target));
+    view.scroll_to_iter(&mut buffer.iter_at_offset(target), 0., true, 0., 0.5);
+    until(|| {
+        let button = editor.widgets.tasks.borrow()[10].button.clone();
+        let bounds = button.compute_bounds(&view).unwrap();
+        bounds.y() >= 0.
+            && bounds.y() + bounds.height() < view.height() as f32
+            && editor.layout.frames.get() == 0
+    });
+    verify(10);
+    gtk::style_context_remove_provider_for_display(&view.display(), &css);
     window.destroy();
     drain();
 }
