@@ -417,6 +417,20 @@ fn motion_target(v: &CanvasView) -> Camera {
         })
 }
 
+pub(super) fn reset_zoom(v: &Rc<CanvasView>) {
+    let size = (
+        f64::from(v.widgets.surface.width()),
+        f64::from(v.widgets.surface.height()),
+    );
+    camera_to(
+        v,
+        v.session
+            .camera
+            .get()
+            .zoomed_at((size.0 / 2., size.1 / 2.), 1.),
+    );
+}
+
 #[cfg(test)]
 pub(in crate::app) mod tests {
     use super::*;
@@ -560,18 +574,4 @@ pub(in crate::app) mod tests {
         stop_camera(v);
         settings.set_gtk_enable_animations(original);
     }
-}
-
-pub(super) fn reset_zoom(v: &Rc<CanvasView>) {
-    let size = (
-        f64::from(v.widgets.surface.width()),
-        f64::from(v.widgets.surface.height()),
-    );
-    camera_to(
-        v,
-        v.session
-            .camera
-            .get()
-            .zoomed_at((size.0 / 2., size.1 / 2.), 1.),
-    );
 }
