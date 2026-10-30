@@ -7,6 +7,7 @@ import subprocess as sp
 import tempfile
 import time
 import uuid
+from PIL import ImageChops, ImageGrab
 
 artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-keyboard'))
 artifacts.mkdir(parents=True, exist_ok=True)
@@ -46,6 +47,48 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         call('windowmove',canvas,'0','0')
         call('windowfocus',canvas)
         time.sleep(.5)
+        # 실제 휠·수정키·중간 버튼 입력이 카메라만 바꾸고 메모 배치를 보존한다.
+        geometry = dict(line.split('=', 1) for line in call('getwindowgeometry', '--shell', canvas).splitlines())
+        width, height = int(geometry['WIDTH']), int(geometry['HEIGHT'])
+        camera_origin = (width // 2, height // 2)
+        body_box = (int(geometry['X']), int(geometry['Y']) + 50,
+                    int(geometry['X']) + width, int(geometry['Y']) + height - 45)
+        initial_notes = json.loads(path.read_text())
+        call('mousemove', '--window', canvas, *map(str, camera_origin))
+        time.sleep(.2)
+        def camera_input(action, label):
+            # 포인터·호버 변화만으로 카메라 이동 검사가 통과하지 않게 같은 곳으로 치운다.
+            call('mousemove', '0', '0')
+            before = ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop(body_box)
+            call('mousemove', '--window', canvas, *map(str, camera_origin))
+            action()
+            call('mousemove', '0', '0')
+            deadline = time.monotonic() + 3
+            while True:
+                after = ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop(body_box)
+                if ImageChops.difference(before, after).getbbox() is not None:
+                    break
+                assert time.monotonic() < deadline, label + ' must move rendered cards'
+                time.sleep(.02)
+            assert json.loads(path.read_text()) == initial_notes, label + ' must not move note positions'
+        camera_input(lambda: call('click', '5'), 'wheel pan')
+        def zoom_wheel():
+            call('keydown', 'ctrl')
+            try:
+                call('click', '4')
+            finally:
+                call('keyup', 'ctrl')
+        camera_input(zoom_wheel, 'Ctrl+wheel zoom')
+        def middle_pan():
+            call('mousedown', '2')
+            try:
+                for dx, dy in [(10, 5), (25, 15), (40, 25)]:
+                    call('mousemove', '--window', canvas, str(camera_origin[0] + dx), str(camera_origin[1] + dy))
+            finally:
+                call('mouseup', '2')
+        camera_input(middle_pan, 'middle-button pan')
+        key('Escape', 'shift+1')
+        time.sleep(.8)
         # 첫 화면은 두 카드 중심을 창 가운데에 맞춘다(100%). 월드 → 창 좌표 변환.
         center=[344,142]
         at=lambda wx,wy:(wx-center[0]+VIEW_CENTER[0],wy-center[1]+VIEW_CENTER[1])
@@ -117,7 +160,6 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         time.sleep(.2)
         call('windowsize',canvas,'820','620')
         time.sleep(.4)
-        from PIL import ImageGrab
         ImageGrab.grab(xdisplay=os.environ['DISPLAY']).save(artifacts/'canvas-pointer-keyboard.png')
         key('ctrl+w')
         time.sleep(.3)
@@ -130,7 +172,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         key('ctrl+w')
         assert app.wait(timeout=8)==0
         assert not any(x in (artifacts/'canvas-app.log').read_text() for x in ['panicked at','Gtk-CRITICAL'])
-        print('PASS: pointer selection/drag, Tab/arrow movement, marquee/align/undo, port link, double-click open, small window, close/flush, restart identity/layout')
+        print('PASS: wheel pan/anchored zoom/middle-button pan, pointer selection/drag, Tab/arrow movement, marquee/align/undo, port link, double-click open, small window, close/flush, restart identity/layout')
     finally:
         if app and app.poll() is None: app.terminate();app.wait(timeout=5)
         wm.terminate();wm.wait(timeout=5)
