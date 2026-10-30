@@ -244,7 +244,7 @@ mod tests {
         queue.record_failure();
         assert!(!queue.clean());
         queue.retry();
-        queue.dispatch(&[original.clone()]);
+        queue.dispatch(std::slice::from_ref(&original));
         let (transaction, result) = wait(&mut queue);
         assert!(!transaction);
         assert!(result.is_ok());
