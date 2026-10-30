@@ -250,6 +250,7 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     );
 
     // 확대 전환은 기존 위젯을 유지하고 저장을 만들지 않는다.
+    input::pointer::test_pinch_interrupts_scroll(&v);
     super::motion::tests::canvas_002_viewport(&v);
     scene::board::set_camera(&v, Camera::default());
 

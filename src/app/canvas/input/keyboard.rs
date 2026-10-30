@@ -212,6 +212,7 @@ fn tab_to_card(v: &Rc<CanvasView>, backwards: bool) -> bool {
 }
 
 fn escape(v: &Rc<CanvasView>) -> bool {
+    motion::stop_camera(v);
     let interaction = v.session.interaction.borrow().clone();
     match interaction {
         Interaction::Idle => {

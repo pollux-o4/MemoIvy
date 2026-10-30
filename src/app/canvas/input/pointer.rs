@@ -1,4 +1,7 @@
-use super::super::{model::layout::Rect, motion, port, scene, CanvasView};
+use super::super::{
+    model::{camera::Camera, layout::Rect},
+    motion, port, scene, CanvasView,
+};
 use super::Interaction;
 use gtk::{gdk, glib, prelude::*, EventControllerScrollFlags as ScrollFlags};
 use std::{cell::Cell, rc::Rc};
@@ -38,53 +41,63 @@ pub(in super::super) fn attach(v: &Rc<CanvasView>) {
 
 fn attach_scroll(v: &Rc<CanvasView>) {
     let scroll = gtk::EventControllerScroll::new(ScrollFlags::BOTH_AXES | ScrollFlags::KINETIC);
-    let panning = Rc::new(Cell::new(false));
     let weak = Rc::downgrade(v);
-    let began_panning = panning.clone();
     scroll.connect_scroll_begin(move |_| {
-        began_panning.set(false);
         if let Some(v) = weak.upgrade() {
             motion::stop_camera(&v);
         }
     });
-    let is_panning = panning.clone();
     let weak = Rc::downgrade(v);
     scroll.connect_scroll(move |controller, dx, dy| {
         let Some(v) = weak.upgrade() else {
             return glib::Propagation::Proceed;
         };
-        let wheel = controller.unit() == gdk::ScrollUnit::Wheel;
         let zooming = controller
             .current_event_state()
             .contains(gdk::ModifierType::CONTROL_MASK);
-        is_panning.set(!zooming);
-        if zooming {
-            let strength = if wheel { WHEEL_ZOOM } else { TOUCHPAD_ZOOM };
-            let camera = v.session.camera.get();
-            motion::stop_camera(&v);
-            let next = camera.zoomed_at(
-                v.session.pointer.get(),
-                camera.zoom * (-dy * strength).exp(),
-            );
-            v.queue_camera(next);
-        } else {
-            let unit = if wheel { WHEEL_PAN } else { 1. };
-            motion::stop_camera(&v);
-            let next = v.session.camera.get().panned(dx * unit, dy * unit);
-            v.queue_camera(next);
-        }
+        motion::stop_camera(&v);
+        let next = scrolled(
+            v.session.camera.get(),
+            controller.unit(),
+            (dx, dy),
+            zooming,
+            v.session.pointer.get(),
+        );
+        v.queue_camera(next);
+        v.session.scroll_panning.set(!zooming);
         glib::Propagation::Stop
     });
     let weak = Rc::downgrade(v);
     scroll.connect_decelerate(move |controller, vx, vy| {
         if let Some(v) = weak.upgrade() {
-            if panning.replace(false) && controller.unit() != gdk::ScrollUnit::Wheel {
-                // shortcut: GTK 4.22 구현은 초당 속도(문서는 ms 표기), GTK 업그레이드 시 scroll_history_finish 단위 재확인.
-                motion::inertia(&v, (vx, vy));
-            }
+            decelerate(&v, controller.unit(), (vx, vy));
         }
     });
     v.widgets.surface.add_controller(scroll);
+}
+
+fn scrolled(
+    camera: Camera,
+    unit: gdk::ScrollUnit,
+    (dx, dy): (f64, f64),
+    zooming: bool,
+    anchor: (f64, f64),
+) -> Camera {
+    let wheel = unit == gdk::ScrollUnit::Wheel;
+    if zooming {
+        let strength = if wheel { WHEEL_ZOOM } else { TOUCHPAD_ZOOM };
+        camera.zoomed_at(anchor, camera.zoom * (-dy * strength).exp())
+    } else {
+        let unit = if wheel { WHEEL_PAN } else { 1. };
+        camera.panned(dx * unit, dy * unit)
+    }
+}
+
+fn decelerate(v: &Rc<CanvasView>, unit: gdk::ScrollUnit, velocity: (f64, f64)) {
+    if v.session.scroll_panning.replace(false) && unit == gdk::ScrollUnit::Surface {
+        // shortcut: GTK 4.22 구현은 초당 속도(문서는 ms 표기), GTK 업그레이드 시 scroll_history_finish 단위 재확인.
+        motion::inertia(v, velocity);
+    }
 }
 
 fn attach_pinch(v: &Rc<CanvasView>) {
@@ -346,4 +359,100 @@ pub(in super::super) fn follow(v: &Rc<CanvasView>) {
         v.widgets.backdrop.queue_draw();
     }
     scene::paint::sync_hud(v);
+}
+
+#[cfg(test)]
+pub(in super::super) fn test_pinch_interrupts_scroll(v: &Rc<CanvasView>) {
+    let controllers = v.widgets.surface.observe_controllers();
+    let scroll = (0..controllers.n_items())
+        .find_map(|i| {
+            controllers
+                .item(i)
+                .and_downcast::<gtk::EventControllerScroll>()
+        })
+        .unwrap();
+    let pinch = (0..controllers.n_items())
+        .find_map(|i| controllers.item(i).and_downcast::<gtk::GestureZoom>())
+        .unwrap();
+    motion::stop_camera(v);
+    scene::board::set_camera(v, super::super::model::camera::Camera::default());
+    let advance = || {
+        let now = std::time::Instant::now();
+        motion::advance(v, now);
+        motion::advance(v, now + std::time::Duration::from_millis(100));
+    };
+    scroll.emit_by_name::<()>("scroll-begin", &[]);
+    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    let before = v.session.camera.get();
+    decelerate(v, gdk::ScrollUnit::Wheel, (1000., 0.));
+    advance();
+    assert_eq!(v.session.camera.get(), before, "wheel has no extra coast");
+    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    let before = v.session.camera.get();
+    decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));
+    advance();
+    assert!(
+        v.session.camera.get().x > before.x,
+        "Surface release keeps bounded coast"
+    );
+    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    pinch.emit_by_name::<()>("begin", &[&None::<gdk::EventSequence>]);
+    // shortcut: 안전한 GDK Surface 이벤트 생성 API가 없어 감속 경계에 합성, 실제 터치패드 검증 때 재확인.
+    decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));
+    let before = v.session.camera.get();
+    advance();
+    assert_eq!(
+        v.session.camera.get(),
+        before,
+        "pinch must invalidate prior scroll coast"
+    );
+    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    let before = v.session.camera.get();
+    motion::camera_to(v, before);
+    decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));
+    advance();
+    let after = v.session.camera.get();
+    assert!(
+        (after.x - before.x).abs() < 1e-6 && (after.y - before.y).abs() < 1e-6,
+        "camera command must invalidate prior scroll coast"
+    );
+    motion::stop_camera(v);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn canvas_002_scroll_units_and_moving_zoom_anchor() {
+        let camera = Camera {
+            x: 120.,
+            y: -40.,
+            zoom: 0.8,
+        };
+        let surface = scrolled(
+            camera,
+            gdk::ScrollUnit::Surface,
+            (0.25, -0.125),
+            false,
+            (0., 0.),
+        );
+        assert_eq!(surface, camera.panned(0.25, -0.125));
+        let wheel = scrolled(camera, gdk::ScrollUnit::Wheel, (1., -1.), false, (0., 0.));
+        assert_eq!(wheel, camera.panned(60., -60.));
+        for unit in [gdk::ScrollUnit::Wheel, gdk::ScrollUnit::Surface] {
+            let mut current = camera;
+            for (anchor, dy) in [
+                ((250., 180.), -0.25),
+                ((270., 185.), -0.125),
+                ((260., 200.), 0.5),
+            ] {
+                let world = current.to_world(anchor);
+                let next = scrolled(current, unit, (0., dy), true, anchor);
+                let after = next.to_world(anchor);
+                assert!((after.0 - world.0).abs() < 1e-9 && (after.1 - world.1).abs() < 1e-9);
+                current = next;
+            }
+        }
+    }
 }

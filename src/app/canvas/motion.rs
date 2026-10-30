@@ -105,6 +105,7 @@ fn center(camera: Camera, size: (f64, f64)) -> (f64, f64) {
 
 /// 화면 중심과 로그 배율을 따로 보간해 확대가 일정한 속도로 느껴지게 한다.
 pub(super) fn camera_to(v: &Rc<CanvasView>, target: Camera) {
+    v.session.scroll_panning.set(false);
     let mut motion = v.motion.borrow_mut();
     motion.inertia = None;
     if !animated(v) {
@@ -134,6 +135,7 @@ pub(super) fn camera_to(v: &Rc<CanvasView>, target: Camera) {
 }
 
 pub(super) fn stop_camera(v: &CanvasView) {
+    v.session.scroll_panning.set(false);
     let mut motion = v.motion.borrow_mut();
     motion.camera = None;
     motion.inertia = None;
@@ -538,6 +540,44 @@ pub(in crate::app) mod tests {
             v.session.camera.get().x < 110.,
             "trackpad coast must stay within 110 screen pixels"
         );
+        inertia(v, (1000., 0.));
+        let selected = v.session.selection.borrow().ids().to_vec();
+        let keys = v.widgets.window.observe_controllers();
+        let keys = (0..keys.n_items())
+            .filter_map(|i| keys.item(i).and_downcast::<gtk::EventControllerKey>())
+            .find(|keys| keys.propagation_phase() == gtk::PropagationPhase::Capture)
+            .unwrap();
+        let stopped: bool = keys.emit_by_name(
+            "key-pressed",
+            &[
+                &gtk::gdk::Key::Escape,
+                &0u32,
+                &gtk::gdk::ModifierType::empty(),
+            ],
+        );
+        assert!(
+            stopped,
+            "Escape consumes cancellation of active camera motion"
+        );
+        assert!(
+            v.motion.borrow().inertia.is_none(),
+            "Escape must stop touchpad coast before the next frame"
+        );
+        v.session.selection.borrow_mut().set([]);
+        inertia(v, (1000., 0.));
+        let stopped: bool = keys.emit_by_name(
+            "key-pressed",
+            &[
+                &gtk::gdk::Key::Escape,
+                &0u32,
+                &gtk::gdk::ModifierType::empty(),
+            ],
+        );
+        assert!(!stopped, "empty-board Escape keeps existing propagation");
+        assert!(v.motion.borrow().inertia.is_none());
+        assert!(v.widgets.window.is_visible());
+        v.session.selection.borrow_mut().set(selected);
+        v.sync_selection();
         inertia(v, (1000., 0.));
         let controllers = v.widgets.surface.observe_controllers();
         let scroll = (0..controllers.n_items())
