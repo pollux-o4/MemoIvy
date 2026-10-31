@@ -1,11 +1,10 @@
+mod syntax;
 use std::ops::Range;
+pub(in crate::presentation::markdown) use syntax::{inline, links, list};
 
 /// 편집기와 카드가 깊이별로 공유하는 목록 기호.
 pub(crate) const BULLETS: [&str; 3] = ["•", "◦", "▪"];
 
-mod inline;
-mod links;
-mod list;
 mod summary;
 
 pub(crate) use inline::{parse, plain_line};

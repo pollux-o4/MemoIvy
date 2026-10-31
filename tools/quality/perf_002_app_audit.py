@@ -80,7 +80,7 @@ def run_once():
 
 def tokens(name):
     out = {}
-    for key, value in re.findall(r'@define-color (\w+) ([^;]+);', (ROOT / f'src/presentation/styles/tokens-{name}.css').read_text()):
+    for key, value in re.findall(r'@define-color (\w+) ([^;]+);', (ROOT / f'src/presentation/styles/themes/tokens-{name}.css').read_text()):
         m = re.match(r'alpha\((#\w+), (\.?\d+)\)', value)
         out[key] = (m.group(1), float(m.group(2))) if m else (value, 1.)
     return out
@@ -136,7 +136,7 @@ def contrast():
     return failures
 
 
-m = re.search(r'\.canvas-card\.done \{ opacity: (\.?\d+)', (ROOT / 'src/presentation/styles/canvas.css').read_text())
+m = re.search(r'\.canvas-card\.done \{ opacity: (\.?\d+)', (ROOT / 'src/presentation/styles/views/canvas.css').read_text())
 DONE_OPACITY = float(m.group(1)) if m else 1.
 runs = [run_once() for _ in range(3)]
 print(f'notes={NOTES} runs={len(runs)} (median)')

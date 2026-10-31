@@ -10,7 +10,7 @@ pub(crate) fn safe_link(url: &str) -> bool {
 }
 
 /// http(s) 주소 문자열을 링크로 본다. 한글 조사가 바로 붙는 일이 많아 비ASCII에서 끝낸다.
-pub(super) fn bare_links(
+pub(in crate::presentation::markdown) fn bare_links(
     text: &str,
     literal: &[Range<usize>],
     chars: &impl Fn(Range<usize>) -> Range<i32>,
@@ -186,7 +186,7 @@ pub(crate) fn link_info(url: &str, label: &str) -> LinkInfo {
 }
 
 // Only hide a link's syntax when its label boundary is unambiguous.
-pub(super) fn label_end(raw: &str) -> Option<usize> {
+pub(in crate::presentation::markdown) fn label_end(raw: &str) -> Option<usize> {
     let mut depth = 0;
     let mut escaped = false;
     let mut code_ticks = 0;

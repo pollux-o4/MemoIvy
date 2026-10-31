@@ -1,21 +1,21 @@
 use super::{Document, ListItem, ListKind, Span, Style, Task};
 use std::ops::Range;
 
-pub(super) struct LineMark {
+pub(in crate::presentation::markdown) struct LineMark {
     /// 들여쓰기 뒤 표식 시작(바이트).
-    pub(super) start: usize,
+    pub(in crate::presentation::markdown) start: usize,
     /// 본문 시작(바이트).
-    pub(super) body: usize,
+    pub(in crate::presentation::markdown) body: usize,
     /// 들여쓰기 칸 수.
-    pub(super) columns: usize,
-    pub(super) kind: ListKind,
+    pub(in crate::presentation::markdown) columns: usize,
+    pub(in crate::presentation::markdown) kind: ListKind,
     /// 체크 괄호 범위(바이트).
     check: Option<Range<usize>>,
 }
 
 /// 한 줄의 목록 표식. 쓰는 동안 바로 보여야 하므로 문단 뒤나 빈 항목도 줄 단위로 인식한다.
 /// 공백까지 쳐야 표식이다. `-5도`나 입력 중인 `-`가 잠깐 기호로 바뀌지 않는다.
-pub(super) fn line_mark(line: &str) -> Option<LineMark> {
+pub(in crate::presentation::markdown) fn line_mark(line: &str) -> Option<LineMark> {
     let body = line.trim_start_matches([' ', '\t']);
     let start = line.len() - body.len();
     let columns = line[..start]
@@ -69,7 +69,7 @@ pub(super) fn line_mark(line: &str) -> Option<LineMark> {
     })
 }
 
-pub(super) fn scan_items(
+pub(in crate::presentation::markdown) fn scan_items(
     text: &str,
     literal: &[Range<usize>],
     chars: &impl Fn(Range<usize>) -> Range<i32>,

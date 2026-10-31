@@ -4,14 +4,14 @@ pub(crate) mod theme;
 
 use gtk::prelude::*;
 
-const LIGHT: &str = include_str!("styles/tokens-light.css");
-const DARK: &str = include_str!("styles/tokens-dark.css");
+const LIGHT: &str = include_str!("styles/themes/tokens-light.css");
+const DARK: &str = include_str!("styles/themes/tokens-dark.css");
 const STYLES: &str = concat!(
     include_str!("styles/base.css"),
     include_str!("styles/menus.css"),
-    include_str!("styles/library.css"),
-    include_str!("styles/memo.css"),
-    include_str!("styles/canvas.css"),
+    include_str!("styles/views/library.css"),
+    include_str!("styles/views/memo.css"),
+    include_str!("styles/views/canvas.css"),
 );
 
 /// 토큰만 테마별로 교체한다. 구성요소 스타일은 한 벌만 유지한다.
