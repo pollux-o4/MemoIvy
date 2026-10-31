@@ -31,3 +31,20 @@ flowchart TB
 - GTK 독립 Markdown 해석·요약은 편집기와 캔버스가 공유한다. 표식 기호는 같은 상수, 체크 색·테두리는 공통 CSS 선택자를 쓴다.
 
 기능 간 조율·저장 경계: ADR-0010. 캔버스 상호작용 설계: ADR-0009.
+
+## 캔버스 확대
+
+```mermaid
+flowchart TB
+    facade["canvas · 기존 화면 진입점·세션"] --> controller["controller · 조율"]
+    controller --> window["window · 창 조립·수명"]
+    controller --> commands["commands · 변경·이력"]
+    controller --> camera["camera · 뷰포트"]
+    controller --> view["view · 선택·화면 동기화"]
+    commands --> port["port · 저장 어댑터"]
+    port --> notebook["Notebook · 원본"]
+    camera --> model["model · GTK 없는 계산"]
+    view --> scene["scene · 보드·그리기·카드"]
+```
+
+`controller`는 기존 `CanvasView`의 조율 책임을 나눠 구현한다. 저장 원본은 Notebook에만 두고 세션의 위치·카드는 화면용 파생 상태로 유지한다. 모델 내부는 geometry(카메라·배치·정렬), selection, history, spring으로 탐색한다. C4 UI 탐색에서 코드 진입점을 찾는다.

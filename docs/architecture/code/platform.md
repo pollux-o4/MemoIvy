@@ -6,16 +6,16 @@
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 서식·원문 범위 | inline의 `parse`·`plain_line`, `Document::item_at` |
-| 목록 인식 | list의 `line_mark`·`scan_items` |
-| 링크 판별·목적지 표시 | links의 `safe_link`·`link_info` |
+| 서식·원문 범위 | `src/presentation/markdown/syntax` inline의 `parse`·`plain_line`, `Document::item_at` |
+| 목록 인식 | syntax list의 `line_mark`·`scan_items` |
+| 링크 판별·목적지 표시 | syntax links의 `safe_link`·`link_info` |
 | 카드 요약 | summary의 `summary`·`fit_preview` |
 
 ## 시각 기반
 
 - CSS 설치·테마 구독: presentation의 `install`, theme의 `is_dark`·`WATCHED`.
 - SVG 렌더링·캐시: icons의 `image`·`illustration`·`cached`.
-- 표식 공통 외관: styles의 `.md-checkbox check`·`.line-marker.task`; 색상 원본은 `tokens-light`·`tokens-dark`.
+- 표식 공통 외관: styles/views의 `.md-checkbox check`·`.line-marker.task`; 색상 원본은 styles/themes의 `tokens-light`·`tokens-dark`.
 
 ## 데스크톱 통합
 

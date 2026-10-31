@@ -22,9 +22,13 @@
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 화면·세션 | `CanvasView`·`CanvasWidgets`·`BoardSession`, `selected_views` |
-| 규칙·이력 | model의 `Camera`·`Selection`·`History`·`Spring` |
-| 표시·입력 | scene의 board·card·preview, input, panels, motion |
+| 화면·세션 · `src/app/canvas/mod.rs` | `CanvasView`·`CanvasWidgets`·`BoardSession`, `selected_views` |
+| 규칙·이력 · `src/app/canvas/model` | model의 `Camera`·`Selection`·`History`·`Spring` |
+| 표시·입력 · `src/app/canvas` | scene의 board·card·preview, input, panels, motion |
 | 저장 연결·요약 캐시 | port의 `NodeView`·`SummaryCache`·`nodes` |
 
 경계 검사: `architecture_tests`. GTK 시나리오 진입점은 `gtk_tests`, 조건 대기·탐색은 `test_support`; 실제 입력 스모크의 공통 기반은 `lsm_driver`다. 실행 절차: OPS-003.
+
+- 캔버스 조율: `src/app/canvas/controller`의 window / `open`, commands / `mutate`·`step_history`, camera / `fit_rects`, view / `render`·`sync_selection`.
+- 카드 표현: `src/app/canvas/scene/cards`의 card·card_root·preview. geometry의 layout·camera·placement는 GTK 없이 검증한다.
+- GTK 시나리오: canvas/tests의 flow·shortcuts·performance, live_editor/tests의 layout·typing·links·editing. 기존 gtk_tests 진입점이 프로세스 격리를 유지한다.

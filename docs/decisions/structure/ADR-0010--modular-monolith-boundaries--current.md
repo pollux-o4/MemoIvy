@@ -18,3 +18,12 @@
 - 병렬 변경: 백엔드는 persistence, 프런트는 app/presentation을 담당한다. 저장 정책 변경과 화면 변경은 공개 계약이 같으면 독립적으로 구현한다. 큐 단위 PERF-001 probe만 저장 구현을 직접 포함하는 검증 도구다.
 - 검증 분담: 백엔드는 `cargo test --locked persistence`, 프런트는 OPS-003 GTK·UI 검사로 확인한다. 양쪽 통합 시 기본 검사와 architecture_tests를 실행한다. 공개 계약 변경은 구현 전 확인하고 양쪽 담당이 호출부 이관을 맞춘다.
 - 재검토: 공개 계약이 두 릴리스 동안 안정되면 크레이트 분리를 판단한다.
+
+## 내부 책임 구분
+
+- SRP: 캔버스 루트의 창 조립·변경·카메라·표시 조율을 controller 하위로 옮긴다. 루트는 기존 화면 계약과 세션 소유권을 유지한다.
+- SSoT: 좌표 허용 규칙은 domain::canvas::valid_position이 소유하며, 편집과 저장 데이터 검증이 공유한다.
+- 정보 은닉: persistence 내부는 domain·notebook·storage로 나누고 루트의 기존 공개 계약을 유지한다.
+- 패턴: Notebook은 Facade, canvas port는 Adapter, History는 Snapshot/Memento 역할을 유지한다. 명령마다 클래스·trait를 추가하는 GoF Command 구현은 현재 단일 호출 경로에 필요하지 않다.
+- OCP·DIP: UI의 저장 구현 직접 접근 금지를 유지한다. 구현 교체 요구가 없는 곳에는 추상화를 추가하지 않는다. 상속 계층이 없어 LSP를 적용할 구체적 대상은 없다.
+- 검증: 기존 명세 테스트의 내용과 GTK 프로세스 격리를 유지하고, 소스 폴더의 파일 수는 architecture_tests로 5개 이하를 검사한다.
