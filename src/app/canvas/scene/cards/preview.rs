@@ -8,7 +8,7 @@ const DEPTH_INDENT: i32 = 12;
 const MAX_DEPTH: usize = 2;
 
 /// 표식 칸. 체크는 CSS 상자, 기호·번호는 글자 하나로 그린다.
-pub(in super::super) fn marker_label() -> Label {
+pub(in crate::app::canvas) fn marker_label() -> Label {
     let label = Label::new(None);
     label.add_css_class("line-marker");
     label.set_valign(gtk::Align::Start);
@@ -16,7 +16,7 @@ pub(in super::super) fn marker_label() -> Label {
     label
 }
 
-pub(in super::super) fn set_marker(label: &Label, marker: Option<&LineMarker>, depth: usize) {
+pub(in crate::app::canvas) fn set_marker(label: &Label, marker: Option<&LineMarker>, depth: usize) {
     for class in ["task", "checked", "bullet", "number"] {
         label.remove_css_class(class);
     }
@@ -85,7 +85,7 @@ impl Row {
     }
 }
 
-pub(in super::super) struct Preview {
+pub(in crate::app::canvas) struct Preview {
     pub root: GtkBox,
     rows: RefCell<Vec<Row>>,
 }

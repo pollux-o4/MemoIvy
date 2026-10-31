@@ -1,14 +1,14 @@
-use super::super::{input, port, port::NodeView, CanvasView};
 use super::{card_root::CardRoot, preview};
+use crate::app::canvas::{input, port, port::NodeView, CanvasView};
 use crate::presentation::{icons, markdown};
 use gtk::{prelude::*, Box as GtkBox, Button, Label, Orientation};
 use std::{cell::RefCell, rc::Rc};
 use uuid::Uuid;
 
-pub(in super::super) const PORT_SIZE: f64 = 18.;
+pub(in crate::app::canvas) const PORT_SIZE: f64 = 18.;
 const PREVIEW_ROWS: i32 = 3;
 
-pub(in super::super) struct Card {
+pub(in crate::app::canvas) struct Card {
     pub root: CardRoot,
     title_marker: Label,
     title: Label,
@@ -150,17 +150,17 @@ impl Card {
 }
 
 #[cfg(test)]
-pub(in super::super) fn title_text(card: &Card) -> String {
+pub(in crate::app::canvas) fn title_text(card: &Card) -> String {
     card.title.text().to_string()
 }
 
 #[cfg(test)]
-pub(in super::super) fn more_text(card: &Card) -> Option<String> {
+pub(in crate::app::canvas) fn more_text(card: &Card) -> Option<String> {
     card.more.is_visible().then(|| card.more.text().to_string())
 }
 
 #[cfg(test)]
-pub(in super::super) fn title_marker_classes(card: &Card) -> Vec<String> {
+pub(in crate::app::canvas) fn title_marker_classes(card: &Card) -> Vec<String> {
     card.title_marker
         .css_classes()
         .iter()
@@ -169,6 +169,6 @@ pub(in super::super) fn title_marker_classes(card: &Card) -> Vec<String> {
 }
 
 #[cfg(test)]
-pub(in super::super) fn preview_rows(card: &Card) -> Vec<(String, String)> {
+pub(in crate::app::canvas) fn preview_rows(card: &Card) -> Vec<(String, String)> {
     card.preview.shown_rows()
 }

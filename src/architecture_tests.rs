@@ -37,7 +37,7 @@ fn adr_0010_backend_does_not_know_the_frontend() {
 #[test]
 fn adr_0010_canvas_reaches_storage_only_through_its_port() {
     for (path, code) in sources("src/app/canvas") {
-        let allowed = path.ends_with("canvas/port.rs") || path.ends_with("canvas/tests.rs");
+        let allowed = path.ends_with("canvas/port.rs") || path.contains("canvas/tests/");
         if !allowed {
             assert!(
                 !code.contains("persistence"),
@@ -108,4 +108,24 @@ fn adr_0010_features_coordinate_through_the_shell() {
             }
         }
     }
+}
+
+#[test]
+fn adr_0010_source_folders_keep_a_small_file_surface() {
+    fn inspect(dir: &Path) {
+        let entries: Vec<_> = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .collect();
+        let files = entries.iter().filter(|p| p.is_file()).count();
+        assert!(
+            files <= 5,
+            "{} has {files} files; group by responsibility",
+            dir.display()
+        );
+        for child in entries.iter().filter(|p| p.is_dir()) {
+            inspect(child);
+        }
+    }
+    inspect(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
 }
