@@ -1,4 +1,4 @@
-from lsm_driver import (call, wait_window, key, clip, binary, environment, write_notes)
+from tools.behavior.lsm_driver import (call, wait_window, key, clip, binary, environment, write_notes)
 # 검증: KEY-001, FMT-002, SAVE-001. 합성 메모만 사용하며 xdotool·xclip·Pillow가 필요하다.
 import json
 import os

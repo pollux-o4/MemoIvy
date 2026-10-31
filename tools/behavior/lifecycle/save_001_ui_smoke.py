@@ -4,7 +4,7 @@ import subprocess as sp, tempfile, os, time, json
 from pathlib import Path
 markdown=os.environ.get('LSM_SMOKE_MARKDOWN') == '1'
 text='# Heading\n## Subheading\n**bold** *italic* ~~strike~~\n- bullet\n1. number\n- [ ] todo\n- [x] done\n[link](https://example.com)' if markdown else 'Refactor smoke test'
-from lsm_driver import (call, wait_window as window, x, binary, environment, move, CLOSE, LIBRARY_NOTE, NEW_NOTE)
+from tools.behavior.lsm_driver import (call, wait_window as window, x, binary, environment, move, CLOSE, LIBRARY_NOTE, NEW_NOTE)
 with tempfile.TemporaryDirectory(prefix='lsm-refactor-') as tmp:
  env=environment(tmp)
  log=open(tmp+'/test.log','w')

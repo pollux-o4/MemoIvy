@@ -1,4 +1,4 @@
-from lsm_driver import (call, wait_window, key, click, clip, binary, environment, write_notes, LIBRARY_NOTE, SEARCH)
+from tools.behavior.lsm_driver import (call, wait_window, key, click, clip, binary, environment, write_notes, LIBRARY_NOTE, SEARCH)
 # 검증: FOCUS-001. 합성 메모만 사용하며 xdotool·xclip·Pillow가 필요하다.
 import json
 import os

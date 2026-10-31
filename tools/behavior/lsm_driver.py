@@ -32,6 +32,7 @@ def wait_window(title):
     raise AssertionError('window missing: ' + title)
 
 
+# shortcut: X11 입력 후 고정 대기로 UI 반영을 기다림, 스모크 실행 시간이 병목으로 확인되면 관찰 가능한 상태 대기로 교체.
 def key(*keys):
     call('key', '--clearmodifiers', *keys)
     time.sleep(.15)

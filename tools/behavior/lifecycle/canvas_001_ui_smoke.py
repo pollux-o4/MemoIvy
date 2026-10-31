@@ -1,4 +1,4 @@
-from lsm_driver import (call, wait_window, key, click, x, clip, binary, environment, write_notes, OPEN_CANVAS)
+from tools.behavior.lsm_driver import (call, wait_window, key, click, x, clip, binary, environment, write_notes, OPEN_CANVAS)
 # 검증: CANVAS-001·CANVAS-002. 합성 데이터의 실제 포인터·키보드·재시작 검사.
 import json
 import os

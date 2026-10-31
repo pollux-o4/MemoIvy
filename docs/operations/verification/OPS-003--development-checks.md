@@ -1,5 +1,6 @@
 # OPS-003 · 개발 검증
 
+- 개발 반복: GTK 없는 규칙 변경은 `cargo test --locked -- --skip app::gtk_tests:: --skip presentation::icons::tests::`로 먼저 확인한다. 저장만 변경하면 `cargo test --locked persistence`를 사용할 수 있다. 통합 전 아래 기본 검사를 완료한다.
 - 기본 검사: Rust 변경 시 실행.
   - `cargo fmt --check`
   - `dbus-run-session -- xvfb-run -a cargo test --locked` — GTK 편집 위젯 검증 포함, Xvfb 필요.
@@ -7,7 +8,7 @@
   - `cargo build --locked`
 - SAVE-001 UI smoke: 저장·닫기 변경 시 실행.
   - 전제: debug 빌드, Xvfb, Openbox, xdotool.
-  - `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/save_001_ui_smoke.py`
+  - `timeout 30s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.save_001_ui_smoke`
   - 별도 설치 경로는 LSM_OPENBOX·LSM_XDOTOOL, 라이브러리는 LD_LIBRARY_PATH, Openbox 테마는 XDG_DATA_DIRS로 지정한다.
   - 합성 XDG 데이터로 생성·입력·즉시 닫기·종료·재실행·다시 열기를 확인한다.
 - PERF-001 합성 probe
@@ -28,17 +29,17 @@
   - X11 테스트의 창 관리자와 도구가 실제 실행되는지 stderr를 확인한다.
 - FMT-001 실시간 편집
   - SAVE-001 환경에 xclip·python3-pil 추가. 별도 xclip 경로는 LSM_XCLIP으로 지정.
-  - `timeout 45s dbus-run-session -- xvfb-run -a python3 tools/behavior/fmt_001_live_ui_smoke.py`.
+  - `timeout 45s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.editor.fmt_001_live_ui_smoke`.
   - 실제 GTK 앱에서 선택·원문 복사·줄 경계 삭제·undo·체크 클릭/키보드·창 크기·안전한 링크 제스처·저장·재열기를 검증한다. 링크는 임시 URI 핸들러를 사용한다.
   - 화면 캡처는 기본 `/tmp/lsm-live-preview`, 변경은 LSM_ARTIFACT_DIR. 어두운 테마는 `GTK_THEME=Adwaita:dark`로 별도 실행한다.
 - FMT-003·CANVAS-004 링크 미리보기·목록 표식·보드 단축키
-  - FMT-001과 같은 환경에서 `timeout 90s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/behavior/fmt_003_canvas_004_ui_smoke.py`. `GTK_THEME=Adwaita:dark`로 반복한다.
+  - FMT-001과 같은 환경에서 `timeout 90s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.editor.fmt_003_canvas_004_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다.
   - 줄 간격 클릭, 링크 머무르기·입력·Esc·키보드 열기·카드가 뜬 채 닫기, 삭제 취소·수락, 완료 단축키를 확인한다. Broadway는 팝오버 그림자 여백만큼 위치가 어긋나므로 위치 판단은 X11에서 한다.
 - FOCUS-001 입력 소유권
-  - FMT-001과 같은 환경에서 `timeout 30s dbus-run-session -- xvfb-run -a python3 tools/behavior/focus_001_ui_smoke.py`.
+  - FMT-001과 같은 환경에서 `timeout 30s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.input.focus_001_ui_smoke`.
   - 마우스 창 전환 5회, 메모 저장 내용과 검색어 불변을 확인한다. 실제 Wayland·한글 IME 검증과 구분한다.
 - KEY-001·FMT-002 단축키
-  - FMT-001과 같은 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/key_001_ui_smoke.py`.
+  - FMT-001과 같은 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.input.key_001_ui_smoke`.
   - 키보드 새 메모·서식 적용/해제·체크·검색·도움말·정상 닫기 저장을 확인한다.
 
 - CANVAS-001·CANVAS-002·CANVAS-003 메모 캔버스
@@ -46,4 +47,4 @@
   - 브라우저 시각 검증: `gtk4-broadwayd -a 127.0.0.1 -p 8085 :5` 실행 후, 합성 XDG_DATA_HOME으로 `GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 cargo run --locked`. 브라우저에서 로컬 포트를 연다.
   - 네이티브 화면 캡처: `LSM_CANVAS_ARTIFACT_DIR=/tmp/lsm-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
   - 실제 포인터로 선택·끌기·범위 선택·정렬·연결 점 끌기·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. 브라우저 에뮬레이션 뷰포트는 좌표가 어긋날 수 있으니 패널 기본 크기로 조작한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.
-  - 실제 캔버스 조작: SAVE-001 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 tools/behavior/canvas_001_ui_smoke.py`. `GTK_THEME=Adwaita:dark`로 반복한다. 범위·사용자 연구와의 구분은 UX-001을 따른다.
+  - 실제 캔버스 조작: SAVE-001 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.canvas_001_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다. 범위·사용자 연구와의 구분은 UX-001을 따른다.

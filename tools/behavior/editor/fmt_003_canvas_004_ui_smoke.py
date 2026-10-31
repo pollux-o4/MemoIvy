@@ -1,4 +1,4 @@
-from lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, OPEN_CANVAS)
+from tools.behavior.lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, OPEN_CANVAS)
 # 검증: FMT-003, CANVAS-004. 합성 데이터로 링크 미리보기·목록 표식·캔버스 단축키를 실제 입력으로 확인한다.
 import json
 import os

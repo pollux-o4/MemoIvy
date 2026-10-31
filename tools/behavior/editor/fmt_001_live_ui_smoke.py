@@ -1,4 +1,4 @@
-from lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, CLOSE, LIBRARY_NOTE)
+from tools.behavior.lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, CLOSE, LIBRARY_NOTE)
 # 검증: FMT-001, SAVE-001. 합성 메모만 사용하며 xdotool·xclip·Pillow가 필요하다.
 import json
 import os
