@@ -1,4 +1,4 @@
-use super::{canvas::LIMIT, note::Note};
+use super::{canvas::valid_position, note::Note};
 use uuid::Uuid;
 
 pub fn connect(notes: &mut [Note], from: Uuid, to: Uuid) -> bool {
@@ -26,9 +26,7 @@ pub fn valid(notes: &[Note]) -> bool {
     let ids: std::collections::HashSet<_> = notes.iter().map(|n| n.id).collect();
     notes.iter().all(|n| {
         let mut seen = std::collections::HashSet::new();
-        n.canvas
-            .position
-            .is_none_or(|p| p.iter().all(|v| v.is_finite() && (0. ..=LIMIT).contains(v)))
+        n.canvas.position.is_none_or(valid_position)
             && n.canvas
                 .next
                 .iter()
@@ -39,6 +37,7 @@ pub fn valid(notes: &[Note]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::persistence::LIMIT;
 
     #[test]
     fn canvas_001_identity_edges_and_delete() {

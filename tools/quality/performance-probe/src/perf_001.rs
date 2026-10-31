@@ -15,7 +15,7 @@ mod store {
 mod note {
     pub use super::store::Note;
 }
-#[path = "../../../../src/persistence/save_queue.rs"]
+#[path = "../../../../src/persistence/storage/save_queue.rs"]
 mod save_queue;
 
 fn main() {
