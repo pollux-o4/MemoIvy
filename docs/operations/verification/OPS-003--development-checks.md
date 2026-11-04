@@ -1,9 +1,9 @@
 # OPS-003 · 개발 검증
 
-- 개발 반복: GTK 없는 규칙 변경은 `cargo test --locked -- --skip app::gtk_tests:: --skip presentation::icons::tests::`로 먼저 확인한다. 저장만 변경하면 `cargo test --locked persistence`를 사용할 수 있다. 통합 전 아래 기본 검사를 완료한다.
+- 개발 반복: 바뀐 영역의 테스트만 `mise run test:<영역>`으로 돌린다(`mise tasks`로 목록 확인). 영역은 unit(GTK 없음)·gtk·editor·canvas·storage·arch이고, `mise run test <이름>`으로 개별 테스트를 고른다. GTK 테스트는 모두 Xvfb에서 돌아 화면에 창을 띄우지 않는다. 통합 전 아래 기본 검사(`mise run check`)를 완료한다.
 - 기본 검사: Rust 변경 시 실행.
   - `cargo fmt --check`
-  - `dbus-run-session -- xvfb-run -a cargo test --locked` — GTK 편집 위젯 검증 포함, Xvfb 필요.
+  - `mise run test` — GTK 편집 위젯 검증 포함, Xvfb 필요.
   - `cargo clippy --locked -- -D warnings`
   - `cargo build --locked`
 - SAVE-001 UI smoke: 저장·닫기 변경 시 실행.
@@ -18,6 +18,8 @@
 - PERF-002 앱 품질 감사
   - `cargo build --release --locked` 후 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/quality/perf_002_app_audit.py`.
   - 프레임: `GSK_RENDERER=ngl LSM_CANVAS_PERF=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' cargo test --release --locked fmt_001_live -- --nocapture`. `cairo`로 반복한다.
+  - 단계 전환: 같은 실행이 `dive-first`(첫 진입)·`dive-again`(재진입)의 클릭 지연·프레임을 출력한다. `LSM_DIVE_FRAMES=<폴더>`를 더하면 전환을 고정 지점마다 PNG로 남겨 모양을 비교한다.
+  - 실제 기기 전환 프레임: `LSM_FRAME_LOG=1 cargo run --release`로 앱을 열고 프로젝트를 오가면 전환마다 `LSM dive` 한 줄(p50·p95·max·빠진 프레임)을 표준 오류로 남긴다. Xvfb 소프트웨어 렌더링 수치와 구분한다.
   - 고주사율 시간 검증: `cargo test --locked canvas_002_high_refresh_jitter`, `cargo test --locked canvas_002_coast`. 60/120/144Hz·간격 흔들림을 시뮬레이션하며 실제 120Hz GPU 프레임 측정과 구분한다.
   - 성능 모드는 일반 GTK 시나리오와 분리하며 목록을 먼저 구성한다. 연속 스크롤 신호의 100개 입력 처리 시간·버스트 프레임 측정을 포함한다. 전후 비교도 같은 준비 조건으로 측정한다.
 - UI-002 앱 메뉴 아이콘

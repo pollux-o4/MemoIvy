@@ -1,6 +1,15 @@
 [tools]
 rust = "1.99.1"
 
+[bootstrap.packages]
+"apt:build-essential" = "latest"
+"apt:pkg-config" = "latest"
+"apt:libgtk-4-dev" = "latest"
+"apt:librsvg2-common" = "latest"
+"apt:zenity" = "latest"
+"apt:dbus-x11" = "latest"
+"apt:xvfb" = "latest"
+
 [tasks.dev]
 description = "개발 모드로 실행"
 run = "cargo run --locked"
@@ -14,10 +23,40 @@ description = "빌드 후 앱 메뉴·바탕화면 설치본 갱신"
 depends = ["build"]
 run = "./integration/install.sh"
 
+# 테스트는 모두 가상 화면(Xvfb)에서 돈다. 뒤에 붙인 인자는 cargo test로 넘어간다.
+# 예: mise run test fmt_003, mise run test:editor -- --nocapture
+[tasks.test]
+description = "전체 테스트 (인자로 이름 거르기)"
+run = "dbus-run-session -- xvfb-run -a cargo test --locked"
+
+[tasks."test:unit"]
+description = "GTK 창 없는 테스트만"
+run = "cargo test --locked -- --skip app::gtk_tests:: --skip presentation::icons::tests::"
+
+[tasks."test:gtk"]
+description = "GTK 위젯 테스트 전체"
+run = "dbus-run-session -- xvfb-run -a cargo test --locked gtk_tests"
+
+[tasks."test:editor"]
+description = "편집기·마크다운 (fmt_*, editor, markdown)"
+run = "dbus-run-session -- xvfb-run -a cargo test --locked -- fmt_ app::editor presentation::markdown"
+
+[tasks."test:canvas"]
+description = "캔버스·프로젝트 (canvas_*, project_*, nav_*, app::canvas)"
+run = "dbus-run-session -- xvfb-run -a cargo test --locked -- canvas project_ nav_"
+
+[tasks."test:storage"]
+description = "저장소·노트북"
+run = "cargo test --locked persistence"
+
+[tasks."test:arch"]
+description = "아키텍처 경계 (ADR-0010)"
+run = "cargo test --locked architecture_tests"
+
 [tasks.check]
 description = "Rust 포맷·테스트·정적 검사"
 run = [
     "cargo fmt --check",
-    "dbus-run-session -- xvfb-run -a cargo test --locked",
+    "mise run test",
     "cargo clippy --locked -- -D warnings",
 ]
