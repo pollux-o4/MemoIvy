@@ -9,6 +9,12 @@ pub struct CanvasNode {
     pub position: Option<[f64; 2]>,
     pub next: Vec<Uuid>,
     pub done: bool,
+    /// 이 메모를 담은 프로젝트 메모. 없으면 최상위다.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent: Option<Uuid>,
+    /// 사용자가 바로가기에 고정한 프로젝트.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub pinned: bool,
 }
 
 pub(in crate::persistence) fn valid_position(p: [f64; 2]) -> bool {

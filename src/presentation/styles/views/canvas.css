@@ -85,3 +85,44 @@ menubutton.panel-row { padding: 0; }
 
 .canvas-empty-title { font-size: 1.14em; font-weight: 600; }
 .canvas-empty-sub { color: @lsm_muted; font-size: .92em; }
+
+/* 프로젝트 카드 · 겹쳐 쌓인 종이로 "안에 더 있다"를 보여 주고, 호버하면 살짝 펼쳐진다 */
+.canvas-card.project.yellow { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_yellow, .8), 0 10px 0 -4px shade(@note_yellow, .62), 0 14px 26px @lsm_shadow; }
+.canvas-card.project.pink { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_pink, .8), 0 10px 0 -4px shade(@note_pink, .62), 0 14px 26px @lsm_shadow; }
+.canvas-card.project.blue { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_blue, .8), 0 10px 0 -4px shade(@note_blue, .62), 0 14px 26px @lsm_shadow; }
+.canvas-card.project.green { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_green, .8), 0 10px 0 -4px shade(@note_green, .62), 0 14px 26px @lsm_shadow; }
+.canvas-card.project.purple { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_purple, .8), 0 10px 0 -4px shade(@note_purple, .62), 0 14px 26px @lsm_shadow; }
+.canvas-card.project.yellow:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_yellow, .8), 0 14px 0 -4px shade(@note_yellow, .62), 0 18px 32px @lsm_shadow; }
+.canvas-card.project.pink:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_pink, .8), 0 14px 0 -4px shade(@note_pink, .62), 0 18px 32px @lsm_shadow; }
+.canvas-card.project.blue:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_blue, .8), 0 14px 0 -4px shade(@note_blue, .62), 0 18px 32px @lsm_shadow; }
+.canvas-card.project.green:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_green, .8), 0 14px 0 -4px shade(@note_green, .62), 0 18px 32px @lsm_shadow; }
+.canvas-card.project.purple:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_purple, .8), 0 14px 0 -4px shade(@note_purple, .62), 0 18px 32px @lsm_shadow; }
+.far .canvas-card.project { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 10px 0 -5px alpha(@note_text, .14); }
+.canvas-card.drop-target { outline: 2px dashed @lsm_accent; outline-offset: 5px; transform: scale(1.035); }
+.card-project { color: @note_text; font-weight: 600; }
+.card-enter { min-width: 22px; min-height: 22px; padding: 0; margin: -2px 2px 0 0; border: 0; border-radius: 7px; background: alpha(@note_text, .08); background-image: none; box-shadow: none; color: @note_text; opacity: .7; transition: opacity 130ms ease-out, background-color 130ms ease-out, transform 130ms cubic-bezier(.2, .9, .3, 1.3); }
+.canvas-card:hover .card-enter, .canvas-card.selected .card-enter { opacity: 1; }
+.card-enter:hover { background: @lsm_accent; color: @lsm_on_accent; transform: scale(1.08); }
+.tiny .card-enter { opacity: 0; }
+progressbar.card-progress > trough { min-height: 4px; border-radius: 999px; background: alpha(@note_text, .12); border: 0; }
+progressbar.card-progress > trough > progress { min-height: 4px; border-radius: 999px; background: @lsm_success; border: 0; }
+.far progressbar.card-progress { opacity: 1; }
+
+/* 들어가기·나오기 · 화면을 잠깐 비우며 확대해 지나간다. 모션 줄이기에서는 GTK가 전환을 끈다 */
+
+/* 경로·바로가기 */
+.canvas-crumbs { padding: 3px; }
+.crumb { min-height: 28px; padding: 0 9px; border: 0; border-radius: 9px; background: transparent; background-image: none; box-shadow: none; color: @lsm_muted; font-weight: 500; font-size: .9em; transition: background-color 110ms ease-out, color 110ms ease-out; }
+.crumb:hover { background-color: @lsm_hover; color: @lsm_text; }
+.crumb:active { background-color: @lsm_press; }
+.crumb.current, .crumb.current:disabled { color: @lsm_text; font-weight: 600; opacity: 1; }
+.crumb drawingarea { color: inherit; }
+.crumb-separator { color: alpha(@lsm_muted, .6); margin: 0 -4px; }
+.crumb-more { color: @lsm_muted; padding: 0 4px; }
+.tool.small.crumb-pin { margin-left: 2px; color: @lsm_muted; }
+.tool.small.crumb-pin:hover { background-color: @lsm_hover; color: @dot_yellow; }
+.tool.small.crumb-pin.active { color: @dot_yellow; }
+.shortcut-chip { min-height: 30px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background-image: none; font-size: .86em; font-weight: 500; transition: transform 150ms cubic-bezier(.2, .9, .3, 1.3), box-shadow 150ms ease-out, background-color 110ms ease-out; }
+.shortcut-chip:hover { transform: translateY(-1px); background-color: shade(@lsm_raised, 1.08); }
+.shortcut-chip:active { transform: scale(.97); }
+.chip-pin { color: @dot_yellow; min-width: 16px; min-height: 16px; }

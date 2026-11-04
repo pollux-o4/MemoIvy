@@ -44,3 +44,10 @@ pub(in crate::app) fn close_on_escape(window: &impl IsA<gtk::Window>) {
     });
     window.as_ref().add_controller(keys);
 }
+
+pub(in crate::app) fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}

@@ -2,10 +2,34 @@ use super::{lifecycle, state::State};
 use gtk::{prelude::*, Application};
 use uuid::Uuid;
 
-pub(in crate::app) fn new_note(state: &State) {
+/// parent 프로젝트 안에 새 메모를 만든다. None이면 최상위다.
+pub(in crate::app) fn new_note(state: &State, parent: Option<Uuid>) {
     let mut s = state.borrow_mut();
-    let position = crate::app::canvas::vacant_position(&s.notebook);
-    if s.notebook.request_create(Some(position)) {
+    let position = crate::app::canvas::vacant_position(&s.notebook, parent);
+    if s.notebook.request_create(Some(position), parent) {
+        s.views.library.add.set_sensitive(false);
+    }
+    drop(s);
+    lifecycle::wake(state);
+}
+/// 단축키를 받은 창 기준. 캔버스에서는 지금 보고 있는 프로젝트 안에 만든다.
+pub(in crate::app) fn new_note_from(state: &State, window: &gtk::Window) {
+    let parent = crate::app::canvas::scope_for(state, window);
+    new_note(state, parent);
+}
+/// 메모들을 새 프로젝트로 묶는다. 프로젝트 메모가 만들어진 뒤 lifecycle이 안으로 옮긴다.
+pub(in crate::app) fn group_into_project(
+    state: &State,
+    ids: Vec<Uuid>,
+    position: [f64; 2],
+    parent: Option<Uuid>,
+) {
+    let mut s = state.borrow_mut();
+    if ids.is_empty() || s.pending_group.is_some() {
+        return;
+    }
+    if s.notebook.request_create(Some(position), parent) {
+        s.pending_group = Some(ids);
         s.views.library.add.set_sensitive(false);
     }
     drop(s);
@@ -54,6 +78,11 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
 }
 pub(in crate::app) fn open_canvas(state: &State, app: &Application, id: Option<Uuid>) {
     crate::app::canvas::open(state, app, id);
+}
+/// 캔버스를 열고 그 프로젝트 안으로 들어간다.
+pub(in crate::app) fn open_canvas_at(state: &State, app: &Application, project: Uuid) {
+    crate::app::canvas::open(state, app, None);
+    crate::app::canvas::show_project(state, project);
 }
 
 pub(in crate::app) fn initialize_positions(notebook: &mut crate::persistence::Notebook) {

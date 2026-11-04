@@ -29,7 +29,6 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
     until(|| v.session.fitted.get());
     motion::stop_camera(v);
     scene::board::set_camera(v, Camera::default());
-    let scroll = scroll_controller(v);
     let child = v
         .widgets
         .stage
@@ -40,7 +39,7 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
     let count = updates.clone();
     let handler =
         child.connect_notify_local(Some("transform"), move |_, _| count.set(count.get() + 1));
-    // shortcut: GTK Wheel을 60으로 정규화해 연속 입력 재현, 실제 Wayland 터치패드 환경에서 실측 재검증.
+    // Surface 입력의 프레임 병합 경로. 단위별 분기는 pointer 테스트에서 확인한다.
     for (dx, dy, expected) in [
         (0.25, 0.125, (25., 12.5)),
         (-0.25, 0.125, (0., 25.)),
@@ -50,7 +49,7 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
         updates.set(0);
         let start = std::time::Instant::now();
         for _ in 0..100 {
-            scroll.emit_by_name::<bool>("scroll", &[&(dx / 60.), &(dy / 60.)]);
+            v.queue_camera(v.session.camera.get().panned(dx, dy));
         }
         println!(
             "TOUCHPAD burst=100 viewport_updates={} handler_ms={:.3}",
@@ -88,7 +87,7 @@ fn touchpad_burst(v: &Rc<CanvasView>) {
         "high-refresh slow movement must preserve subpixel translation: {tx}, {ty}"
     );
     // 대기 중 다른 조작이 카메라를 바꿔도 오래된 스크롤 위치를 재생하지 않는다.
-    scroll.emit_by_name::<bool>("scroll", &[&0.25, &0.125]);
+    v.queue_camera(v.session.camera.get().panned(0.25, 0.125));
     scene::board::set_camera(v, Camera::default());
     settle(50);
     assert_eq!(v.session.camera.get(), Camera::default());
@@ -295,8 +294,10 @@ fn capture(v: &Rc<CanvasView>) {
 // Run on the existing GTK test thread; GTK cannot be initialized on parallel test threads.
 mod flow;
 mod performance;
+mod projects;
 mod shortcuts;
 
 pub(in crate::app) use flow::canvas_001_widget_flow_and_recovery;
 pub(in crate::app) use performance::perf_002_frames;
+pub(in crate::app) use projects::project_001_levels_grouping_and_shortcuts;
 pub(in crate::app) use shortcuts::canvas_004_markers_shortcuts_and_delete;

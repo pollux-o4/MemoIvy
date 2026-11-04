@@ -6,7 +6,7 @@
 |---|---|
 | 앱·창 조율 | `run`, shell의 `AppState`·`Views`·`Closing`, `wake`·`refresh_all` |
 | 삭제 순서 | shell commands의 `delete_notes`·`next_delete` |
-| 검색·목록 갱신 | library cards의 `refresh`·`list_key` |
+| 검색·목록 갱신 | library cards의 `refresh`·`list_key`·`tree`·`location` |
 | 공유 조작 | shared의 `confirm_delete`·`close_on_escape`·`find_named`, focus·shortcuts |
 
 ## 편집기
@@ -25,7 +25,9 @@
 | 화면·세션 · `src/app/canvas/mod.rs` | `CanvasView`·`CanvasWidgets`·`BoardSession`, `selected_views` |
 | 규칙·이력 · `src/app/canvas/model` | model의 `Camera`·`Selection`·`History`·`Spring` |
 | 표시·입력 · `src/app/canvas` | scene의 board·card·preview, input, panels, motion |
-| 저장 연결·요약 캐시 | port의 `NodeView`·`SummaryCache`·`nodes` |
+| 저장 연결·요약 캐시 | port의 `NodeView`·`SummaryCache`·`nodes`, 단계 경로·바로가기 `path`·`shortcuts`·`move_targets` |
+| 프로젝트 단계·전환 | controller commands의 `go_to`·`switch_scope`·`group_selected`·`move_into`, scene dive의 `capture`·`begin`·`play`·`pose`, panels navigator의 `sync` |
+| 보드 그리기 | scene paint의 `draw_backdrop`·backdrop `Backdrop`·edge_tiles `EdgeTiles`, board의 `set_camera`·`apply_camera`·`render`(다른 단계 카드 `parked`) |
 
 경계 검사: `architecture_tests`. GTK 시나리오 진입점은 `gtk_tests`, 조건 대기·탐색은 `test_support`; 실제 입력 스모크의 공통 기반은 `lsm_driver`다. 실행 절차: OPS-003.
 

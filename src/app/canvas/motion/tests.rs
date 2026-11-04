@@ -150,6 +150,75 @@ pub(in crate::app) fn canvas_002_viewport(v: &Rc<CanvasView>) {
                 .and_downcast::<gtk::EventControllerScroll>()
         })
         .unwrap();
+    for hz in [60., 90., 120., 144.] {
+        stop_camera(v);
+        scene::board::set_camera(v, goal(1.));
+        scroll.emit_by_name::<bool>("scroll", &[&0., &1.]);
+        let wheel_begin = Instant::now();
+        v.motion.borrow_mut().last = Some(wheel_begin);
+        advance(v, wheel_begin + Duration::from_secs_f64(1. / hz));
+        let first = v.session.camera.get().y;
+        assert!(
+            first > 0. && first < 60.,
+            "wheel must interpolate at {hz}Hz, got {first}"
+        );
+        advance(v, wheel_begin + Duration::from_secs_f64(2. / hz));
+        assert!(
+            v.session.camera.get().y > first,
+            "wheel must move between input events"
+        );
+        let position = v.session.camera.get();
+        scroll.emit_by_name::<bool>("scroll", &[&0., &1.]);
+        assert_eq!(v.session.camera.get(), position, "retarget does not jump");
+        assert!(
+            (motion_target(v).y - 120.).abs() < 1e-6,
+            "wheel accumulates unfinished distance"
+        );
+        scroll.emit_by_name::<bool>("scroll", &[&0., &-1.]);
+        assert!(
+            (motion_target(v).y - 60.).abs() < 1e-6,
+            "reverse input reduces the pending target"
+        );
+        for frame in 3..=(hz as usize * 2) {
+            advance(v, wheel_begin + Duration::from_secs_f64(frame as f64 / hz));
+        }
+        assert!((v.session.camera.get().y - 60.).abs() < 1e-6);
+        assert!(
+            v.motion.borrow().camera.is_none(),
+            "wheel settles and releases the frame loop"
+        );
+    }
+    wheel_pan(v, 0., 1e9);
+    let boundary = motion_target(v);
+    wheel_pan(v, 0., 1e9);
+    assert_eq!(
+        motion_target(v),
+        boundary,
+        "blocked wheel input cannot accumulate outside the board"
+    );
+    wheel_pan(v, 0., -60.);
+    assert!((motion_target(v).y - boundary.y + 60.).abs() < 1e-6);
+    stop_camera(v);
+    settings.set_gtk_enable_animations(false);
+    scene::board::set_camera(v, goal(1.));
+    scroll.emit_by_name::<bool>("scroll", &[&0., &1.]);
+    assert_eq!(
+        v.session.camera.get().y,
+        60.,
+        "reduced motion applies wheel immediately"
+    );
+    assert!(v.motion.borrow().camera.is_none());
+    settings.set_gtk_enable_animations(true);
+    scroll.emit_by_name::<bool>("scroll", &[&0., &1.]);
+    stop_camera(v);
+    let stopped = v.session.camera.get();
+    advance(v, Instant::now() + Duration::from_secs(1));
+    assert_eq!(
+        v.session.camera.get(),
+        stopped,
+        "cancellation discards the pending wheel target"
+    );
+    inertia(v, (1000., 0.));
     scroll.emit_by_name::<()>("scroll-begin", &[]);
     assert!(
         v.motion.borrow().inertia.is_none(),

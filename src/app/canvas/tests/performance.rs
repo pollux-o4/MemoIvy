@@ -35,6 +35,15 @@ pub(in crate::app) fn perf_002_frames() {
     open(&state, &app, None);
     settle(600);
     let v = state.borrow().views.canvas.clone().unwrap();
+    println!(
+        "PERF-002 renderer={}",
+        v.widgets.window.renderer().unwrap().type_().name()
+    );
+    let display = gtk::gdk::Display::default().unwrap();
+    let surface = v.widgets.window.surface().unwrap();
+    if let Some(monitor) = display.monitor_at_surface(&surface) {
+        println!("PERF-002 monitor-refresh={}mHz", monitor.refresh_rate());
+    }
     let initial_camera = v.session.camera.get();
     let initial_pointer = v.session.pointer.get();
     scene::board::set_camera(&v, Camera::default());
@@ -104,8 +113,9 @@ pub(in crate::app) fn perf_002_frames() {
     settle(100);
     let scroll = scroll_controller(&v);
     let burst_started = Instant::now();
+    // shortcut: Surface 이벤트 생성 API가 없어 병합 경로를 직접 측정, 실제 Wayland 터치패드 확보 시 입력 포함 재측정.
     for _ in 0..100 {
-        scroll.emit_by_name::<bool>("scroll", &[&(0.25 / 60.), &(0.125 / 60.)]);
+        v.queue_camera(v.session.camera.get().panned(0.25, 0.125));
     }
     println!(
         "PERF-002 touchpad-input-100: {:.3}ms",
@@ -116,9 +126,34 @@ pub(in crate::app) fn perf_002_frames() {
     measure("touchpad-burst", 2., &mut |t| {
         let direction = if t < 1. { 1. } else { -1. };
         for _ in 0..16 {
-            scroll.emit_by_name::<bool>("scroll", &[&(direction / 60.), &(direction * 0.5 / 60.)]);
+            v.queue_camera(v.session.camera.get().panned(direction, direction * 0.5));
         }
     });
+    scene::board::set_camera(&v, Camera::default());
+    let mut notch = 0;
+    measure("wheel-notches", 2., &mut |t| {
+        let next = (t / 0.08) as usize;
+        while notch < next {
+            let direction = if notch < 12 { 1. } else { -1. };
+            scroll.emit_by_name::<bool>("scroll", &[&0., &direction]);
+            notch += 1;
+        }
+    });
+    motion::stop_camera(&v);
+    scene::board::set_camera(&v, Camera::default());
+    // 1000Hz 마우스 휠 클릭 끌기: 프레임마다 여러 움직임이 몰려도 한 번만 갱신한다.
+    *v.session.interaction.borrow_mut() = Interaction::Pan { last: (0., 0.) };
+    let mut moved = 0;
+    measure("middle-pan", 2., &mut |t| {
+        let next = (t * 1000.) as usize;
+        while moved < next {
+            let direction = if moved < 1000 { 1. } else { -1. };
+            input::pointer::pan_by(&v, (direction * 0.6, direction * 0.3));
+            moved += 1;
+        }
+    });
+    v.session.interaction.replace(Interaction::Idle);
+    scene::paint::sync_hud(&v);
     scene::board::set_camera(&v, Camera::default());
     measure("pan-100%", 2., &mut |t| {
         scene::board::set_camera(
@@ -148,19 +183,104 @@ pub(in crate::app) fn perf_002_frames() {
     input::keyboard::run(&v, input::keyboard::Command::Flow);
     measure("flow-300-cards", 1.2, &mut |_| {});
     v.undo();
-    let camera = v.session.camera.get();
-    let surface = gtk::cairo::ImageSurface::create(gtk::cairo::Format::ARgb32, 1920, 1080).unwrap();
-    let cr = gtk::cairo::Context::new(&surface).unwrap();
-    let began = Instant::now();
-    for _ in 0..30 {
-        scene::paint::draw_backdrop(&v, &cr, 1920., 1080.);
+    // 프로젝트 들어가기·나오기 전환. 처음 들어갈 때(카드 생성)와 다시 들어갈 때(재사용)를 나눠 본다.
+    v.move_into(ids[1..40].to_vec(), Some(ids[0]));
+    drain();
+    if let Ok(dir) = std::env::var("LSM_DIVE_FRAMES") {
+        dive_frames(&v, ids[0], std::path::Path::new(&dir));
     }
-    println!(
-        "PERF-002 backdrop-1080p: {:.2}ms per paint (zoom {:.2})",
-        began.elapsed().as_secs_f64() * 1000. / 30.,
-        camera.zoom
-    );
+    for name in ["dive-first", "dive-again"] {
+        motion::stop_camera(&v);
+        let (mut entered, mut left) = (false, false);
+        measure(name, 1.6, &mut |t| {
+            if !entered {
+                entered = true;
+                let began = Instant::now();
+                v.enter(ids[0]);
+                println!(
+                    "PERF-002 {name}-click: {:.1}ms",
+                    began.elapsed().as_secs_f64() * 1000.
+                );
+            } else if t > 0.8 && !left && !v.session.diving.get() {
+                left = true;
+                v.leave();
+            }
+        });
+        until(|| v.session.scope.get().is_none() && !v.session.diving.get());
+    }
+    v.undo();
+    let renderer = v.widgets.window.renderer().unwrap();
+    let viewport = gtk::graphene::Rect::new(0., 0., 1920., 1080.);
+    for zoom in [1., 0.2, 0.05] {
+        scene::board::set_camera(
+            &v,
+            Camera {
+                zoom,
+                ..Camera::default()
+            },
+        );
+        let camera = v.session.camera.get();
+        let began = Instant::now();
+        for frame in 0..30 {
+            scene::board::set_camera(&v, camera.panned(frame as f64 * 0.37, frame as f64 * 0.21));
+            let snapshot = gtk::Snapshot::new();
+            scene::paint::draw_backdrop(&v, &snapshot, 1920., 1080.);
+            let _ = renderer.render_texture(snapshot.to_node().unwrap(), Some(&viewport));
+        }
+        println!(
+            "PERF-002 backdrop-1080p: {:.2}ms per frame (zoom {:.2})",
+            began.elapsed().as_secs_f64() * 1000. / 30.,
+            camera.zoom
+        );
+    }
     v.destroy();
     library.destroy();
     drain();
+}
+
+/// 전환을 고정 지점마다 창 전체로 렌더링해 PNG로 남긴다. 모션 모양을 눈으로 검토할 때 쓴다.
+fn dive_frames(v: &Rc<CanvasView>, project: Uuid, dir: &std::path::Path) {
+    std::fs::create_dir_all(dir).unwrap();
+    let renderer = v.widgets.window.renderer().unwrap();
+    let shot = |name: String| {
+        let (w, h) = (v.widgets.window.width(), v.widgets.window.height());
+        let paintable = gtk::WidgetPaintable::new(Some(&v.widgets.window));
+        let node = loop {
+            settle(40);
+            let snapshot = gtk::Snapshot::new();
+            paintable.snapshot(&snapshot, f64::from(w), f64::from(h));
+            if let Some(node) = snapshot.to_node() {
+                break node;
+            }
+        };
+        let texture = renderer.render_texture(
+            node,
+            Some(&gtk::graphene::Rect::new(0., 0., w as f32, h as f32)),
+        );
+        texture.save_to_png(dir.join(name)).unwrap();
+    };
+    // 누른 카드가 화면 안에 있어야 카드에서 화면으로 이어지는 모양을 볼 수 있다.
+    if let Some(rect) = v.shown_rect(project) {
+        let size = motion::viewport(v);
+        scene::board::set_camera(v, Camera::centered_on(rect, size, 0.35));
+        settle(100);
+    }
+    scene::dive::HOLD.with(|hold| hold.set(true));
+    for (name, enter) in [("enter", true), ("leave", false)] {
+        if enter {
+            v.enter(project);
+        } else {
+            v.leave();
+        }
+        for step in 0..=8 {
+            scene::dive::pose(v, f64::from(step) / 8.);
+            shot(format!("{name}-{step}.png"));
+        }
+        scene::dive::HOLD.with(|hold| hold.set(false));
+        until(|| !v.session.diving.get());
+        scene::dive::HOLD.with(|hold| hold.set(true));
+        shot(format!("{name}-end.png"));
+        settle(100);
+    }
+    scene::dive::HOLD.with(|hold| hold.set(false));
 }

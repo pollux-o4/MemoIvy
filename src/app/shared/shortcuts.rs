@@ -68,6 +68,16 @@ const CANVAS: &[Section] = &[
         ],
     ),
     (
+        "프로젝트",
+        &[
+            ("프로젝트 들어가기", "", &["두 번 누르기", "Enter"]),
+            ("프로젝트 설명 열기", "", &["Shift+Enter"]),
+            ("밖으로 나가기", "", &["Esc", "Alt+↑"]),
+            ("새 프로젝트로 묶기", "", &["Alt+G"]),
+            ("밖으로 꺼내기", "", &["Alt+Shift+G"]),
+        ],
+    ),
+    (
         "캔버스 정렬",
         &[
             ("왼쪽 · 가운데 · 오른쪽", "", &["Alt+A", "Alt+H", "Alt+D"]),
@@ -204,7 +214,7 @@ pub(in crate::app) fn attach(window: &ApplicationWindow, state: &State) {
         };
         match key.to_lower() {
             gdk::Key::n => {
-                crate::app::shell::commands::new_note(&state);
+                crate::app::shell::commands::new_note_from(&state, window.upcast_ref());
             }
             gdk::Key::f => {
                 let (library, search) = {

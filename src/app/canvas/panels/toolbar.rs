@@ -112,7 +112,10 @@ fn help_popover() -> gtk::Popover {
     body.add_css_class("help-body");
     for (gesture, meaning) in [
         ("끌기", "카드 이동 · 빈 곳은 범위 선택"),
-        ("두 번 누르기 · Enter", "메모 열기"),
+        ("두 번 누르기 · Enter", "메모 열기 · 프로젝트는 들어가기"),
+        ("프로젝트 카드에 끌어 놓기", "그 프로젝트로 옮기기"),
+        ("Alt+G", "선택을 새 프로젝트로 묶기"),
+        ("Esc · Alt+↑", "프로젝트 밖으로 나가기"),
         ("Shift + 누르기", "선택에 더하거나 빼기"),
         ("오른쪽 점 끌기", "다음 메모에 연결"),
         ("스크롤 · Space + 끌기", "보드 이동"),
@@ -142,6 +145,8 @@ pub(super) struct AlignBar {
     pub count: Label,
     pub distribute: [Button; 2],
     pub delete: Button,
+    pub group: Button,
+    pub lift: Button,
     pub commands: Vec<(Button, Command)>,
 }
 
@@ -209,6 +214,11 @@ pub(super) fn align_bar() -> AlignBar {
         commands.push((button, command));
     }
     bar.append(&divider());
+    let group = icon_button(icons::PROJECT, "새 프로젝트로 묶기 · Alt+G");
+    let lift = icon_button(icons::UP, "프로젝트 밖으로 꺼내기 · Alt+Shift+G");
+    bar.append(&group);
+    bar.append(&lift);
+    bar.append(&divider());
     let delete = icon_button(icons::TRASH, "선택한 메모 삭제 · Delete");
     delete.add_css_class("danger");
     bar.append(&delete);
@@ -224,6 +234,8 @@ pub(super) fn align_bar() -> AlignBar {
         count,
         distribute: [across, down],
         delete,
+        group,
+        lift,
         commands,
     }
 }
@@ -238,6 +250,8 @@ pub(super) fn wire(v: &Rc<CanvasView>, actions: Actions) {
         });
     };
     on(&actions.delete, |v| v.delete_selected());
+    on(&actions.group, |v| v.group_selected());
+    on(&actions.lift, |v| v.lift_selected());
     on(&actions.undo, |v| v.undo());
     on(&actions.redo, |v| v.redo());
     on(&actions.zoom_out, |v| {
@@ -250,7 +264,7 @@ pub(super) fn wire(v: &Rc<CanvasView>, actions: Actions) {
     });
     on(&actions.empty_add, |v| {
         if let Some(st) = v.state.upgrade() {
-            crate::app::shell::commands::new_note(&st);
+            crate::app::shell::commands::new_note(&st, v.session.scope.get());
         }
     });
     for (button, command) in actions.commands {

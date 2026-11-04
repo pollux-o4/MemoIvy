@@ -4,4 +4,4 @@ mod camera;
 mod commands;
 mod view;
 mod window;
-pub(in crate::app) use window::{open, refresh, update_status};
+pub(in crate::app) use window::{adopt, open, refresh, scope_for, show_project, update_status};

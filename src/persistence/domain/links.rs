@@ -16,6 +16,7 @@ pub fn connect(notes: &mut [Note], from: Uuid, to: Uuid) -> bool {
 }
 
 pub fn remove(notes: &mut Vec<Note>, id: Uuid) {
+    super::nesting::lift_children(notes, id);
     notes.retain(|n| n.id != id);
     for note in notes {
         note.canvas.next.retain(|next| *next != id);
@@ -24,14 +25,15 @@ pub fn remove(notes: &mut Vec<Note>, id: Uuid) {
 
 pub fn valid(notes: &[Note]) -> bool {
     let ids: std::collections::HashSet<_> = notes.iter().map(|n| n.id).collect();
-    notes.iter().all(|n| {
-        let mut seen = std::collections::HashSet::new();
-        n.canvas.position.is_none_or(valid_position)
-            && n.canvas
-                .next
-                .iter()
-                .all(|id| *id != n.id && ids.contains(id) && seen.insert(*id))
-    })
+    super::nesting::valid(notes)
+        && notes.iter().all(|n| {
+            let mut seen = std::collections::HashSet::new();
+            n.canvas.position.is_none_or(valid_position)
+                && n.canvas
+                    .next
+                    .iter()
+                    .all(|id| *id != n.id && ids.contains(id) && seen.insert(*id))
+        })
 }
 
 #[cfg(test)]

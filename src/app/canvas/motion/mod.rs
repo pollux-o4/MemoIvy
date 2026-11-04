@@ -85,11 +85,11 @@ pub(super) fn link_progress(elapsed: f64) -> f64 {
     ease(elapsed / LINK_SECONDS)
 }
 
-fn animated(v: &CanvasView) -> bool {
+pub(super) fn animated(v: &CanvasView) -> bool {
     v.widgets.window.settings().is_gtk_enable_animations() && v.widgets.surface.is_mapped()
 }
 
-fn viewport(v: &CanvasView) -> (f64, f64) {
+pub(super) fn viewport(v: &CanvasView) -> (f64, f64) {
     (
         f64::from(v.widgets.surface.width()).max(1.),
         f64::from(v.widgets.surface.height()).max(1.),
@@ -139,6 +139,12 @@ pub(super) fn stop_camera(v: &CanvasView) {
     let mut motion = v.motion.borrow_mut();
     motion.camera = None;
     motion.inertia = None;
+}
+
+/// 휠의 이산 입력을 남은 목표에 누적해 입력 사이에도 같은 스프링으로 움직인다.
+pub(super) fn wheel_pan(v: &Rc<CanvasView>, dx: f64, dy: f64) {
+    let target = v.keep_camera(motion_target(v).panned(dx, dy));
+    camera_to(v, target);
 }
 
 pub(super) fn zoom_target(v: &CanvasView) -> f64 {

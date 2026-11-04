@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::card::{Card, PORT_SIZE};
 use gtk::prelude::*;
-use std::rc::Rc;
+use std::{collections::HashSet, rc::Rc};
 use uuid::Uuid;
 
 const FAR_ZOOM: f64 = 0.45;
@@ -14,7 +14,12 @@ const PORT_MIN_ZOOM: f64 = 0.3;
 
 /// 월드 전체에 변환 하나만 적용해 확대·이동 비용을 카드 수와 무관하게 유지한다.
 pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
-    let camera = v.keep_camera(camera);
+    apply_camera(v, v.keep_camera(camera), true);
+}
+
+/// 범위 제한 없이 카메라를 그대로 적용한다. 단계 전환은 화면 밖 위치를 거쳐 가므로 제한하지 않고,
+/// 배율 단계 스타일도 바꾸지 않는다(카드 전체 스타일 재계산이 모션 프레임을 밀어낸다).
+pub(in super::super) fn apply_camera(v: &CanvasView, camera: Camera, restyle: bool) {
     v.session.camera.set(camera);
     let transform = gtk::gsk::Transform::new()
         .translate(&gtk::graphene::Point::new(
@@ -28,7 +33,10 @@ pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
     v.widgets
         .zoom_label
         .set_label(&format!("{:.0}%", camera.zoom * 100.));
-    for (class, limit) in [("far", FAR_ZOOM), ("tiny", TINY_ZOOM)] {
+    for (class, limit) in [("far", FAR_ZOOM), ("tiny", TINY_ZOOM)]
+        .into_iter()
+        .filter(|_| restyle)
+    {
         if camera.zoom < limit {
             v.widgets.surface.add_css_class(class);
         } else {
@@ -42,7 +50,13 @@ pub(in super::super) fn set_camera(v: &CanvasView, camera: Camera) {
 }
 
 /// 화면 밖 카드는 측정·그리기에서 뺀다. 비용을 메모 수가 아니라 보이는 카드 수에 맞춘다.
+/// 단계 전환 중에는 숨기지 않는다. 숨겼다 다시 보이는 카드는 측정을 새로 해 모션 프레임을 밀어낸다.
 fn cull(v: &CanvasView) {
+    let grow_only = v.session.dive.borrow().is_some();
+    cull_for(v, v.session.camera.get(), !grow_only);
+}
+
+fn cull_for(v: &CanvasView, camera: Camera, hide: bool) {
     let (width, height) = (
         f64::from(v.widgets.surface.width()),
         f64::from(v.widgets.surface.height()),
@@ -50,7 +64,6 @@ fn cull(v: &CanvasView) {
     if width < 1. || height < 1. {
         return;
     }
-    let camera = v.session.camera.get();
     let margin = CULL_MARGIN / camera.zoom;
     let view = layout::Rect::new(
         camera.x - margin,
@@ -68,7 +81,7 @@ fn cull(v: &CanvasView) {
             || focused
                 .as_ref()
                 .is_some_and(|w| w == card.root.upcast_ref::<gtk::Widget>());
-        if card.root.get_visible() != keep {
+        if card.root.get_visible() != keep && (keep || hide) {
             card.root.set_visible(keep);
         }
     }
@@ -150,33 +163,71 @@ pub(in super::super) fn render(v: &Rc<CanvasView>) {
     let Some(st) = v.state.upgrade() else {
         return;
     };
-    let nodes = port::nodes(&st.borrow(), &mut v.session.summaries.borrow_mut());
-    let first = !v.session.fitted.get();
+    // 보던 프로젝트가 지워지면 최상위로 돌아간다. 안의 메모는 저장 계층이 한 단계 위로 올렸다.
+    if v.session
+        .scope
+        .get()
+        .is_some_and(|id| !port::exists(&st.borrow(), id))
     {
+        v.session.scope.set(None);
+    }
+    // 지워진 단계의 화면 기억은 버린다. 세션이 길어도 메모 수 이상으로 늘지 않는다.
+    v.session
+        .cameras
+        .borrow_mut()
+        .retain(|scope, _| scope.is_none_or(|id| port::exists(&st.borrow(), id)));
+    let nodes = port::nodes(
+        &st.borrow(),
+        &mut v.session.summaries.borrow_mut(),
+        v.session.scope.get(),
+    );
+    let first = !v.session.fitted.get();
+    let here: HashSet<Uuid> = nodes.iter().map(|n| n.id).collect();
+    {
+        let alive = port::note_ids(&st.borrow());
         let mut cards = v.widgets.cards.borrow_mut();
+        let mut parked = v.widgets.parked.borrow_mut();
         let mut shown = v.session.shown.borrow_mut();
-        cards.retain(|id, card| {
-            let keep = nodes.iter().any(|n| n.id == *id);
+        // 지워진 메모의 카드만 버린다. 숨긴 카드는 메모 수 이상으로 늘지 않는다.
+        parked.retain(|id, card| {
+            let keep = alive.contains(id);
             if !keep {
                 v.widgets.world.remove(&card.root);
-                shown.remove(id);
-                motion::stop_card(v, *id);
             }
             keep
         });
+        for id in cards.keys().copied().collect::<Vec<_>>() {
+            if here.contains(&id) {
+                continue;
+            }
+            let card = cards.remove(&id).expect("listed card");
+            shown.remove(&id);
+            motion::stop_card(v, id);
+            if alive.contains(&id) {
+                card.root.set_visible(false);
+                card.set_selected(false);
+                parked.insert(id, card);
+            } else {
+                v.widgets.world.remove(&card.root);
+            }
+        }
     }
     v.session
         .selection
         .borrow_mut()
-        .retain(|id| nodes.iter().any(|n| n.id == id));
+        .retain(|id| here.contains(&id));
     let mut added = Vec::new();
     for node in &nodes {
         let exists = v.widgets.cards.borrow().contains_key(&node.id);
         if !exists {
-            let card = Card::new(v, node.id);
+            let revived = v.widgets.parked.borrow_mut().remove(&node.id);
+            let card = revived.unwrap_or_else(|| {
+                let card = Card::new(v, node.id);
+                card.root
+                    .insert_before(&v.widgets.world, Some(&v.widgets.port_handle));
+                card
+            });
             card.update(node);
-            card.root
-                .insert_before(&v.widgets.world, Some(&v.widgets.port_handle));
             // 첫 화면에서는 카메라가 정해진 뒤 보이는 카드만 측정한다.
             card.root.set_visible(!first);
             v.widgets

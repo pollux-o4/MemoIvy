@@ -15,7 +15,7 @@ fn settle(book: &mut Notebook) -> Vec<NotebookEvent> {
     events
 }
 fn create(book: &mut Notebook) -> Uuid {
-    assert!(book.request_create(Some([64., 64.])));
+    assert!(book.request_create(Some([64., 64.]), None));
     settle(book)
         .into_iter()
         .find_map(|event| match event {
@@ -52,7 +52,7 @@ fn note_002_pending_delete_merges_latest_other_edit() {
     let deleted = create(&mut book);
     let other = create(&mut book);
     assert!(book.request_delete(deleted));
-    assert!(!book.request_create(None));
+    assert!(!book.request_create(None, None));
     book.tick(Instant::now());
     assert!(book.set_text(other, "동시 입력".into()));
     book.flush();
@@ -131,7 +131,7 @@ fn save_002_new_edit_after_failed_close_keeps_debounce() {
 fn note_001_create_is_visible_only_after_transaction_and_preserves_edits() {
     let (dir, mut book) = notebook();
     let existing = create(&mut book);
-    assert!(book.request_create(Some([500., 64.])));
+    assert!(book.request_create(Some([500., 64.]), None));
     assert_eq!(book.notes().len(), 1);
     book.tick(Instant::now());
     book.set_text(existing, "생성 중 편집".into());
@@ -173,4 +173,46 @@ fn canvas_001_edits_validate_and_restore_only_surviving_links() {
     assert!(book.note(a).unwrap().canvas().next.is_empty());
     assert!(book.note(a).unwrap().canvas().done);
     settle(&mut book);
+}
+#[test]
+fn project_001_nesting_saves_and_deleting_a_project_keeps_children() {
+    let (dir, mut book) = notebook();
+    let project = create(&mut book);
+    let child = create(&mut book);
+    assert!(book.edit_canvas(|edit| assert!(edit.set_parent(child, Some(project)))));
+    assert!(!book.edit_canvas(|edit| assert!(!edit.set_parent(project, Some(child)))));
+    assert!(book.request_create(Some([64., 64.]), Some(child)));
+    let grandchild = settle(&mut book)
+        .into_iter()
+        .find_map(|event| match event {
+            NotebookEvent::Created(id) => Some(id),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(book.note(grandchild).unwrap().canvas().parent, Some(child));
+    let before: Vec<_> = book
+        .notes()
+        .iter()
+        .map(|n| (n.id, n.canvas.clone()))
+        .collect();
+    assert!(book.edit_canvas(|edit| assert!(edit.set_parent(grandchild, None))));
+    assert!(book.edit_canvas(|edit| assert!(edit.set_parent(child, None))));
+    assert!(book.edit_canvas(|edit| assert!(edit.set_parent(project, Some(child)))));
+    // 되돌리기 스냅숏이 순환을 만들면 포함 관계는 현재대로 둔다.
+    book.edit_canvas(|edit| edit.restore(&before));
+    assert!(super::nesting::valid(book.notes()));
+    book.edit_canvas(|edit| {
+        edit.set_parent(project, None);
+        edit.restore(&before);
+    });
+    assert_eq!(book.note(child).unwrap().canvas().parent, Some(project));
+    assert!(book.request_delete(child));
+    settle(&mut book);
+    book.flush();
+    settle(&mut book);
+    let loaded = Notebook::open(dir.path().join("notes.json")).unwrap();
+    assert_eq!(
+        loaded.note(grandchild).unwrap().canvas().parent,
+        Some(project)
+    );
 }

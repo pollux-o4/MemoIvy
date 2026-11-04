@@ -1,6 +1,8 @@
 //! 보드 위에 떠 있는 도구. 조립·배선(build·wire)과 상태 반영(sync)을 분리한다.
 mod inspector;
+mod navigator;
 mod toolbar;
+pub(super) use navigator::Navigator;
 
 use super::{input::keyboard::Command, CanvasView};
 use crate::{app::shell::state::State, presentation::icons};
@@ -18,6 +20,8 @@ pub(super) struct Actions {
     pub delete: Button,
     pub commands: Vec<(Button, Command)>,
     pub empty_add: Button,
+    pub group: Button,
+    pub lift: Button,
 }
 
 pub(super) struct Floating {
@@ -35,6 +39,10 @@ pub(super) struct Floating {
     pub panel: Revealer,
     pub inspector: GtkBox,
     pub empty: GtkBox,
+    pub empty_title: Label,
+    pub empty_sub: Label,
+    pub navigator: Navigator,
+    pub project_actions: [Button; 2],
     pub actions: Actions,
 }
 
@@ -42,7 +50,7 @@ pub(super) fn build(state: &State) -> Floating {
     let dock = toolbar::dock(state);
     let align = toolbar::align_bar();
     let (panel, inspector) = inspector::shell();
-    let (empty, empty_add) = empty_state();
+    let (empty, empty_add, empty_title, empty_sub) = empty_state();
     Floating {
         dock_row: dock.row,
         dock: dock.root,
@@ -58,6 +66,10 @@ pub(super) fn build(state: &State) -> Floating {
         panel,
         inspector,
         empty,
+        empty_title,
+        empty_sub,
+        navigator: navigator::build(),
+        project_actions: [align.group.clone(), align.lift.clone()],
         actions: Actions {
             undo: dock.undo,
             redo: dock.redo,
@@ -67,11 +79,13 @@ pub(super) fn build(state: &State) -> Floating {
             delete: align.delete,
             commands: align.commands,
             empty_add,
+            group: align.group,
+            lift: align.lift,
         },
     }
 }
 
-fn empty_state() -> (GtkBox, Button) {
+fn empty_state() -> (GtkBox, Button, Label, Label) {
     let empty = GtkBox::new(Orientation::Vertical, 8);
     empty.add_css_class("canvas-empty");
     empty.set_halign(gtk::Align::Center);
@@ -96,11 +110,12 @@ fn empty_state() -> (GtkBox, Button) {
     add.set_margin_top(12);
     empty.append(&add);
     empty.set_visible(false);
-    (empty, add)
+    (empty, add, title, sub)
 }
 
 pub(super) fn wire(v: &Rc<CanvasView>, actions: Actions) {
     toolbar::wire(v, actions);
+    navigator::wire(v);
     let weak = Rc::downgrade(v);
     v.widgets.retry.connect_clicked(move |_| {
         if let Some(st) = weak.upgrade().and_then(|v| v.state.upgrade()) {
@@ -117,6 +132,17 @@ pub(super) fn sync(v: &Rc<CanvasView>) {
         .summary
         .set_text(&format!("메모 {} · 연결 {}", nodes.len(), edges));
     v.widgets.empty.set_visible(nodes.is_empty());
+    let inside = v.session.scope.get().is_some();
+    v.widgets.empty_title.set_text(if inside {
+        "프로젝트가 비어 있어요"
+    } else {
+        "아직 메모가 없어요"
+    });
+    v.widgets.empty_sub.set_text(if inside {
+        "여기서 만든 메모는 이 프로젝트 안에 담겨요. Esc로 밖으로 나갈 수 있어요."
+    } else {
+        "메모를 만들면 카드로 나타나고, 끌어서 배치하고 연결할 수 있어요."
+    });
     let count = nodes.len();
     drop(nodes);
     let selected = v.session.selection.borrow().len();
@@ -129,11 +155,12 @@ pub(super) fn sync(v: &Rc<CanvasView>) {
     for button in &v.widgets.distribute {
         button.set_sensitive(selected >= 3);
     }
+    v.widgets.project_actions[1].set_visible(inside);
     v.widgets
         .dock
         .set_visible(count > 0 || v.widgets.retry.is_visible());
     inspector::sync(v);
-    v.widgets
-        .summary
-        .set_visible(v.widgets.surface.width() == 0 || v.widgets.surface.width() >= COMPACT_WIDTH);
+    let wide = v.widgets.surface.width() == 0 || v.widgets.surface.width() >= COMPACT_WIDTH;
+    v.widgets.summary.set_visible(wide);
+    navigator::sync(v, !wide);
 }

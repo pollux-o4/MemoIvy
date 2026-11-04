@@ -1,18 +1,34 @@
-/* 메모 목록 */
+/* 메모 목록 · 중립 표면 위에 색 띠만 두어 많아져도 차분하게 읽힌다 */
 .library { background: @lsm_bg; color: @lsm_text; }
 .lsm-search { min-height: 32px; border-radius: 9px; background: alpha(@lsm_text, .055); background-image: none; color: @lsm_text; border: 0; box-shadow: none; padding: 0 8px; transition: background-color 140ms ease-out, box-shadow 140ms ease-out; }
 .lsm-search:focus-within { background: @lsm_surface; box-shadow: 0 0 0 2px alpha(@lsm_accent, .55); }
 .lsm-search > text { background: transparent; border: 0; outline: none; box-shadow: none; }
 .count, .empty-sub { color: @lsm_muted; font-size: .84em; }
 .preview { color: @lsm_muted; font-size: .9em; }
-.card { border-radius: 12px; margin-bottom: 10px; border: 0; color: @note_text; box-shadow: inset 0 0 0 1px alpha(#000000, .045), 0 1px 2px @lsm_shadow; transition: box-shadow 160ms ease-out, transform 160ms cubic-bezier(.2, .9, .3, 1.1); }
-.card:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .045), 0 4px 14px @lsm_shadow; transform: translateY(-1px); }
-.card.yellow { background: @note_yellow; }
-.card.pink { background: @note_pink; }
-.card.blue { background: @note_blue; }
-.card.green { background: @note_green; }
-.card.purple { background: @note_purple; }
-.card .preview { color: @note_muted; }
-.card-open { background: transparent; background-image: none; border: 0; box-shadow: none; padding: 12px 14px; color: @note_text; border-radius: 12px; }
-.card .icon-button { margin: 6px 6px 0 0; opacity: .5; color: @note_text; }
+.segmented { padding: 2px; border-radius: 9px; background: alpha(@lsm_text, .055); }
+.segmented > button { min-height: 24px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @lsm_muted; font-size: .82em; font-weight: 500; transition: background-color 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out; }
+.segmented > button:hover { color: @lsm_text; }
+.segmented > button:checked { background: @lsm_raised; color: @lsm_text; box-shadow: 0 0 0 1px @lsm_hairline, 0 1px 3px @lsm_shadow; }
+.card { border-radius: 12px; margin-bottom: 8px; border: 0; background: @lsm_surface; color: @lsm_text; box-shadow: inset 0 0 0 1px @lsm_hairline; transition: box-shadow 160ms ease-out, transform 160ms cubic-bezier(.2, .9, .3, 1.1), background-color 160ms ease-out; }
+.card:hover { background: shade(@lsm_surface, 1.06); box-shadow: inset 0 0 0 1px @lsm_hairline, 0 4px 14px @lsm_shadow; transform: translateY(-1px); }
+.card-stripe { min-width: 4px; margin: 10px 0 10px 8px; border-radius: 999px; }
+.card.yellow .card-stripe { background: @dot_yellow; }
+.card.pink .card-stripe { background: @dot_pink; }
+.card.blue .card-stripe { background: @dot_blue; }
+.card.green .card-stripe { background: @dot_green; }
+.card.purple .card-stripe { background: @dot_purple; }
+.card.project { background: alpha(@lsm_text, .035); }
+.card.project .card-title { font-weight: 700; }
+.card.nested { margin-bottom: 6px; }
+.card.nested .card-title { font-size: .96em; }
+.card .preview { color: @lsm_muted; }
+.card-location { color: @lsm_accent; font-size: .76em; font-weight: 600; }
+.card-open { background: transparent; background-image: none; border: 0; box-shadow: none; padding: 10px 12px; color: @lsm_text; border-radius: 12px; }
+.card-toggle { min-width: 24px; min-height: 24px; padding: 0; margin-left: 4px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @lsm_muted; }
+.card-toggle:hover { background: @lsm_hover; color: @lsm_text; }
+.task-chip { padding: 1px 7px; border-radius: 999px; background: alpha(@lsm_text, .07); color: @lsm_muted; font-size: .76em; font-weight: 600; font-feature-settings: "tnum"; }
+.task-chip.complete { background: alpha(@lsm_success, .16); color: @lsm_success; }
+.card progressbar.card-progress > trough { min-height: 3px; border-radius: 999px; background: alpha(@lsm_text, .08); border: 0; margin-top: 4px; }
+.card progressbar.card-progress > trough > progress { min-height: 3px; border-radius: 999px; background: @lsm_success; border: 0; }
+.card .icon-button { margin: 6px 6px 0 0; opacity: .5; color: @lsm_text; }
 .card:hover .icon-button, .card .icon-button:focus-within, .card .icon-button:checked { opacity: 1; }

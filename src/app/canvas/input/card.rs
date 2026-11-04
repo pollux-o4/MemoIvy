@@ -138,8 +138,13 @@ pub(in super::super) fn attach(v: &Rc<CanvasView>, card: &CardRoot, id: Uuid) {
             return;
         };
         v.session.guides.borrow_mut().clear();
+        let target = drop_target(&v, &origins);
         clear_drag_style(&v);
         scene::paint::sync_hud(&v);
+        if let (true, Some(target)) = (moved, target) {
+            v.move_into(origins.iter().map(|o| o.0).collect(), Some(target));
+            return;
+        }
         if moved {
             let moves: layout::Moves = {
                 let shown = v.session.shown.borrow();
@@ -166,7 +171,11 @@ pub(in super::super) fn attach(v: &Rc<CanvasView>, card: &CardRoot, id: Uuid) {
             .is_some_and(|(last, at)| last == id && i64::from(time) - i64::from(at) <= window);
         if again {
             v.session.last_click.set(None);
-            v.open_note(id);
+            if v.node(id).is_some_and(|n| n.project.is_some()) {
+                v.enter(id);
+            } else {
+                v.open_note(id);
+            }
         } else {
             v.session.last_click.set(Some((id, time)));
         }
@@ -265,6 +274,14 @@ pub(in super::super) fn follow(v: &Rc<CanvasView>) {
     for (id, origin) in &origins {
         scene::board::show_card(v, *id, [origin[0] + delta.0, origin[1] + delta.1]);
     }
+    let target = drop_target(v, &origins);
+    for (id, card) in v.widgets.cards.borrow().iter() {
+        if Some(*id) == target {
+            card.root.add_css_class("drop-target");
+        } else {
+            card.root.remove_css_class("drop-target");
+        }
+    }
     *v.session.guides.borrow_mut() = guides;
     v.widgets.backdrop.queue_draw();
     scene::paint::sync_hud(v);
@@ -291,8 +308,27 @@ fn clear_drag_style(v: &CanvasView) {
     if v.session.drag_styled.replace(false) {
         for card in v.widgets.cards.borrow().values() {
             card.root.remove_css_class("dragging");
+            card.root.remove_css_class("drop-target");
         }
     }
+}
+
+/// 포인터 아래에 끌고 있지 않은 프로젝트 카드가 있으면 그 안으로 넣는다.
+fn drop_target(v: &CanvasView, moving: &[(Uuid, [f64; 2])]) -> Option<Uuid> {
+    let point = v.session.camera.get().to_world(v.session.pointer.get());
+    let shown = v.session.shown.borrow();
+    v.session
+        .nodes
+        .borrow()
+        .iter()
+        .filter(|n| n.project.is_some() && !moving.iter().any(|(id, _)| *id == n.id))
+        .find(|n| {
+            shown.get(&n.id).is_some_and(|p| {
+                let r = port::rect_at(*p);
+                point.0 >= r.x && point.0 <= r.right() && point.1 >= r.y && point.1 <= r.bottom()
+            })
+        })
+        .map(|n| n.id)
 }
 
 fn others(v: &CanvasView, moving: &[(Uuid, [f64; 2])]) -> Vec<Rect> {

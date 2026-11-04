@@ -11,7 +11,17 @@ fn isolated(name: &str, run: fn()) {
         return;
     }
     let _display = DISPLAY.lock().unwrap_or_else(|poison| poison.into_inner());
-    let output = Command::new(std::env::current_exe().expect("test executable"))
+    let exe = std::env::current_exe().expect("test executable");
+    // 사용자 화면에 창을 띄우지 않는다. xvfb-run 밖에서 실행되면 가상 화면과 격리된 D-Bus로 감싼다.
+    let headless = std::env::var("XAUTHORITY").is_ok_and(|auth| auth.contains("xvfb-run"));
+    let mut command = if headless {
+        Command::new(&exe)
+    } else {
+        let mut wrapped = Command::new("dbus-run-session");
+        wrapped.args(["--", "xvfb-run", "-a"]).arg(&exe);
+        wrapped
+    };
+    let output = command
         .args(["--exact", &exact, "--nocapture"])
         // xvfb-run sets DISPLAY, but GTK otherwise prefers the host Wayland socket.
         .env(
@@ -60,6 +70,10 @@ scenario!(
 scenario!(
     canvas_001_widget_flow_and_recovery,
     super::canvas::tests::canvas_001_widget_flow_and_recovery
+);
+scenario!(
+    project_001_levels_grouping_and_shortcuts,
+    super::canvas::tests::project_001_levels_grouping_and_shortcuts
 );
 scenario!(
     canvas_004_markers_shortcuts_and_delete,

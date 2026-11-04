@@ -1,4 +1,7 @@
-use crate::{app::canvas::CanvasView, persistence::Notebook};
+use crate::{
+    app::canvas::CanvasView,
+    persistence::{Navigation, Notebook},
+};
 use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, SearchEntry, TextView};
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
 use uuid::Uuid;
@@ -21,6 +24,8 @@ pub(in crate::app) struct LibraryView {
     pub list: GtkBox,
     pub count: Label,
     pub search: SearchEntry,
+    /// 켜면 프로젝트별 묶음, 끄면 최근 수정 순 목록.
+    pub grouped: gtk::ToggleButton,
     pub error: Label,
     pub add: Button,
 }
@@ -39,6 +44,10 @@ pub(in crate::app) enum Closing {
 }
 pub(in crate::app) struct AppState {
     pub notebook: Notebook,
+    /// 프로젝트 방문 기록. 바로가기 순위에만 쓰는 파생 데이터다.
+    pub navigation: Navigation,
+    /// 새 프로젝트 메모가 만들어지면 그 안으로 옮길 메모들.
+    pub pending_group: Option<Vec<Uuid>>,
     pub views: Views,
     pub refresh_at: Option<Instant>,
     pub closing: Closing,
@@ -46,9 +55,11 @@ pub(in crate::app) struct AppState {
     pub delete_queue: Vec<Uuid>,
 }
 impl AppState {
-    pub fn new(notebook: Notebook, library: LibraryView) -> State {
+    pub fn new(notebook: Notebook, navigation: Navigation, library: LibraryView) -> State {
         Rc::new(RefCell::new(Self {
             notebook,
+            navigation,
+            pending_group: None,
             views: Views {
                 library,
                 windows: HashMap::new(),
@@ -83,12 +94,14 @@ impl AppState {
     ) -> State {
         std::fs::write(&path, serde_json::to_vec(&notes).unwrap()).unwrap();
         Self::new(
-            Notebook::open(path).unwrap(),
+            Notebook::open(path.clone()).unwrap(),
+            Navigation::beside(&path),
             LibraryView {
                 window: ApplicationWindow::new(app),
                 list: GtkBox::new(gtk::Orientation::Vertical, 0),
                 count: Label::new(None),
                 search: SearchEntry::new(),
+                grouped: gtk::ToggleButton::new(),
                 error: Label::new(None),
                 add: Button::new(),
             },

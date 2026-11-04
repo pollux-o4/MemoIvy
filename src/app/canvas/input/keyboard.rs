@@ -133,6 +133,17 @@ fn handle(v: &Rc<CanvasView>, key: gdk::Key, modifiers: gdk::ModifierType) -> bo
         };
     }
     if alt && !ctrl {
+        if key == gdk::Key::Up {
+            return v.leave();
+        }
+        if key.to_lower() == gdk::Key::g {
+            if shift {
+                v.lift_selected();
+            } else {
+                v.group_selected();
+            }
+            return true;
+        }
         return alignment(v, key, shift);
     }
     if !board_has_focus(v) {
@@ -159,7 +170,12 @@ fn handle(v: &Rc<CanvasView>, key: gdk::Key, modifiers: gdk::ModifierType) -> bo
         gdk::Key::Return | gdk::Key::KP_Enter => {
             let id = v.session.selection.borrow().single();
             if let Some(id) = id {
-                v.open_note(id);
+                // 프로젝트는 들어가고, Shift+Enter는 프로젝트 설명 메모를 연다.
+                if !shift && v.node(id).is_some_and(|n| n.project.is_some()) {
+                    v.enter(id);
+                } else {
+                    v.open_note(id);
+                }
             }
             id.is_some()
         }
@@ -217,7 +233,8 @@ fn escape(v: &Rc<CanvasView>) -> bool {
     match interaction {
         Interaction::Idle => {
             if v.session.selection.borrow().is_empty() {
-                return false;
+                // 고른 것이 없으면 Esc는 한 단계 위로 나간다.
+                return v.leave();
             }
             v.session.selection.borrow_mut().set([]);
             v.sync_selection();

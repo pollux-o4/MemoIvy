@@ -55,16 +55,7 @@ fn attach_scroll(v: &Rc<CanvasView>) {
         let zooming = controller
             .current_event_state()
             .contains(gdk::ModifierType::CONTROL_MASK);
-        motion::stop_camera(&v);
-        let next = scrolled(
-            v.session.camera.get(),
-            controller.unit(),
-            (dx, dy),
-            zooming,
-            v.session.pointer.get(),
-        );
-        v.queue_camera(next);
-        v.session.scroll_panning.set(!zooming);
+        scroll_input(&v, controller.unit(), (dx, dy), zooming);
         glib::Propagation::Stop
     });
     let weak = Rc::downgrade(v);
@@ -74,6 +65,23 @@ fn attach_scroll(v: &Rc<CanvasView>) {
         }
     });
     v.widgets.surface.add_controller(scroll);
+}
+
+fn scroll_input(v: &Rc<CanvasView>, unit: gdk::ScrollUnit, delta: (f64, f64), zooming: bool) {
+    if unit == gdk::ScrollUnit::Wheel && !zooming {
+        motion::wheel_pan(v, delta.0 * WHEEL_PAN, delta.1 * WHEEL_PAN);
+    } else {
+        motion::stop_camera(v);
+        let next = scrolled(
+            v.session.camera.get(),
+            unit,
+            delta,
+            zooming,
+            v.session.pointer.get(),
+        );
+        v.queue_camera(next);
+        v.session.scroll_panning.set(!zooming);
+    }
 }
 
 fn scrolled(
@@ -185,8 +193,7 @@ fn attach_board_drag(v: &Rc<CanvasView>) {
             _ => None,
         };
         if let Some(step) = pan {
-            let next = v.session.camera.get().panned(step.0, step.1);
-            scene::board::set_camera(&v, next);
+            pan_by(&v, step);
             return;
         }
         follow(&v);
@@ -226,6 +233,11 @@ fn attach_board_drag(v: &Rc<CanvasView>) {
         }
     });
     v.widgets.surface.add_controller(drag);
+}
+
+/// 고속 마우스는 프레임마다 여러 번 움직임을 보낸다. 좌표만 누적하고 화면 갱신은 프레임 클록에 한 번 맞춘다.
+pub(in super::super) fn pan_by(v: &Rc<CanvasView>, step: (f64, f64)) {
+    v.queue_camera(v.session.camera.get().panned(step.0, step.1));
 }
 
 fn attach_port_drag(v: &Rc<CanvasView>) {
@@ -382,12 +394,12 @@ pub(in super::super) fn test_pinch_interrupts_scroll(v: &Rc<CanvasView>) {
         motion::advance(v, now + std::time::Duration::from_millis(100));
     };
     scroll.emit_by_name::<()>("scroll-begin", &[]);
-    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    scroll_input(v, gdk::ScrollUnit::Surface, (0., 0.6), false);
     let before = v.session.camera.get();
     decelerate(v, gdk::ScrollUnit::Wheel, (1000., 0.));
     advance();
     assert_eq!(v.session.camera.get(), before, "wheel has no extra coast");
-    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    scroll_input(v, gdk::ScrollUnit::Surface, (0., 0.6), false);
     let before = v.session.camera.get();
     decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));
     advance();
@@ -395,7 +407,7 @@ pub(in super::super) fn test_pinch_interrupts_scroll(v: &Rc<CanvasView>) {
         v.session.camera.get().x > before.x,
         "Surface release keeps bounded coast"
     );
-    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    scroll_input(v, gdk::ScrollUnit::Surface, (0., 0.6), false);
     pinch.emit_by_name::<()>("begin", &[&None::<gdk::EventSequence>]);
     // shortcut: 안전한 GDK Surface 이벤트 생성 API가 없어 감속 경계에 합성, 실제 터치패드 검증 때 재확인.
     decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));
@@ -406,7 +418,7 @@ pub(in super::super) fn test_pinch_interrupts_scroll(v: &Rc<CanvasView>) {
         before,
         "pinch must invalidate prior scroll coast"
     );
-    scroll.emit_by_name::<bool>("scroll", &[&0., &0.01]);
+    scroll_input(v, gdk::ScrollUnit::Surface, (0., 0.6), false);
     let before = v.session.camera.get();
     motion::camera_to(v, before);
     decelerate(v, gdk::ScrollUnit::Surface, (1000., 0.));

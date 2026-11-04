@@ -84,9 +84,21 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     input::pointer::test_pinch_interrupts_scroll(&v);
     super::motion::tests::canvas_002_viewport(&v);
     scene::board::set_camera(&v, Camera::default());
+    scene::paint::tests::canvas_002_grid_preserves_subpixel_motion();
+    // 휠 클릭 이동은 입력을 누적해 프레임당 한 번 반영하고 빈 HUD 표면을 올리지 않는다.
+    *v.session.interaction.borrow_mut() = Interaction::Pan { last: (0., 0.) };
+    for _ in 0..4 {
+        input::pointer::pan_by(&v, (1.5, 0.5));
+    }
+    assert_eq!(v.session.camera.get(), Camera::default().panned(6., 2.));
+    assert!(!v.widgets.hud.is_visible(), "pan must not show the HUD");
+    settle(50);
+    v.session.interaction.replace(Interaction::Idle);
+    scene::board::set_camera(&v, Camera::default());
 
     connect_through_menu(&v, b);
     assert_eq!(state.borrow().notebook.notes()[0].canvas().next, vec![b]);
+    scene::paint::tests::canvas_002_edge_tiles_match_direct(&v);
     let before_noop = v.history.borrow().len();
     v.connect_nodes(a, b);
     v.connect_nodes(a, a);

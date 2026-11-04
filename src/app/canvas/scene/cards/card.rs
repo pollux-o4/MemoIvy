@@ -17,6 +17,10 @@ pub(in crate::app::canvas) struct Card {
     link_count: Label,
     tasks: Label,
     more: Label,
+    project: GtkBox,
+    project_count: Label,
+    progress: gtk::ProgressBar,
+    enter: Button,
     done: Button,
     shown: RefCell<Option<NodeView>>,
 }
@@ -37,6 +41,21 @@ impl Card {
         title.set_ellipsize(gtk::pango::EllipsizeMode::End);
         title.add_css_class("card-title");
         head.append(&title);
+        let enter = Button::new();
+        enter.set_child(Some(&icons::image(icons::ENTER)));
+        enter.add_css_class("card-enter");
+        enter.set_focusable(false);
+        enter.set_valign(gtk::Align::Start);
+        enter.set_tooltip_text(Some("프로젝트 열기 · 두 번 누르기 또는 Enter"));
+        enter.update_property(&[gtk::accessible::Property::Label("프로젝트 열기")]);
+        enter.set_visible(false);
+        let weak = Rc::downgrade(v);
+        enter.connect_clicked(move |_| {
+            if let Some(v) = weak.upgrade() {
+                v.enter(id);
+            }
+        });
+        head.append(&enter);
         let done = Button::new();
         done.set_child(Some(&icons::image(icons::CHECK)));
         done.add_css_class("card-done");
@@ -56,8 +75,20 @@ impl Card {
         preview.root.set_vexpand(true);
         root.append(&preview.root);
 
+        let progress = gtk::ProgressBar::new();
+        progress.add_css_class("card-progress");
+        progress.set_visible(false);
+        root.append(&progress);
+
         let meta = GtkBox::new(Orientation::Horizontal, 10);
         meta.add_css_class("card-meta");
+        let project = GtkBox::new(Orientation::Horizontal, 4);
+        project.add_css_class("card-project");
+        project.append(&icons::image(icons::PROJECT));
+        let project_count = Label::new(None);
+        project.append(&project_count);
+        project.set_visible(false);
+        meta.append(&project);
         let links = GtkBox::new(Orientation::Horizontal, 3);
         links.append(&icons::image(icons::LINK));
         let link_count = Label::new(None);
@@ -81,6 +112,10 @@ impl Card {
             link_count,
             tasks,
             more,
+            project,
+            project_count,
+            progress,
+            enter,
             done,
             shown: RefCell::new(None),
         }
@@ -116,9 +151,27 @@ impl Card {
         }
         self.links.set_visible(!node.next.is_empty());
         self.link_count.set_text(&node.next.len().to_string());
-        self.tasks.set_visible(node.tasks.1 > 0);
+        // 프로젝트는 자기 할 일과 안쪽 전체 할 일을 합쳐 진행률로 보여 준다.
+        let tasks = node.project.map_or(node.tasks, |p| {
+            (node.tasks.0 + p.tasks.0, node.tasks.1 + p.tasks.1)
+        });
+        self.tasks.set_visible(tasks.1 > 0);
         self.tasks
-            .set_text(&format!("할 일 {}/{}", node.tasks.0, node.tasks.1));
+            .set_text(&format!("할 일 {}/{}", tasks.0, tasks.1));
+        self.project.set_visible(node.project.is_some());
+        self.enter.set_visible(node.project.is_some());
+        self.progress
+            .set_visible(node.project.is_some() && tasks.1 > 0);
+        if tasks.1 > 0 {
+            self.progress.set_fraction(tasks.0 as f64 / tasks.1 as f64);
+        }
+        if let Some(project) = node.project {
+            self.project_count
+                .set_text(&format!("메모 {}", project.notes));
+            self.root.add_css_class("project");
+        } else {
+            self.root.remove_css_class("project");
+        }
         if node.done {
             self.root.add_css_class("done");
         } else {
@@ -134,8 +187,13 @@ impl Card {
             .update_property(&[gtk::accessible::Property::Label(label)]);
         self.root
             .update_property(&[gtk::accessible::Property::Label(&format!(
-                "{} · 선택 및 이동",
-                node.display_title()
+                "{} · {}",
+                node.display_title(),
+                if node.project.is_some() {
+                    "프로젝트 · Enter로 열기"
+                } else {
+                    "선택 및 이동"
+                }
             ))]);
         *shown = Some(node.clone());
     }

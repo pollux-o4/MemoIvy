@@ -75,8 +75,8 @@ fn fingerprint(id: Uuid, nodes: &[NodeView]) -> String {
     for node in nodes {
         let _ = write!(
             key,
-            "|{}{}{}{}{}{:?}",
-            node.id, node.title, node.preview, node.color, node.done, node.next
+            "|{}{}{}{}{}{:?}{:?}",
+            node.id, node.title, node.preview, node.color, node.done, node.next, node.project
         );
         // 체크 상태는 요약 글자에 드러나지 않는다.
         if node.id == id {
@@ -222,6 +222,8 @@ fn build(v: &Rc<CanvasView>, id: Uuid, nodes: &[NodeView]) {
     });
     group.append(&replay);
     v.widgets.inspector.append(&group);
+
+    project_section(v, note);
 
     v.widgets.inspector.append(&section("다음 메모"));
     let links = GtkBox::new(Orientation::Vertical, 0);
@@ -391,4 +393,93 @@ fn connect_menu(v: &Rc<CanvasView>, note: &NodeView, nodes: &[NodeView]) -> gtk:
     crate::app::shared::menu_popover(&popover);
     menu.set_popover(Some(&popover));
     menu.upcast()
+}
+
+/// 프로젝트 열기와 다른 프로젝트로 옮기기. 끌어서 프로젝트 카드에 놓는 조작의 키보드 대체 경로다.
+fn project_section(v: &Rc<CanvasView>, note: &NodeView) {
+    let Some(st) = v.state.upgrade() else {
+        return;
+    };
+    let id = note.id;
+    let scope = v.session.scope.get();
+    let targets = port::move_targets(&st.borrow(), &[id]);
+    let outside = scope.map(|scope| port::parent_of(&st.borrow(), scope));
+    if note.project.is_none() && targets.is_empty() && outside.is_none() {
+        return;
+    }
+    v.widgets.inspector.append(&section("프로젝트"));
+    let group = GtkBox::new(Orientation::Vertical, 0);
+    group.add_css_class("panel-group");
+    if let Some(project) = note.project {
+        let enter = action_row(icons::ENTER, "프로젝트 열기", "canvas-control-enter");
+        enter.set_tooltip_text(Some(&format!("안의 메모 {}개 보기 · Enter", project.notes)));
+        let weak = Rc::downgrade(v);
+        enter.connect_clicked(move |_| {
+            if let Some(v) = weak.upgrade() {
+                v.enter(id);
+            }
+        });
+        group.append(&enter);
+    }
+    if let Some(parent) = outside {
+        let lift = action_row(icons::UP, "밖으로 꺼내기", "canvas-control-lift");
+        lift.set_tooltip_text(Some("한 단계 위 보드로 옮기기 · Alt+Shift+G"));
+        let weak = Rc::downgrade(v);
+        lift.connect_clicked(move |_| {
+            if let Some(v) = weak.upgrade() {
+                v.move_into(vec![id], parent);
+            }
+        });
+        group.append(&lift);
+    }
+    if !targets.is_empty() {
+        let menu = gtk::MenuButton::new();
+        menu.set_widget_name("canvas-control-move");
+        menu.add_css_class("panel-row");
+        menu.set_tooltip_text(Some("카드를 프로젝트 카드 위에 끌어 놓아도 옮겨져요"));
+        let contents = GtkBox::new(Orientation::Horizontal, 8);
+        contents.append(&icons::image(icons::PROJECT));
+        contents.append(&row_label("프로젝트로 옮기기"));
+        menu.set_child(Some(&contents));
+        menu.update_property(&[gtk::accessible::Property::Label("옮길 프로젝트 선택")]);
+        let popover = gtk::Popover::new();
+        let list = GtkBox::new(Orientation::Vertical, 0);
+        list.add_css_class("menu-body");
+        for target in targets {
+            let row = Button::new();
+            row.add_css_class("menu-row");
+            let line = GtkBox::new(Orientation::Horizontal, 8);
+            line.append(&dot(&target.color));
+            let title = Label::new(Some(&target.title));
+            title.set_xalign(0.);
+            title.set_hexpand(true);
+            title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+            title.set_max_width_chars(26);
+            line.append(&title);
+            row.set_child(Some(&line));
+            let weak = Rc::downgrade(v);
+            let close = popover.downgrade();
+            row.connect_clicked(move |_| {
+                if let Some(popover) = close.upgrade() {
+                    popover.popdown();
+                }
+                if let Some(v) = weak.upgrade() {
+                    v.move_into(vec![id], Some(target.id));
+                }
+            });
+            list.append(&row);
+        }
+        let scroll = ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .propagate_natural_width(true)
+            .max_content_height(280)
+            .child(&list)
+            .build();
+        popover.set_child(Some(&scroll));
+        crate::app::shared::menu_popover(&popover);
+        menu.set_popover(Some(&popover));
+        group.append(&menu);
+    }
+    v.widgets.inspector.append(&group);
 }

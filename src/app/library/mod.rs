@@ -6,7 +6,7 @@ use crate::app::{
         state::{AppState, LibraryView},
     },
 };
-use crate::persistence::{data_path, Notebook};
+use crate::persistence::{data_path, Navigation, Notebook};
 use crate::presentation::icons;
 pub(in crate::app) use cards::refresh;
 use gtk::{
@@ -55,7 +55,7 @@ pub(in crate::app) fn build(app: &Application) {
     let search = library.search.clone();
     let mut notebook = store;
     commands::initialize_positions(&mut notebook);
-    let state = AppState::new(notebook, library);
+    let state = AppState::new(notebook, Navigation::beside(&path), library);
     let canvas = Button::with_label("캔버스");
     canvas.add_css_class("lsm-action");
     let st = state.clone();
@@ -66,8 +66,12 @@ pub(in crate::app) fn build(app: &Application) {
     let st = state.clone();
     let a = app.clone();
     search.connect_search_changed(move |_| crate::app::shell::views::refresh_all(&st, &a));
+    let grouped = state.borrow().views.library.grouped.clone();
     let st = state.clone();
-    add.connect_clicked(move |_| commands::new_note(&st));
+    let a = app.clone();
+    grouped.connect_toggled(move |_| refresh(&st, &a));
+    let st = state.clone();
+    add.connect_clicked(move |_| commands::new_note(&st, None));
     let st = state.clone();
     window.connect_close_request(move |_| lifecycle::close_library(&st));
     lifecycle::wake(&state);
@@ -94,8 +98,22 @@ fn build_contents(window: &ApplicationWindow, add: Button) -> LibraryView {
     outer.append(&search);
     let count = Label::new(None);
     count.set_xalign(0.);
+    count.set_hexpand(true);
     count.add_css_class("count");
-    outer.append(&count);
+    // 프로젝트별 묶음과 최근 순 목록을 오가는 세그먼트.
+    let grouped = gtk::ToggleButton::with_label("프로젝트별");
+    grouped.set_active(true);
+    let recent = gtk::ToggleButton::with_label("최근");
+    recent.set_group(Some(&grouped));
+    let segment = GtkBox::new(Orientation::Horizontal, 0);
+    segment.add_css_class("segmented");
+    segment.append(&grouped);
+    segment.append(&recent);
+    segment.set_visible(false);
+    let bar = GtkBox::new(Orientation::Horizontal, 8);
+    bar.append(&count);
+    bar.append(&segment);
+    outer.append(&bar);
     let list = GtkBox::new(Orientation::Vertical, 0);
     let scroll = ScrolledWindow::builder()
         .vexpand(true)
@@ -114,6 +132,7 @@ fn build_contents(window: &ApplicationWindow, add: Button) -> LibraryView {
         list,
         count,
         search,
+        grouped,
         error,
         add,
     }

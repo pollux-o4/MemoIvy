@@ -112,10 +112,15 @@ fn tick(state: &State) -> glib::ControlFlow {
         match event {
             NotebookEvent::Created(id) => {
                 state.borrow().views.library.add.set_sensitive(true);
+                let group = state.borrow_mut().pending_group.take();
+                if let Some(children) = group {
+                    crate::app::canvas::adopt(state, id, children);
+                }
                 refresh_all(state, &app);
                 commands::open_note(state, &app, id);
             }
             NotebookEvent::Deleted(id) => {
+                state.borrow_mut().navigation.forget(id);
                 let editor = state.borrow_mut().views.windows.remove(&id);
                 if let Some(editor) = editor {
                     editor.window.destroy();
@@ -133,6 +138,7 @@ fn tick(state: &State) -> glib::ControlFlow {
             NotebookEvent::SaveFailed(error) | NotebookEvent::OperationFailed(error) => {
                 let mut s = state.borrow_mut();
                 s.views.library.add.set_sensitive(true);
+                s.pending_group = None;
                 // 남은 삭제는 멈춘다. 편집 잠금은 save_failed가 푼다.
                 s.delete_queue.clear();
                 s.save_failed(&error.to_string());
@@ -221,7 +227,7 @@ pub(in crate::app) fn save_002_close_failure_and_idle_timer() {
         !state.borrow().timer_active,
         "idle notebook stops its timer"
     );
-    commands::new_note(&state);
+    commands::new_note(&state, None);
     flush(&state);
     until(|| matches!(state.borrow().notebook.status(), SaveStatus::Saved));
     let id = state.borrow().notebook.notes()[0].id();
@@ -268,7 +274,7 @@ pub(in crate::app) fn save_002_close_failure_and_idle_timer() {
             weak.upgrade()
                 .map_or(glib::Propagation::Proceed, |state| close_library(&state))
         });
-    commands::new_note(&pending);
+    commands::new_note(&pending, None);
     assert_eq!(close_library(&pending), glib::Propagation::Stop);
     until(|| matches!(pending.borrow().notebook.status(), SaveStatus::Saved));
     let created = pending.borrow().notebook.notes()[0].id();

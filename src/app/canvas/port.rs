@@ -24,12 +24,31 @@ pub(super) struct NodeView {
     pub color: String,
     pub position: [f64; 2],
     pub next: Vec<Uuid>,
+    /// 다른 프로젝트 안쪽 메모로 이어지는 연결을 이 단계의 카드끼리로 투영한 것. 편집할 수 없다.
+    pub through: Vec<Uuid>,
     pub done: bool,
+    pub pinned: bool,
+    /// 자식이 있으면 프로젝트다. 하위 전체의 메모 수와 할 일 진행.
+    pub project: Option<ProjectSummary>,
     pub tasks: (usize, usize),
     pub title_marker: Option<markdown::LineMarker>,
     pub lines: Rc<Vec<markdown::PreviewLine>>,
     /// 요약에 담지 않은 나머지 내용 줄 수.
     pub remaining: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) struct ProjectSummary {
+    pub notes: usize,
+    pub tasks: (usize, usize),
+}
+
+/// 경로·바로가기에 쓰는 프로젝트 이름표.
+#[derive(Clone, PartialEq, Debug)]
+pub(super) struct Place {
+    pub id: Uuid,
+    pub title: String,
+    pub color: String,
 }
 
 impl NodeView {
@@ -61,40 +80,204 @@ struct CachedSummary {
     lines: Rc<Vec<markdown::PreviewLine>>,
 }
 
-pub(super) fn nodes(state: &AppState, cache: &mut SummaryCache) -> Vec<NodeView> {
-    cache
-        .0
-        .retain(|id, _| state.notebook.notes().iter().any(|note| note.id() == *id));
-    state
-        .notebook
-        .notes()
+/// scope 단계에 보이는 카드. 하위 메모의 연결은 그 메모를 담은 이 단계 카드로 투영한다.
+pub(super) fn nodes(
+    state: &AppState,
+    cache: &mut SummaryCache,
+    scope: Option<Uuid>,
+) -> Vec<NodeView> {
+    let notes = state.notebook.notes();
+    let ids: std::collections::HashSet<_> = notes.iter().map(|note| note.id()).collect();
+    cache.0.retain(|id, _| ids.contains(id));
+    for note in notes {
+        let entry = cache.0.entry(note.id()).or_default();
+        if entry.text != note.text() || entry.text.is_empty() {
+            let summary = markdown::summary(note.text());
+            *entry = CachedSummary {
+                text: note.text().to_owned(),
+                lines: Rc::new(summary.lines.clone()),
+                summary,
+                tasks: markdown::task_progress(note.text()),
+            };
+        }
+    }
+    let parents: HashMap<Uuid, Option<Uuid>> =
+        notes.iter().map(|n| (n.id(), n.canvas().parent)).collect();
+    // 이 단계에서 메모를 대표하는 카드. scope 바깥 메모는 None이다.
+    let shown_as = |id: Uuid| -> Option<Uuid> {
+        let mut current = id;
+        for _ in 0..=parents.len() {
+            let parent = *parents.get(&current)?;
+            if parent == scope {
+                return Some(current);
+            }
+            current = parent?;
+        }
+        None
+    };
+    let mut projects: HashMap<Uuid, ProjectSummary> = HashMap::new();
+    let mut through: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    for note in notes {
+        let Some(card) = shown_as(note.id()) else {
+            continue;
+        };
+        if card != note.id() {
+            let tasks = cache.0[&note.id()].tasks;
+            let project = projects.entry(card).or_insert(ProjectSummary {
+                notes: 0,
+                tasks: (0, 0),
+            });
+            project.notes += 1;
+            project.tasks.0 += tasks.0;
+            project.tasks.1 += tasks.1;
+        }
+        for target in &note.canvas().next {
+            let Some(to) = shown_as(*target) else {
+                continue;
+            };
+            let direct = card == note.id() && to == *target;
+            let list = through.entry(card).or_default();
+            if !direct && to != card && !list.contains(&to) {
+                list.push(to);
+            }
+        }
+    }
+    notes
         .iter()
         .enumerate()
+        .filter(|(_, note)| note.canvas().parent == scope)
         .map(|(index, note)| {
-            let entry = cache.0.entry(note.id()).or_default();
-            if entry.text != note.text() || entry.text.is_empty() {
-                let summary = markdown::summary(note.text());
-                *entry = CachedSummary {
-                    text: note.text().to_owned(),
-                    lines: Rc::new(summary.lines.clone()),
-                    summary,
-                    tasks: markdown::task_progress(note.text()),
-                };
-            }
+            let entry = &cache.0[&note.id()];
+            let next = note.canvas().next.clone();
+            let mut through = through.remove(&note.id()).unwrap_or_default();
+            through.retain(|id| !next.contains(id));
             NodeView {
                 id: note.id(),
                 title: entry.summary.title.clone(),
                 preview: entry.summary.preview.clone(),
                 color: note.color().to_owned(),
                 position: note.canvas().position.unwrap_or_else(|| slot(index)),
-                next: note.canvas().next.clone(),
+                next,
+                through,
                 done: note.canvas().done,
+                pinned: note.canvas().pinned,
+                project: projects.get(&note.id()).copied(),
                 tasks: entry.tasks,
                 title_marker: entry.summary.title_marker.clone(),
                 lines: entry.lines.clone(),
                 remaining: entry.summary.remaining,
             }
         })
+        .collect()
+}
+
+/// 메모 → 부모. 경로·깊이·프로젝트 판별을 메모 수만큼 한 번에 읽는다(`note()`는 선형 탐색이다).
+fn parents(state: &AppState) -> HashMap<Uuid, Option<Uuid>> {
+    state
+        .notebook
+        .notes()
+        .iter()
+        .map(|n| (n.id(), n.canvas().parent))
+        .collect()
+}
+
+fn projects(parents: &HashMap<Uuid, Option<Uuid>>) -> std::collections::HashSet<Uuid> {
+    parents.values().filter_map(|p| *p).collect()
+}
+
+fn place(state: &AppState, id: Uuid) -> Option<Place> {
+    let note = state.notebook.note(id)?;
+    // 제목은 첫 줄에서 나온다. 본문 전체를 파싱하지 않는다.
+    let first = note
+        .text()
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("");
+    let title = markdown::summary(first).title;
+    Some(Place {
+        id,
+        title: if title.is_empty() {
+            "이름 없는 프로젝트".into()
+        } else {
+            title
+        },
+        color: note.color().to_owned(),
+    })
+}
+
+fn ancestors(parents: &HashMap<Uuid, Option<Uuid>>, id: Uuid) -> impl Iterator<Item = Uuid> + '_ {
+    // 저장 계층이 순환을 거부하지만 화면은 깊이 상한으로 한 번 더 막는다.
+    std::iter::successors(Some(id), |id| parents.get(id).copied().flatten())
+        .take(crate::persistence::MAX_DEPTH + 2)
+}
+
+/// 최상위에서 scope까지의 경로. scope가 사라졌으면 남은 가장 가까운 조상까지만 돌려준다.
+pub(super) fn path(state: &AppState, scope: Option<Uuid>) -> Vec<Place> {
+    let Some(scope) = scope else {
+        return Vec::new();
+    };
+    let parents = parents(state);
+    let mut path: Vec<_> = ancestors(&parents, scope)
+        .map_while(|id| place(state, id))
+        .collect();
+    path.reverse();
+    path
+}
+
+pub(super) fn note_ids(state: &AppState) -> std::collections::HashSet<Uuid> {
+    state.notebook.notes().iter().map(|n| n.id()).collect()
+}
+
+pub(super) fn exists(state: &AppState, id: Uuid) -> bool {
+    state.notebook.note(id).is_some()
+}
+
+/// 고정한 프로젝트가 먼저, 그다음 자주·최근 들어간 프로젝트. 현재 경로에 있는 곳은 뺀다.
+pub(super) fn shortcuts(state: &AppState, scope: Option<Uuid>, limit: usize) -> Vec<(Place, bool)> {
+    let parents = parents(state);
+    let projects = projects(&parents);
+    let here: Vec<_> = scope.map_or_else(Vec::new, |s| ancestors(&parents, s).collect());
+    let mut out: Vec<(Place, bool)> = state
+        .notebook
+        .notes()
+        .iter()
+        .filter(|n| n.canvas().pinned && !here.contains(&n.id()))
+        .take(limit)
+        .filter_map(|n| place(state, n.id()))
+        .map(|p| (p, true))
+        .collect();
+    let now = crate::app::shared::unix_now();
+    for id in state
+        .navigation
+        .ranked(now, |id| projects.contains(&id) && !here.contains(&id))
+    {
+        if out.len() >= limit {
+            break;
+        }
+        if out.iter().all(|(p, _)| p.id != id) {
+            out.extend(place(state, id).map(|p| (p, false)));
+        }
+    }
+    out
+}
+
+/// 선택 메모를 옮길 수 있는 프로젝트 후보. 자기 자신·하위·깊이 초과는 빠진다.
+pub(super) fn move_targets(state: &AppState, ids: &[Uuid]) -> Vec<Place> {
+    let parents = parents(state);
+    let projects = projects(&parents);
+    state
+        .notebook
+        .notes()
+        .iter()
+        .filter(|n| projects.contains(&n.id()))
+        .filter(|n| ancestors(&parents, n.id()).count() <= crate::persistence::MAX_DEPTH)
+        .filter(|n| {
+            ids.iter().all(|id| {
+                !ancestors(&parents, n.id()).any(|a| a == *id)
+                    && parents.get(id).is_some_and(|p| *p != Some(n.id()))
+            })
+        })
+        .filter_map(|n| place(state, n.id()))
         .collect()
 }
 
@@ -139,16 +322,34 @@ pub(super) fn set_done(notes: &mut Notes<'_>, id: Uuid, done: bool) {
     notes.set_done(id, done);
 }
 
+pub(super) fn set_parent(notes: &mut Notes<'_>, id: Uuid, parent: Option<Uuid>) -> bool {
+    notes.set_parent(id, parent)
+}
+
+pub(super) fn set_pinned(notes: &mut Notes<'_>, id: Uuid, pinned: bool) {
+    notes.set_pinned(id, pinned);
+}
+
+pub(super) fn parent_of(state: &AppState, id: Uuid) -> Option<Uuid> {
+    state.notebook.note(id).and_then(|n| n.canvas().parent)
+}
+
+pub(super) fn pinned(state: &AppState, id: Uuid) -> bool {
+    state.notebook.note(id).is_some_and(|n| n.canvas().pinned)
+}
+
 fn slot(index: usize) -> [f64; 2] {
     super::model::placement::slot(index)
 }
 
-pub(super) fn vacant(notebook: &Notebook) -> [f64; 2] {
+/// 같은 단계 카드만 피한다. 다른 프로젝트 안의 카드는 이 화면에 겹쳐 보이지 않는다.
+pub(super) fn vacant(notebook: &Notebook, scope: Option<Uuid>) -> [f64; 2] {
     super::model::placement::vacant(
         notebook
             .notes()
             .iter()
             .enumerate()
+            .filter(|(_, n)| n.canvas().parent == scope)
             .map(|(i, n)| n.canvas().position.unwrap_or_else(|| slot(i))),
     )
 }
