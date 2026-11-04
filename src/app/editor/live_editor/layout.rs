@@ -75,6 +75,48 @@ impl LiveEditor {
         }
     }
 
+    /// 내어쓰기를 적용한 즉시 실제 본문 위치를 재어 표식 폭을 고친다.
+    /// 다음 프레임에 고치면 입력하는 동안 본문이 한 번 밀렸다가 제자리로 돌아온다.
+    pub(super) fn settle_paragraphs(
+        &self,
+        view: &TextView,
+        document: &Document,
+        selected: &Range<i32>,
+    ) {
+        if self.source.get() {
+            return;
+        }
+        let buffer = view.buffer();
+        for _ in 0..2 {
+            let mut measured = BTreeSet::new();
+            let mut changed = false;
+            for item in &document.items {
+                if hides_marker(item, selected) {
+                    continue;
+                }
+                let marker = super::super::source_slice(&buffer, item.marker.clone());
+                if !measured.insert(marker.clone()) {
+                    continue;
+                }
+                let want = view.left_margin() + GUTTER * (item.depth as i32 + 1);
+                let got = view
+                    .iter_location(&buffer.iter_at_offset(item.content.start))
+                    .x();
+                let delta = got - want;
+                let mut fixes = self.layout.hang_fix.borrow_mut();
+                let fix = fixes.entry(marker).or_insert(0);
+                if delta != 0 && (*fix + delta).abs() <= HANG_FIX_LIMIT {
+                    *fix += delta;
+                    changed = true;
+                }
+            }
+            if !changed {
+                return;
+            }
+            self.sync_paragraphs(view, document, selected);
+        }
+    }
+
     /// 레이아웃이 안정된 뒤 커서 줄의 본문 위치를 재어, 어긋났으면 그 표식 폭을 고친다.
     pub(super) fn correct_hang(self: &Rc<Self>) {
         let Some(view) = self.view.upgrade() else {

@@ -3,8 +3,106 @@ use super::*;
 pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
     let text =
         "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
-    let (window, view, source, _editor) = shown_window(text);
+    let (window, view, source, editor) = shown_window(text);
     let buffer = view.buffer();
+    // 입력 직후 첫 그림부터 본문이 제자리에 있어야 한다. 다음 프레임 보정에 기대지 않는다.
+    // 폰트마다 측정 폭이 실제와 어긋날 수 있다. 어긋난 측정값에서 시작해도 첫 그림이 맞아야 한다.
+    for typed in ["- 첫", "- [ ] 첫", "- 상위\n  - 첫"] {
+        editor.layout.hang_fix.borrow_mut().clear();
+        for marker in ["- ", "- [ ] ", "  - "] {
+            editor.layout.hang_fix.borrow_mut().insert(marker.into(), 3);
+        }
+        buffer.set_text(&format!("{text}\n{typed}"));
+        buffer.place_cursor(&buffer.end_iter());
+        editor.refresh();
+        let item = buffer.end_iter().offset() - 1;
+        let depth = i32::from(typed.contains("\n  "));
+        assert_eq!(
+            view.iter_location(&buffer.iter_at_offset(item)).x(),
+            20 + GUTTER * (depth + 1),
+            "{typed:?} content must start aligned without waiting for a frame"
+        );
+    }
+    // 빈 항목에 한글을 조합·확정·지우는 동안 본문이 1px도 움직이지 않는다.
+    // 아랫줄도 위아래로 흔들리지 않는다. 빈 줄과 한글 줄의 높이가 같아야 한다.
+    // 한글이 없는 기본 글꼴이어야 빈 줄과 한글 줄의 높이 차이가 드러난다.
+    let settings = gtk::Settings::default().unwrap();
+    let font = settings.gtk_font_name();
+    settings.set_gtk_font_name(Some("Ubuntu Sans 11"));
+    editor.layout.hang_fix.borrow_mut().clear();
+    buffer.set_text("* \n아래");
+    buffer.place_cursor(&buffer.iter_at_offset(2));
+    editor.refresh();
+    settle(30);
+    editor.refresh();
+    settle(30);
+    let below = || view.iter_location(&buffer.end_iter()).y();
+    let below_empty = below();
+    let bullet = || {
+        let label = editor.widgets.bullets.borrow()[0].clone();
+        let point = label.compute_point(&view, &gtk::graphene::Point::new(0.0, 0.0));
+        (point.map(|p| p.y() as i32), label.height_request())
+    };
+    let bullet_empty = bullet();
+    let still = |step: &str| {
+        assert_eq!(
+            view.iter_location(&buffer.iter_at_offset(2)).x(),
+            20 + GUTTER,
+            "content moved at {step}"
+        );
+        assert_eq!(below(), below_empty, "next line moved vertically at {step}");
+        assert_eq!(bullet(), bullet_empty, "bullet moved vertically at {step}");
+    };
+    still("empty");
+    // 한글 입력기: 자음이 이어지면 앞 글자를 확정하고 새 글자를 조합한다.
+    view.emit_preedit_changed("ㅁ");
+    drain();
+    still("preedit");
+    for (commit, next) in [("ㅁ", "ㄴ"), ("ㄴ", "ㅇ")] {
+        buffer.insert_at_cursor(commit);
+        view.emit_preedit_changed(next);
+        drain();
+        still(commit);
+    }
+    view.emit_preedit_changed("");
+    drain();
+    for _ in 0..2 {
+        let mut end = buffer.iter_at_mark(&buffer.get_insert());
+        let mut start = end;
+        start.backward_char();
+        buffer.delete(&mut start, &mut end);
+        drain();
+        still("delete");
+    }
+    // 기호 모양의 세로 중심이 옆 한글의 세로 중심과 1px 안에서 맞는다.
+    buffer.set_text("* 가\n  * 가\n    * 가");
+    editor.refresh();
+    settle(30);
+    let bullets = editor.widgets.bullets.borrow().clone();
+    for (depth, (label, start)) in bullets.iter().zip([2, 8, 16]).enumerate() {
+        let glyph = view.iter_location(&buffer.iter_at_offset(start));
+        let (_, glyph_y) =
+            view.buffer_to_window_coords(gtk::TextWindowType::Widget, glyph.x(), glyph.y());
+        let glyph_center = f64::from(glyph_y) + f64::from(glyph.height()) / 2.0;
+        let top = label
+            .compute_point(&view, &gtk::graphene::Point::new(0.0, 0.0))
+            .unwrap()
+            .y();
+        let (ink, logical) = label.layout().extents();
+        let scale = f64::from(pango::SCALE);
+        let ink_center = f64::from(top)
+            + f64::from(label.height()) / 2.0
+            + (f64::from(ink.y() + ink.height() / 2)
+                - f64::from(logical.y() + logical.height() / 2))
+                / scale;
+        assert!(
+            (ink_center - glyph_center).abs() <= 1.0,
+            "depth {depth} bullet center {ink_center} vs text {glyph_center}"
+        );
+    }
+    settings.set_gtk_font_name(font.as_deref());
+    buffer.set_text(text);
+    settle(30);
     // TextView가 text 커서를 쓰는 실제 조건에서도 체크는 화살표로 구분한다.
     view.set_cursor_from_name(Some("text"));
     let checkbox = find_checkbox(view.upcast_ref()).unwrap();

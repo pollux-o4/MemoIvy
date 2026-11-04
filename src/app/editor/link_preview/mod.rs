@@ -11,18 +11,23 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// 테스트는 실제 시간을 기다리므로 지연을 같은 비율로 줄인다. 순서·유예 관계는 그대로 검증된다.
+const TIME_SCALE: u64 = if cfg!(test) { 5 } else { 1 };
+const fn ms(value: u64) -> Duration {
+    Duration::from_millis(value / TIME_SCALE)
+}
 /// 지나가는 포인터에 뜨지 않을 만큼만 기다린다.
-const HOVER_DELAY: Duration = Duration::from_millis(350);
+const HOVER_DELAY: Duration = ms(350);
 /// 키보드는 타이핑 도중 끼어들지 않도록 더 오래 기다린다.
-const CARET_DELAY: Duration = Duration::from_millis(600);
+const CARET_DELAY: Duration = ms(600);
 /// 카드가 방금 떠 있었으면 옆 링크로 옮겨 갈 때 기다리지 않는다.
-const SWITCH_DELAY: Duration = Duration::from_millis(60);
-const SWITCH_WINDOW: Duration = Duration::from_millis(400);
+const SWITCH_DELAY: Duration = ms(60);
+const SWITCH_WINDOW: Duration = ms(400);
 /// 링크에서 카드로 포인터를 옮기는 동안 닫히지 않게 한다.
-const CLOSE_DELAY: Duration = Duration::from_millis(220);
+const CLOSE_DELAY: Duration = ms(220);
 /// CSS `.closing` 전환 길이와 맞춘다.
-const EXIT: Duration = Duration::from_millis(90);
-const COPIED: Duration = Duration::from_millis(1200);
+const EXIT: Duration = ms(90);
+const COPIED: Duration = ms(1200);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(super) enum Source {

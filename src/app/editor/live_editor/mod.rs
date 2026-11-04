@@ -11,10 +11,11 @@ use std::{
     rc::Rc,
 };
 
-/// 목록 한 단계가 차지하는 표식 칸. 체크박스 16px과 본문 사이 8px이다.
+/// 목록 한 단계가 차지하는 표식 칸. 표식은 칸 오른쪽에 붙여 본문과 늘 MARKER_GAP만큼 띄운다.
 const GUTTER: i32 = 24;
-const CHECK_BOX: i32 = 20;
-const BULLET_BOX: i32 = 16;
+const MARKER_GAP: i32 = 6;
+/// CSS `.md-checkbox check` 13px + 테두리 1.5px × 2.
+const CHECK_BOX: i32 = 16;
 const HANG_FIX_LIMIT: i32 = 6;
 
 struct TaskWidget {
@@ -25,6 +26,11 @@ struct TaskWidget {
 /// 표식 칸의 왼쪽. 태그 변경 직후의 낡은 글자 위치에 끌려가지 않도록 여백으로 계산한다.
 fn marker_x(view: &TextView, depth: usize) -> i32 {
     view.left_margin() + GUTTER * depth as i32
+}
+
+/// 표식 칸의 오른쪽 끝(본문에서 MARKER_GAP 앞).
+fn marker_end(view: &TextView, depth: usize) -> i32 {
+    marker_x(view, depth) + GUTTER - MARKER_GAP
 }
 
 /// (왼쪽 여백, 첫 줄 들여쓰기) 조합마다 하나씩 재사용한다. 값이 몇 가지뿐이라 늘어나지 않는다.
@@ -57,14 +63,34 @@ impl LiveEditor {
         });
     }
 
+    /// 글이 바뀌면 그리기(GDK_PRIORITY_REDRAW)보다 먼저 맞춘다. 늦으면 낡은 배치로 한 프레임 그려졌다가 바뀐다.
+    fn schedule_edit(self: &Rc<Self>) {
+        self.schedule();
+        let editor = self.clone();
+        glib::idle_add_local_full(glib::Priority::HIGH_IDLE, move || {
+            editor.refresh();
+            glib::ControlFlow::Break
+        });
+    }
+
     fn refresh(self: &Rc<Self>) {
-        if self.input.composing.get() {
-            return;
-        }
         let Some(view) = self.view.upgrade() else {
             return;
         };
         let buffer = view.buffer();
+        if self.input.composing.get() {
+            // 조합 중 확정된 글자로 빈 항목이 채워지면 표식 폭이 달라진다. 글자·커서는 건드리지 않고 들여쓰기만 맞춘다.
+            if self.dirty.replace(false) {
+                let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
+                *self.document.borrow_mut() = markdown::parse(&text);
+                self.restyle.set(true);
+            }
+            let document = self.document.borrow();
+            let selected = selected_lines(&buffer);
+            self.sync_paragraphs(&view, &document, &selected);
+            self.settle_paragraphs(&view, &document, &selected);
+            return;
+        }
         let start = buffer.start_iter();
         let end = buffer.end_iter();
         if self.dirty.replace(false) {
@@ -147,6 +173,7 @@ impl LiveEditor {
         };
         reconcile(&buffer, &self.tags.marker, markers);
         self.sync_paragraphs(&view, &document, &selected);
+        self.settle_paragraphs(&view, &document, &selected);
         drop(document);
         self.sync_theme(&view);
         self.sync_tasks();
@@ -181,6 +208,12 @@ pub(in crate::app) fn configure(view: &TextView) {
     // 줄 간격은 위쪽에 둔다. GTK는 줄 아래 간격을 누르면 숨긴 글자까지 센 위치를 계산해 중단된다.
     view.set_pixels_above_lines(4);
     view.set_pixels_inside_wrap(2);
+    // 줄 높이를 고정한다. 기본 글꼴에 한글이 없으면 빈 줄이 한글 줄보다 낮아 입력할 때 아랫줄이 흔들린다.
+    let css = gtk::CssProvider::new();
+    css.load_from_data("textview { line-height: 1.5em; }");
+    #[allow(deprecated)]
+    view.style_context()
+        .add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
 pub(in crate::app) fn attach(view: &TextView) -> CheckButton {

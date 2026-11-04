@@ -94,7 +94,7 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
         // 입력이 시작되면 카드는 바로 물러나고, 포인터가 다시 움직일 때까지 뜨지 않는다.
         state.preview.hide();
         state.pointer.hovered.replace(None);
-        state.schedule();
+        state.schedule_edit();
     });
     let state = editor.clone();
     buffer.connect_mark_set(move |_, _, mark| {

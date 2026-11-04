@@ -13,7 +13,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     assert!(editor.preview.is_pending());
     editor.preview.pointer_left();
     assert!(!editor.preview.is_pending());
-    settle(450);
+    settle(100);
     assert_eq!(editor.preview.shown_url(), None);
     // 머무르면 뜨고, 이름과 목적지를 함께 보여 준다. 포커스는 편집기에 남는다.
     view.grab_focus();
@@ -107,18 +107,18 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     editor.preview.dismiss();
     buffer.place_cursor(&buffer.iter_at_offset(3));
-    settle(750);
+    settle(160);
     assert!(!editor.preview.is_shown(), "dismissed stays dismissed");
     buffer.place_cursor(&buffer.end_iter());
     drain();
     // 조합 중에는 뜨지 않는다.
     buffer.place_cursor(&buffer.iter_at_offset(2));
     view.emit_preedit_changed("한");
-    settle(750);
+    settle(160);
     assert!(!editor.preview.is_shown());
     view.emit_preedit_changed("");
     // 대기 중 창을 닫아도 타이머·보조 표면이 남지 않는다.
     editor.preview.hover(&link(0), anchor);
     window.destroy();
-    settle(450);
+    settle(100);
 }
