@@ -1,0 +1,4 @@
+/target/
+**/target/
+*.snap
+/artifacts/ui-review/*.png

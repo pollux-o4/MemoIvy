@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=MemoIvy
+Comment=간단한 스티키 메모
+Exec=@HOME@/.local/libexec/memoivy-launcher
+Icon=@HOME@/.local/share/icons/hicolor/scalable/apps/memoivy.svg
+Terminal=false
+Categories=Office;Utility;
+StartupNotify=true
+StartupWMClass=io.github.pollux_o4.MemoIvy
