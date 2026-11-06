@@ -7,6 +7,10 @@ pub(super) struct EditorTags {
     // 표식은 투명하게 남겨 빈 항목의 커서·줄 위치를 보존한다.
     pub marker: TextTag,
     pub link_hover: TextTag,
+    /// 커서가 없는 이미지 줄의 원문. 이미지 아래 흐린 한 줄로 남는다.
+    pub media_quiet: TextTag,
+    /// 커서가 들어온 이미지 줄의 원문.
+    pub media_source: TextTag,
 }
 
 impl LiveEditor {
@@ -25,9 +29,10 @@ impl LiveEditor {
                 if let Some((_, task)) = self.tags.styles.iter().find(|(s, _)| *s == Style::Task) {
                     task.set_foreground_rgba(Some(&muted));
                 }
+                self.tags.media_source.set_foreground_rgba(Some(&muted));
             }
         }
-        if let Some(accent) = context.lookup_color("lsm_accent") {
+        if let Some(accent) = context.lookup_color("memoivy_accent") {
             let tint = gdk::RGBA::new(accent.red(), accent.green(), accent.blue(), 0.16);
             if self.tags.link_hover.background_rgba().as_ref() != Some(&tint) {
                 self.tags.link_hover.set_background_rgba(Some(&tint));
@@ -96,6 +101,15 @@ pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
         .foreground_rgba(&gdk::RGBA::new(0., 0., 0., 0.002))
         .build();
     let link_hover = TextTag::builder().name("md-link-hover").build();
+    let media_quiet = TextTag::builder()
+        .name("md-media-quiet")
+        .scale(0.7)
+        .foreground_rgba(&gdk::RGBA::new(0., 0., 0., 0.002))
+        .build();
+    let media_source = TextTag::builder()
+        .name("md-media-source")
+        .scale(0.85)
+        .build();
     for (_, tag) in &tags {
         buffer.tag_table().add(tag);
     }
@@ -103,12 +117,16 @@ pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
     buffer.tag_table().add(&syntax);
     buffer.tag_table().add(&marker);
     buffer.tag_table().add(&link_hover);
+    buffer.tag_table().add(&media_quiet);
+    buffer.tag_table().add(&media_source);
     EditorTags {
         styles: tags,
         hidden,
         syntax,
         marker,
         link_hover,
+        media_quiet,
+        media_source,
     }
 }
 

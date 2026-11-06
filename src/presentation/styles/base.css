@@ -1,38 +1,38 @@
 /* 창 틀·머리글·공용 조작. 색은 모두 토큰을 쓴다. */
-.lsm-window, .lsm-window > decoration { background: @lsm_bg; color: @lsm_text; border: 0; border-radius: 14px; }
-.lsm-window > decoration { box-shadow: 0 0 0 1px @lsm_hairline, 0 18px 48px @lsm_shadow_deep; }
-.lsm-window:backdrop > decoration { box-shadow: 0 0 0 1px @lsm_hairline, 0 8px 24px @lsm_shadow; }
-.lsm-window.maximized, .lsm-window.maximized > decoration { border-radius: 0; box-shadow: none; }
-.lsm-window .lsm-titlebar { padding: 0; margin: 0; border: 0; background: @lsm_bg; background-image: none; box-shadow: none; }
-.header { padding: 4px 10px; background: @lsm_bg; border: 0; box-shadow: none; transition: background-color 180ms ease-out; }
+.memoivy-window, .memoivy-window > decoration { background: @memoivy_bg; color: @memoivy_text; border: 0; border-radius: 14px; }
+.memoivy-window > decoration { box-shadow: 0 0 0 1px @memoivy_hairline, 0 18px 48px @memoivy_shadow_deep; }
+.memoivy-window:backdrop > decoration { box-shadow: 0 0 0 1px @memoivy_hairline, 0 8px 24px @memoivy_shadow; }
+.memoivy-window.maximized, .memoivy-window.maximized > decoration { border-radius: 0; box-shadow: none; }
+.memoivy-window .memoivy-titlebar { padding: 0; margin: 0; border: 0; background: @memoivy_bg; background-image: none; box-shadow: none; }
+.header { padding: 4px 10px; background: @memoivy_bg; border: 0; box-shadow: none; transition: background-color 180ms ease-out; }
 .header-title { font-weight: 600; font-size: .96em; }
-.lsm-window:backdrop .header-title { color: @lsm_muted; }
+.memoivy-window:backdrop .header-title { color: @memoivy_muted; }
 
 .window-action, .icon-button > button, .icon-button { min-width: 32px; min-height: 32px; padding: 0; margin: 0; border: 0; border-radius: 8px; background: transparent; background-image: none; box-shadow: none; color: inherit; transition: background-color 120ms ease-out, opacity 120ms ease-out; }
-.window-action { margin: 0 1px; color: @lsm_muted; }
-.window-action:hover, .icon-button > button:hover { background-color: @lsm_hover; color: @lsm_text; }
-.window-action:active, .icon-button > button:active, .icon-button > button:checked { background-color: @lsm_press; }
-.window-action.close:hover { background-color: @lsm_danger_hover; color: @lsm_danger; }
+.window-action { margin: 0 1px; color: @memoivy_muted; }
+.window-action:hover, .icon-button > button:hover { background-color: @memoivy_hover; color: @memoivy_text; }
+.window-action:active, .icon-button > button:active, .icon-button > button:checked { background-color: @memoivy_press; }
+.window-action.close:hover { background-color: @memoivy_danger_hover; color: @memoivy_danger; }
 
-.new-note { background: @lsm_accent; background-image: none; color: @lsm_on_accent; border: 0; border-radius: 9px; padding: 5px 12px 5px 8px; font-weight: 600; box-shadow: 0 1px 2px @lsm_shadow; transition: background-color 120ms ease-out, box-shadow 160ms ease-out, transform 120ms ease-out; }
-.new-note:hover { background-color: shade(@lsm_accent, 1.08); box-shadow: 0 3px 10px @lsm_shadow; }
-.new-note:active { background-color: shade(@lsm_accent, .93); transform: scale(.975); }
-.new-note:disabled { opacity: .55; color: @lsm_on_accent; }
-.lsm-action { background: transparent; background-image: none; border: 0; box-shadow: none; border-radius: 8px; padding: 6px 10px; color: inherit; font-weight: 500; transition: background-color 120ms ease-out; }
-.lsm-action:hover { background-color: @lsm_hover; }
-.lsm-action:active { background-color: @lsm_press; }
+.new-note { background: @memoivy_accent; background-image: none; color: @memoivy_on_accent; border: 0; border-radius: 9px; padding: 5px 12px 5px 8px; font-weight: 600; box-shadow: 0 1px 2px @memoivy_shadow; transition: background-color 120ms ease-out, box-shadow 160ms ease-out, transform 120ms ease-out; }
+.new-note:hover { background-color: shade(@memoivy_accent, 1.08); box-shadow: 0 3px 10px @memoivy_shadow; }
+.new-note:active { background-color: shade(@memoivy_accent, .93); transform: scale(.975); }
+.new-note:disabled { opacity: .55; color: @memoivy_on_accent; }
+.memoivy-action { background: transparent; background-image: none; border: 0; box-shadow: none; border-radius: 8px; padding: 6px 10px; color: inherit; font-weight: 500; transition: background-color 120ms ease-out; }
+.memoivy-action:hover { background-color: @memoivy_hover; }
+.memoivy-action:active { background-color: @memoivy_press; }
 
-button:focus-visible, .canvas-card:focus-visible, switch:focus-visible, checkbutton:focus-visible { outline: 2px solid alpha(@lsm_accent, .85); outline-offset: 1px; }
+button:focus-visible, .canvas-card:focus-visible, switch:focus-visible, checkbutton:focus-visible { outline: 2px solid alpha(@memoivy_accent, .85); outline-offset: 1px; }
 .card-title { font-size: 1.02em; font-weight: 600; }
-.status { padding: 4px 20px 10px; font-size: .82em; color: @lsm_muted; }
-.error { color: @lsm_danger; }
+.status { padding: 4px 20px 10px; font-size: .82em; color: @memoivy_muted; }
+.error { color: @memoivy_danger; }
 
-tooltip.background, tooltip { background: @lsm_raised; color: @lsm_text; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px @lsm_hairline, 0 6px 18px @lsm_shadow; }
+tooltip.background, tooltip { background: @memoivy_raised; color: @memoivy_text; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px @memoivy_hairline, 0 6px 18px @memoivy_shadow; }
 tooltip > box { padding: 2px 4px; }
-scrollbar.overlay-indicator slider { min-width: 4px; min-height: 4px; border-radius: 999px; background-color: alpha(@lsm_muted, .55); border: 0; }
+scrollbar.overlay-indicator slider { min-width: 4px; min-height: 4px; border-radius: 999px; background-color: alpha(@memoivy_muted, .55); border: 0; }
 scrollbar { background: transparent; border: 0; }
 
-switch { min-width: 34px; min-height: 20px; border-radius: 999px; border: 0; background: alpha(@lsm_muted, .35); background-image: none; box-shadow: none; transition: background-color 160ms ease-out; }
-switch:checked { background: @lsm_success; }
+switch { min-width: 34px; min-height: 20px; border-radius: 999px; border: 0; background: alpha(@memoivy_muted, .35); background-image: none; box-shadow: none; transition: background-color 160ms ease-out; }
+switch:checked { background: @memoivy_success; }
 switch slider { min-width: 16px; min-height: 16px; margin: 2px; border-radius: 999px; border: 0; background: white; background-image: none; box-shadow: 0 1px 3px alpha(black, .3); transition: margin 180ms cubic-bezier(.2, .9, .3, 1); }
 

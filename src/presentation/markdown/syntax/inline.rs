@@ -1,7 +1,7 @@
 use super::{
     links::{bare_links, label_end},
-    list::scan_items,
-    safe_link, Document, Link, Marker, Span, Style, Task,
+    list::{line_mark, scan_items, LineMark},
+    safe_link, Document, Link, Marker, Span, Style, Task, TaskState,
 };
 use pulldown_cmark::{Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd};
 use std::ops::Range;
@@ -10,11 +10,23 @@ use std::ops::Range;
 pub(crate) fn plain_line(line: &str) -> String {
     let source = line.trim();
     let mut out = String::new();
+    let mut image_depth = 0;
     for event in Parser::new_ext(
         source,
         Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS,
     ) {
         match event {
+            Event::Start(Tag::Image { .. }) => {
+                image_depth += 1;
+                if image_depth == 1 {
+                    out.push_str("[이미지] ");
+                }
+            }
+            Event::End(TagEnd::Image) => image_depth -= 1,
+            // 설명 뒤의 `|너비`는 표시 문법이라 뺀다.
+            Event::Text(text) if image_depth > 0 => {
+                out.push_str(text.rsplit_once('|').map_or(&*text, |(alt, _)| alt))
+            }
             Event::Text(text) | Event::Code(text) => out.push_str(&text),
             Event::SoftBreak | Event::HardBreak => out.push(' '),
             _ => {}
@@ -42,7 +54,6 @@ pub(crate) fn parse(text: &str) -> Document {
     let mut image_depth = 0;
     // 일반 주소를 찾을 때 건너뛸 구간: 코드와 이미 링크인 곳.
     let mut literal: Vec<Range<usize>> = Vec::new();
-    let mut parsed_tasks: Vec<(Range<i32>, bool)> = Vec::new();
     // shortcut: 전체 파싱은 입력 idle마다 한 번 병합, PERF-001 크기를 넘는 문서에서 지연이 측정되면 증분 파싱 검토.
     for (event, range) in Parser::new_ext(
         text,
@@ -54,6 +65,10 @@ pub(crate) fn parse(text: &str) -> Document {
             Event::Start(Tag::Image { .. }) => {
                 image_depth += 1;
                 literal.push(range.clone());
+                if image_depth == 1 {
+                    doc.images
+                        .extend(super::media::block_image(text, range.clone(), &chars));
+                }
                 continue;
             }
             Event::End(TagEnd::Image) => {
@@ -142,11 +157,6 @@ pub(crate) fn parse(text: &str) -> Document {
                 }
             }
             Event::Start(Tag::Link { .. }) => literal.push(range.clone()),
-            Event::TaskListMarker(checked) => {
-                // 탭 뒤의 체크는 범위가 탭부터 시작한다. 토글이 `[` 다음 글자를 바꾸므로 잘라 낸다.
-                let box_start = range.start + (raw.len() - raw.trim_start().len());
-                parsed_tasks.push((chars(box_start..range.end), checked));
-            }
             _ => {}
         }
         if let Some(style) = style {
@@ -164,20 +174,95 @@ pub(crate) fn parse(text: &str) -> Document {
     }
     bare_links(text, &literal, &chars, &mut doc);
     scan_items(text, &literal, &chars, &mut doc);
-    // 인용문 안이나 번호와 함께 쓴 체크는 원문으로 남기고 토글만 지원한다.
-    for (range, checked) in parsed_tasks {
-        if !doc
+    scan_external_tasks(text, &literal, &chars, &mut doc);
+    doc.tasks.sort_by_key(|task| task.range.start);
+    doc
+}
+
+/// 목록 파서가 소유하지 않는 인용문·번호 목록의 체크도 같은 표식 규칙으로 읽는다.
+fn scan_external_tasks(
+    text: &str,
+    literal: &[Range<usize>],
+    chars: &impl Fn(Range<usize>) -> Range<i32>,
+    doc: &mut Document,
+) {
+    let mut at = 0;
+    for raw in text.split_inclusive('\n') {
+        let line_start = at;
+        at += raw.len();
+        let line = raw.trim_end_matches(['\n', '\r']);
+        let prefix = quote_prefix(line);
+        let source = &line[prefix..];
+        let Some(mark) = line_mark(source) else {
+            continue;
+        };
+        let Some((check, state)) = task_marker(source, &mark) else {
+            continue;
+        };
+        let source_range = line_start + prefix + check.start..line_start + prefix + check.end;
+        if literal
+            .iter()
+            .any(|range| range.contains(&source_range.start))
+        {
+            continue;
+        }
+        let range = chars(source_range);
+        if doc
             .items
             .iter()
             .any(|item| item.marker.contains(&range.start))
         {
-            doc.spans.push(Span {
-                range: range.clone(),
-                style: Style::Task,
-            });
-            doc.tasks.push(Task { range, checked });
+            continue;
+        }
+        doc.spans.push(Span {
+            range: range.clone(),
+            style: Style::Task,
+        });
+        doc.tasks.push(Task {
+            range,
+            state,
+            item: None,
+        });
+    }
+}
+
+fn task_marker(line: &str, mark: &LineMark) -> Option<(Range<usize>, TaskState)> {
+    if let (Some(range), Some(state)) = (&mark.check, mark.task_state) {
+        return Some((range.clone(), state));
+    }
+    if mark.kind != super::ListKind::Ordered {
+        return None;
+    }
+    let tail = line.get(mark.body..)?;
+    let marker = tail.get(..3)?;
+    if !matches!(tail.as_bytes().get(3), Some(b' ' | b'\t')) {
+        return None;
+    }
+    Some((mark.body..mark.body + 3, TaskState::from_marker(marker)?))
+}
+
+fn quote_prefix(line: &str) -> usize {
+    let mut at = 0;
+    let mut found = false;
+    loop {
+        let mut marker = at;
+        let mut spaces = 0;
+        while matches!(line.as_bytes().get(marker), Some(b' ' | b'\t')) && spaces < 3 {
+            marker += 1;
+            spaces += 1;
+        }
+        if line.as_bytes().get(marker) != Some(&b'>') {
+            break;
+        }
+        found = true;
+        at = marker + 1;
+        if matches!(line.as_bytes().get(at), Some(b' ' | b'\t')) {
+            at += 1;
         }
     }
-    doc.tasks.sort_by_key(|task| task.range.start);
-    doc
+    if found {
+        at
+    } else {
+        0
+    }
 }

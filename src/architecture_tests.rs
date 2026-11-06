@@ -89,9 +89,9 @@ fn adr_0010_frontend_uses_only_the_notebook_boundary() {
 
 #[test]
 fn adr_0010_features_coordinate_through_the_shell() {
-    for feature in ["library", "editor", "canvas", "shared"] {
+    for feature in ["library", "editor", "canvas", "files", "shared"] {
         for (path, code) in sources(&format!("src/app/{feature}")) {
-            for sibling in ["library", "editor", "canvas"] {
+            for sibling in ["library", "editor", "canvas", "files"] {
                 if sibling == feature {
                     continue;
                 }

@@ -12,6 +12,7 @@ const STYLES: &str = concat!(
     include_str!("styles/views/library.css"),
     include_str!("styles/views/memo.css"),
     include_str!("styles/views/canvas.css"),
+    include_str!("styles/views/files.css"),
 );
 
 /// 토큰만 테마별로 교체한다. 구성요소 스타일은 한 벌만 유지한다.

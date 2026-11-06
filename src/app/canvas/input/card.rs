@@ -9,7 +9,6 @@ use gtk::{gdk, prelude::*, GestureDrag};
 use std::{cell::Cell, rc::Rc};
 use uuid::Uuid;
 
-const DRAG_THRESHOLD: f64 = 3.;
 const SNAP_PIXELS: f64 = 6.;
 
 /// 카드 전체를 끌어 옮기고, 눌러서 선택하며, 두 번 눌러 원본을 연다.
@@ -234,7 +233,7 @@ pub(in super::super) fn follow(v: &Rc<CanvasView>) {
     let world = camera.to_world(v.session.pointer.get());
     let mut delta = (world.0 - grab.0, world.1 - grab.1);
     if !moved {
-        if delta.0.hypot(delta.1) * camera.zoom < DRAG_THRESHOLD {
+        if delta.0.hypot(delta.1) * camera.zoom < super::drag_threshold() {
             return;
         }
         begin_move(v, &origins);

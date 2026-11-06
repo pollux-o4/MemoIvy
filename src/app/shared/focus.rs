@@ -36,7 +36,7 @@ pub(in crate::app) mod tests {
     // Called by the display test on its GTK thread.
     pub(in crate::app) fn focus_001_releases_and_restores_input_owner() {
         let app = gtk::Application::builder()
-            .application_id("io.github.lsm.FocusTest")
+            .application_id("io.github.pollux_o4.MemoIvy.FocusTest")
             .build();
         app.register(None::<&gtk::gio::Cancellable>).unwrap();
         let window = ApplicationWindow::new(&app);

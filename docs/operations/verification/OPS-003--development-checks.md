@@ -1,6 +1,6 @@
 # OPS-003 · 개발 검증
 
-- 개발 반복: 바뀐 영역의 테스트만 `mise run test:<영역>`으로 돌린다(`mise tasks`로 목록 확인). 영역은 unit(GTK 없음)·gtk·editor·canvas·storage·arch이고, `mise run test <이름>`으로 개별 테스트를 고른다. GTK 테스트는 모두 Xvfb에서 돌아 화면에 창을 띄우지 않는다. 통합 전 아래 기본 검사(`mise run check`)를 완료한다.
+- 개발 반복: 바뀐 영역의 테스트만 `mise run test:<영역>`으로 돌린다(`mise tasks`로 목록 확인). 영역은 unit(GTK 없음)·gtk·editor·canvas·files·storage·arch이고, `mise run test <이름>`으로 개별 테스트를 고른다. GTK 테스트는 모두 Xvfb에서 돌아 화면에 창을 띄우지 않는다. 통합 전 아래 기본 검사(`mise run check`)를 완료한다.
 - 기본 검사: Rust 변경 시 실행.
   - `cargo fmt --check`
   - `mise run test` — GTK 편집 위젯 검증 포함, Xvfb 필요.
@@ -9,17 +9,17 @@
 - SAVE-001 UI smoke: 저장·닫기 변경 시 실행.
   - 전제: debug 빌드, Xvfb, Openbox, xdotool.
   - `timeout 30s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.save_001_ui_smoke`
-  - 별도 설치 경로는 LSM_OPENBOX·LSM_XDOTOOL, 라이브러리는 LD_LIBRARY_PATH, Openbox 테마는 XDG_DATA_DIRS로 지정한다.
+  - 별도 설치 경로는 MEMOIVY_OPENBOX·MEMOIVY_XDOTOOL, 라이브러리는 LD_LIBRARY_PATH, Openbox 테마는 XDG_DATA_DIRS로 지정한다.
   - 합성 XDG 데이터로 생성·입력·즉시 닫기·종료·재실행·다시 열기를 확인한다.
 - PERF-001 합성 probe
   - `CARGO_TARGET_DIR=target cargo build --locked --manifest-path tools/quality/performance-probe/Cargo.toml`
-  - `timeout 15s xvfb-run -a target/debug/lsm-performance-probe`
+  - `timeout 15s xvfb-run -a target/debug/memoivy-performance-probe`
   - 검증 범위는 PERF-001을 따른다.
 - PERF-002 앱 품질 감사
   - `cargo build --release --locked` 후 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 tools/quality/perf_002_app_audit.py`.
-  - 프레임: `GSK_RENDERER=ngl LSM_CANVAS_PERF=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' cargo test --release --locked fmt_001_live -- --nocapture`. `cairo`로 반복한다.
-  - 단계 전환: 같은 실행이 `dive-first`(첫 진입)·`dive-again`(재진입)의 클릭 지연·프레임을 출력한다. `LSM_DIVE_FRAMES=<폴더>`를 더하면 전환을 고정 지점마다 PNG로 남겨 모양을 비교한다.
-  - 실제 기기 전환 프레임: `LSM_FRAME_LOG=1 cargo run --release`로 앱을 열고 프로젝트를 오가면 전환마다 `LSM dive` 한 줄(p50·p95·max·빠진 프레임)을 표준 오류로 남긴다. Xvfb 소프트웨어 렌더링 수치와 구분한다.
+  - 프레임: `GSK_RENDERER=ngl MEMOIVY_CANVAS_PERF=1 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' cargo test --release --locked fmt_001_live -- --nocapture`. `cairo`로 반복한다.
+  - 단계 전환: 같은 실행이 `dive-first`(첫 진입)·`dive-again`(재진입)의 클릭 지연·프레임을 출력한다. `MEMOIVY_DIVE_FRAMES=<폴더>`를 더하면 전환을 고정 지점마다 PNG로 남겨 모양을 비교한다.
+  - 실제 기기 전환 프레임: `MEMOIVY_FRAME_LOG=1 cargo run --release`로 앱을 열고 프로젝트를 오가면 전환마다 `MemoIvy dive` 한 줄(p50·p95·max·빠진 프레임)을 표준 오류로 남긴다. Xvfb 소프트웨어 렌더링 수치와 구분한다.
   - 고주사율 시간 검증: `cargo test --locked canvas_002_high_refresh_jitter`, `cargo test --locked canvas_002_coast`. 60/120/144Hz·간격 흔들림을 시뮬레이션하며 실제 120Hz GPU 프레임 측정과 구분한다.
   - 성능 모드는 일반 GTK 시나리오와 분리하며 목록을 먼저 구성한다. 연속 스크롤 신호의 100개 입력 처리 시간·버스트 프레임 측정을 포함한다. 전후 비교도 같은 준비 조건으로 측정한다.
 - UI-002 앱 메뉴 아이콘
@@ -30,10 +30,10 @@
   - Glycin SVG 로더의 D-Bus 권한 오류는 소켓 사용이 허용된 격리 D-Bus 세션에서 재검증한다.
   - X11 테스트의 창 관리자와 도구가 실제 실행되는지 stderr를 확인한다.
 - FMT-001 실시간 편집
-  - SAVE-001 환경에 xclip·python3-pil 추가. 별도 xclip 경로는 LSM_XCLIP으로 지정.
+  - SAVE-001 환경에 xclip·python3-pil 추가. 별도 xclip 경로는 MEMOIVY_XCLIP으로 지정.
   - `timeout 45s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.editor.fmt_001_live_ui_smoke`.
   - 실제 GTK 앱에서 선택·원문 복사·줄 경계 삭제·undo·체크 클릭/키보드·창 크기·안전한 링크 제스처·저장·재열기를 검증한다. 링크는 임시 URI 핸들러를 사용한다.
-  - 화면 캡처는 기본 `/tmp/lsm-live-preview`, 변경은 LSM_ARTIFACT_DIR. 어두운 테마는 `GTK_THEME=Adwaita:dark`로 별도 실행한다.
+  - 화면 캡처는 기본 `/tmp/memoivy-live-preview`, 변경은 MEMOIVY_ARTIFACT_DIR. 어두운 테마는 `GTK_THEME=Adwaita:dark`로 별도 실행한다.
 - FMT-003·CANVAS-004 링크 미리보기·목록 표식·보드 단축키
   - FMT-001과 같은 환경에서 `timeout 90s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.editor.fmt_003_canvas_004_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다.
   - 줄 간격 클릭, 링크 머무르기·입력·Esc·키보드 열기·카드가 뜬 채 닫기, 삭제 취소·수락, 완료 단축키를 확인한다. Broadway는 팝오버 그림자 여백만큼 위치가 어긋나므로 위치 판단은 X11에서 한다.
@@ -47,6 +47,10 @@
 - CANVAS-001·CANVAS-002·CANVAS-003 메모 캔버스
   - 기본 GTK 테스트에 확대 보간·중간 재목표·모션 줄이기·위젯 유지·유휴 종료와 원본 동기화·연결·완료·되돌리기·방향키·저장 실패·창 종료 위젯 검증을 포함한다.
   - 브라우저 시각 검증: `gtk4-broadwayd -a 127.0.0.1 -p 8085 :5` 실행 후, 합성 XDG_DATA_HOME으로 `GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 cargo run --locked`. 브라우저에서 로컬 포트를 연다.
-  - 네이티브 화면 캡처: `LSM_CANVAS_ARTIFACT_DIR=/tmp/lsm-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
+  - 네이티브 화면 캡처: `MEMOIVY_CANVAS_ARTIFACT_DIR=/tmp/memoivy-canvas-qa dbus-run-session -- xvfb-run -a cargo test --locked`. 실제 앱 CSS와 밝은/어두운 테마를 적용한 GTK 렌더링을 저장한다.
   - 실제 포인터로 선택·끌기·범위 선택·정렬·연결 점 끌기·확대·원본 편집·완료·연결 해제·재시작 복원을 확인한다. 브라우저 에뮬레이션 뷰포트는 좌표가 어긋날 수 있으니 패널 기본 크기로 조작한다. `GTK_THEME=Adwaita:dark`와 작은 창에서도 반복한다. Broadway는 실제 Wayland·IME 검증을 대체하지 않는다.
   - 실제 캔버스 조작: SAVE-001 환경에서 `timeout 35s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.canvas_001_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다. 범위·사용자 연구와의 구분은 UX-001을 따른다.
+- FMT-004·FILE-001 메모 이미지·파일 화면
+  - `mise run test:files`가 저장소(data_003)·편집기 이미지 줄(fmt_004)·파일 창(file_001)을 Xvfb에서 확인한다.
+  - 화면 검토: `MEMOIVY_MEDIA_ARTIFACT_DIR=<폴더> mise run test file_001`이 앱 CSS로 그린 메모 이미지·파일 창(사용 중/사용 안 함)·크게 보기를 PNG로 남긴다. 판정이 아닌 검토용이다.
+  - 실제 클립보드 붙여넣기·파일 관리자 끌어 놓기·파일 창에서 메모로 끌기는 실제 세션에서 확인한다. Xvfb 위젯 시험은 넣기 위치·undo·크기 기록을 직접 호출로 검증한다.

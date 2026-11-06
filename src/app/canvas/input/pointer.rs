@@ -10,7 +10,6 @@ use uuid::Uuid;
 const WHEEL_PAN: f64 = 60.;
 const WHEEL_ZOOM: f64 = 0.18;
 const TOUCHPAD_ZOOM: f64 = 0.012;
-const MARQUEE_THRESHOLD: f64 = 3.;
 
 pub(in super::super) fn attach(v: &Rc<CanvasView>) {
     attach_scroll(v);
@@ -327,7 +326,7 @@ pub(in super::super) fn follow(v: &Rc<CanvasView>) {
             Interaction::Marquee { anchor, base, rect } => {
                 let zoom = v.session.camera.get().zoom;
                 let far = (world.0 - anchor.0).hypot(world.1 - anchor.1) * zoom;
-                if rect.is_some() || far >= MARQUEE_THRESHOLD {
+                if rect.is_some() || far >= super::drag_threshold() {
                     let area = Rect::from_corners(*anchor, world);
                     *rect = Some(area);
                     marquee = Some((area, base.clone()));

@@ -40,18 +40,29 @@ pub fn save(path: &Path, notes: &[Note]) -> io::Result<()> {
             "올바르지 않은 캔버스 데이터",
         ));
     }
+    write_atomic(path, |file| {
+        serde_json::to_writer(&mut *file, notes)?;
+        Ok(())
+    })
+}
+
+/// DATA-002의 원자 교체. 같은 폴더의 소유자 전용 임시 파일에 쓰고 동기화한 뒤 바꿔 넣는다.
+pub(in crate::persistence) fn write_atomic(
+    path: &Path,
+    write: impl FnOnce(&mut fs::File) -> io::Result<()>,
+) -> io::Result<()> {
     let dir = path
         .parent()
         .ok_or_else(|| io::Error::other("저장 폴더가 없습니다"))?;
     fs::create_dir_all(dir)?;
-    let temp = dir.join(format!(".notes-{}.tmp", Uuid::new_v4()));
+    let temp = dir.join(format!(".write-{}.tmp", Uuid::new_v4()));
     let result = (|| {
         let mut file = fs::OpenOptions::new()
             .write(true)
             .create_new(true)
             .mode(0o600)
             .open(&temp)?;
-        serde_json::to_writer(&mut file, notes)?;
+        write(&mut file)?;
         file.flush()?;
         file.sync_all()?;
         fs::rename(&temp, path)?;

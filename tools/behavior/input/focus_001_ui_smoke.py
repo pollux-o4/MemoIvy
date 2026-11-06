@@ -1,4 +1,4 @@
-from tools.behavior.lsm_driver import (call, wait_window, key, click, clip, binary, environment, write_notes, LIBRARY_NOTE, SEARCH)
+from tools.behavior.memoivy_driver import (call, wait_window, key, click, clip, binary, environment, write_notes, LIBRARY_NOTE, SEARCH)
 # 검증: FOCUS-001. 합성 메모만 사용하며 xdotool·xclip·Pillow가 필요하다.
 import json
 import os
@@ -9,7 +9,7 @@ import time
 import uuid
 from PIL import ImageGrab
 
-artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-live-preview'))
+artifacts = Path(os.environ.get('MEMOIVY_ARTIFACT_DIR', '/tmp/memoivy-live-preview'))
 artifacts.mkdir(parents=True, exist_ok=True)
 original = '# 실시간 메모 📝\n## 오늘 할 일\n**굵게** · *기울임* · ~~취소~~\n- 글머리표\n1. 번호 목록\n- [ ] 테스트 할 일\n- [x] 완료한 일\n[예시 링크](https://example.com)\n\n끝'
 
@@ -28,17 +28,17 @@ def copied_source():
     return sp.check_output([clip, '-selection', 'clipboard', '-o'], text=True, timeout=5)
 
 
-with tempfile.TemporaryDirectory(prefix='lsm-live-') as tmp:
+with tempfile.TemporaryDirectory(prefix='memoivy-live-') as tmp:
     env = environment(tmp)
     path = write_notes(tmp, [dict(id=str(uuid.uuid4()), text=original, color='yellow', modified=1)])
     log = open(artifacts / 'app.log', 'w')
-    wm = sp.Popen([os.environ.get('LSM_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
+    wm = sp.Popen([os.environ.get('MEMOIVY_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
     app = None
     try:
         time.sleep(.6)
         assert wm.poll() is None
         app = sp.Popen([binary], env=env, stdout=log, stderr=log)
-        library = wait_window('^스티키 메모$')
+        library = wait_window('^MemoIvy$')
         call('windowmove', library, '10', '10')
         click(library, *LIBRARY_NOTE)
         note = wait_window('^메모$')

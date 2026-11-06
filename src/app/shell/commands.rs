@@ -76,6 +76,22 @@ pub(in crate::app) fn next_delete(state: &State) {
 pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     crate::app::editor::open_note(state, app, id);
 }
+pub(in crate::app) fn open_files(state: &State, app: &Application) {
+    crate::app::files::open(state, app);
+}
+/// 저장·삭제로 본문이 바뀐 뒤 첨부 사용처를 다시 맞춘다. 바뀌었으면 파일 화면을 갱신한다.
+pub(in crate::app) fn reconcile_attachments(state: &State) {
+    let mut guard = state.borrow_mut();
+    let s = &mut *guard;
+    let changed = s
+        .attachments
+        .reconcile(s.notebook.notes(), crate::persistence::now());
+    let files = s.views.files.clone();
+    drop(guard);
+    if let (true, Some(files)) = (changed, files) {
+        files.refresh(state);
+    }
+}
 pub(in crate::app) fn open_canvas(state: &State, app: &Application, id: Option<Uuid>) {
     crate::app::canvas::open(state, app, id);
 }

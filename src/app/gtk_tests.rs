@@ -5,7 +5,7 @@ static DISPLAY: Mutex<()> = Mutex::new(());
 
 fn isolated(name: &str, run: fn()) {
     let exact = format!("app::gtk_tests::{name}");
-    if std::env::var("LSM_GTK_SCENARIO").as_deref() == Ok(exact.as_str()) {
+    if std::env::var("MEMOIVY_GTK_SCENARIO").as_deref() == Ok(exact.as_str()) {
         gtk::init().expect("GTK tests require a display; run under xvfb-run");
         run();
         return;
@@ -28,7 +28,7 @@ fn isolated(name: &str, run: fn()) {
             "GDK_BACKEND",
             std::env::var("GDK_BACKEND").unwrap_or_else(|_| "x11".into()),
         )
-        .env("LSM_GTK_SCENARIO", &exact)
+        .env("MEMOIVY_GTK_SCENARIO", &exact)
         .output()
         .expect("run isolated GTK scenario");
     print!("{}", String::from_utf8_lossy(&output.stdout));
@@ -40,7 +40,7 @@ macro_rules! scenario {
     ($name:ident, $run:path) => {
         #[test]
         fn $name() {
-            if std::env::var("LSM_CANVAS_PERF").is_err() {
+            if std::env::var("MEMOIVY_CANVAS_PERF").is_err() {
                 isolated(stringify!($name), $run);
             }
         }
@@ -51,7 +51,7 @@ macro_rules! scenario {
 fn fmt_001_live_editor_preserves_source_selection_undo_and_preedit() {
     isolated(
         "fmt_001_live_editor_preserves_source_selection_undo_and_preedit",
-        if std::env::var("LSM_CANVAS_PERF").is_ok() {
+        if std::env::var("MEMOIVY_CANVAS_PERF").is_ok() {
             super::canvas::tests::perf_002_frames
         } else {
             super::editor::live_editor::tests::fmt_001_live_editor_preserves_source_selection_undo_and_preedit
@@ -86,6 +86,14 @@ scenario!(
 scenario!(
     fmt_003_typing_flow,
     super::editor::live_editor::tests::fmt_003_typing_flow
+);
+scenario!(
+    fmt_004_image_blocks,
+    super::editor::live_editor::media::tests::fmt_004_image_blocks
+);
+scenario!(
+    file_001_files_view,
+    super::files::tests::file_001_files_view
 );
 scenario!(
     fmt_003_link_preview_lifecycle,

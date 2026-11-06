@@ -38,8 +38,8 @@ fn fmt_001_source_ranges_and_unicode() {
     assert_eq!(slice(text, doc.links[0].range.clone()), "한글😀");
     assert_eq!(slice(text, doc.tasks[0].range.clone()), "[ ]");
     assert_eq!(slice(text, doc.tasks[1].range.clone()), "[x]");
-    assert!(!doc.tasks[0].checked);
-    assert!(doc.tasks[1].checked);
+    assert_eq!(doc.tasks[0].state, TaskState::Open);
+    assert_eq!(doc.tasks[1].state, TaskState::Done);
     for m in doc.markers {
         assert!(!slice(text, m.range).is_empty());
     }
@@ -88,8 +88,8 @@ fn fmt_003_list_items_keep_marker_and_content_ranges() {
             ("  - ".into(), "안쪽".into(), 1, ListKind::Bullet),
             ("1. ".into(), "번호".into(), 0, ListKind::Ordered),
             ("12) ".into(), "둘".into(), 0, ListKind::Ordered),
-            ("- [x] ".into(), "끝남".into(), 0, ListKind::Task(true)),
-            ("- [ ] ".into(), "할 일".into(), 0, ListKind::Task(false)),
+            ("- [x] ".into(), "끝남".into(), 0, ListKind::Task),
+            ("- [ ] ".into(), "할 일".into(), 0, ListKind::Task),
             ("- ".into(), "".into(), 0, ListKind::Bullet),
         ]
     );
@@ -109,7 +109,7 @@ fn fmt_003_list_items_keep_marker_and_content_ranges() {
     // 쓰는 동안: 문단 바로 뒤, 빈 항목, 빈 체크도 그 자리에서 항목이다. 공백 전에는 아니다.
     let kinds = |text: &str| parse(text).items.iter().map(|i| i.kind).collect::<Vec<_>>();
     assert_eq!(kinds("문단\n- "), [ListKind::Bullet]);
-    assert_eq!(kinds("문단\n- [ ] "), [ListKind::Task(false)]);
+    assert_eq!(kinds("문단\n- [ ] "), [ListKind::Task]);
     assert_eq!(kinds("문단\n2. "), [ListKind::Ordered]);
     assert!(kinds("문단\n-").is_empty());
     assert!(kinds("-5도").is_empty());
@@ -139,8 +139,8 @@ fn fmt_003_list_items_keep_marker_and_content_ranges() {
     // 중첩 체크는 각자 항목에 붙는다.
     let text = "- [ ] 위\n\t- [x] 아래";
     let doc = parse(text);
-    assert_eq!(doc.items[0].kind, ListKind::Task(false));
-    assert_eq!(doc.items[1].kind, ListKind::Task(true));
+    assert_eq!(doc.items[0].kind, ListKind::Task);
+    assert_eq!(doc.items[1].kind, ListKind::Task);
     assert_eq!(slice(text, doc.items[0].content.clone()), "위");
     // 번호 + 체크는 번호를 숨기지 않는다.
     let text = "1. [ ] 일";
@@ -163,7 +163,7 @@ fn canvas_004_summary_keeps_list_markers_for_cards() {
         "- [ ] 머리 할 일\n- [x] 끝남\n  - 안쪽\n3. 셋째\n문단 하나\n문단 둘\n```\n- 코드\n```\n---",
     );
     assert_eq!(s.title, "머리 할 일");
-    assert_eq!(s.title_marker, Some(LineMarker::Task(false)));
+    assert_eq!(s.title_marker, Some(LineMarker::Task(TaskState::Open)));
     let got: Vec<_> = s
         .lines
         .iter()
@@ -172,7 +172,7 @@ fn canvas_004_summary_keeps_list_markers_for_cards() {
     assert_eq!(
         got,
         [
-            (Some(LineMarker::Task(true)), 0, "끝남"),
+            (Some(LineMarker::Task(TaskState::Done)), 0, "끝남"),
             (Some(LineMarker::Bullet), 1, "안쪽"),
             (Some(LineMarker::Number("3.".into())), 0, "셋째"),
             (None, 0, "문단 하나"),
@@ -195,6 +195,7 @@ fn canvas_004_fit_preview_spends_a_line_budget() {
     let line = |marker: Option<LineMarker>, text: &str| PreviewLine {
         marker,
         depth: 0,
+        continuation: false,
         text: text.into(),
     };
     // 문단만 있으면 지금처럼 한 행으로 이어 세 줄까지 쓴다.
@@ -367,6 +368,21 @@ fn fmt_001_link_protocols() {
 }
 
 #[test]
+fn fmt_003_done_task_style_covers_shift_enter_continuations() {
+    let text = "- [x] 완료\n      결과: 추가 설명\n- [ ] 진행 중";
+    let doc = parse(text);
+    let done = doc
+        .spans
+        .iter()
+        .find(|span| span.style == Style::TaskDone)
+        .unwrap();
+    assert_eq!(
+        slice(text, done.range.clone()),
+        "완료\n      결과: 추가 설명"
+    );
+}
+
+#[test]
 fn fmt_003_item_at_matches_source_boundaries() {
     let text = "앞😀\n- 한글\n\n  - 안쪽\n- ";
     let doc = parse(text);
@@ -383,4 +399,68 @@ fn fmt_003_item_at_matches_source_boundaries() {
         );
     }
     assert!(parse("").item_at(0).is_none());
+}
+
+#[test]
+fn fmt_001_task_in_progress_is_its_own_state() {
+    let doc = parse("- [/] 진행\n- [ ] 할 일\n- [x] 끝");
+    let states: Vec<_> = doc.tasks.iter().map(|task| task.state).collect();
+    assert_eq!(states, [TaskState::Doing, TaskState::Open, TaskState::Done]);
+    assert!(!doc
+        .spans
+        .iter()
+        .any(|span| span.style == Style::TaskDone && span.range.start < 7));
+    assert_eq!(task_progress("- [/] a\n- [x] b"), (1, 2));
+}
+
+#[test]
+fn fmt_001_task_toggle_cycles() {
+    use TaskState::*;
+    assert_eq!(Open.toggled(false), Done);
+    assert_eq!(Doing.toggled(false), Done);
+    assert_eq!(Done.toggled(false), Open);
+    assert_eq!(Open.toggled(true), Doing);
+    assert_eq!(Done.toggled(true), Doing);
+    assert_eq!(Doing.toggled(true), Open);
+}
+
+#[test]
+fn fmt_001_task_in_progress_stays_in_progress_in_nested_markdown_contexts() {
+    for text in ["> - [/] 인용", "1. [/] 번호"] {
+        let doc = parse(text);
+        assert_eq!(doc.tasks.len(), 1, "{text}");
+        assert_eq!(doc.tasks[0].state, TaskState::Doing, "{text}");
+    }
+}
+
+#[test]
+fn fmt_004_only_whole_line_asset_images_are_blocks() {
+    let hash = "a".repeat(64);
+    let text = format!(
+        "글\n![스크린샷|320](asset:{hash})\n  ![](asset:{hash})  \n문장 ![](asset:{hash}) 끝\n![x](https://e.com/a.png)\n```\n![](asset:{hash})\n```"
+    );
+    let doc = parse(&text);
+    let images: Vec<_> = doc
+        .images
+        .iter()
+        .map(|i| (i.alt.as_str(), i.width, i.line.start))
+        .collect();
+    assert_eq!(images, [("스크린샷", Some(320), 2), ("", None, 2 + 83 + 1)]);
+    assert_eq!(doc.images[0].target, format!("asset:{hash}"));
+    let wide = parse(&format!("![a|9000](asset:{hash})"));
+    assert_eq!(wide.images[0].width, None, "범위 밖 너비는 무시한다");
+}
+
+#[test]
+fn fmt_004_markup_roundtrips_and_summary_shows_alt() {
+    let target = format!("asset:{}", "b".repeat(64));
+    let line = Image::markup("설명|]\n", Some(200), &target);
+    assert_eq!(line, format!("![설명|200]({target})"));
+    let doc = parse(&line);
+    assert_eq!(
+        (doc.images[0].alt.as_str(), doc.images[0].width),
+        ("설명", Some(200))
+    );
+    assert_eq!(Image::markup("", None, &target), format!("![]({target})"));
+    assert_eq!(plain_line(&line), "[이미지] 설명");
 }

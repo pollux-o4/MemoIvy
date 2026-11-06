@@ -15,13 +15,32 @@ fn cursor(buffer: &TextBuffer) -> i32 {
     buffer.iter_at_mark(&buffer.get_insert()).offset()
 }
 
+fn has_first_line_content(buffer: &TextBuffer, item: &ListItem) -> bool {
+    let mut end = buffer.iter_at_offset(item.content.start);
+    end.forward_to_line_end();
+    end.offset() > item.content.start
+}
+
+/// 목록에서 Home은 숨겨진 표식이나 이어쓰기 들여쓰기 앞이 아닌 보이는 본문 시작으로 이동한다.
+fn visible_line_start(buffer: &TextBuffer, item: &ListItem, at: i32) -> i32 {
+    let mut start = buffer.iter_at_offset(at);
+    start.set_line_offset(0);
+    if start.offset() == item.marker.start {
+        return item.content.start;
+    }
+    while !start.ends_line() && start.char().is_whitespace() {
+        start.forward_char();
+    }
+    start.offset()
+}
+
 /// 다음 항목의 표식. 체크는 비운 상태로 시작하고 번호는 하나 늘린다.
 fn next_marker(marker: &str, kind: ListKind) -> String {
     let body = marker.trim_start();
     let indent = &marker[..marker.len() - body.len()];
     match kind {
         ListKind::Bullet => format!("{indent}{} ", &body[..1]),
-        ListKind::Task(_) => format!("{indent}{} [ ] ", &body[..1]),
+        ListKind::Task => format!("{indent}{} [ ] ", &body[..1]),
         ListKind::Ordered => {
             let digits = body.bytes().take_while(u8::is_ascii_digit).count();
             let number: u64 = body[..digits].parse().unwrap_or(0);
@@ -68,17 +87,49 @@ fn renumber_after(buffer: &TextBuffer, document: &Document, index: usize, first:
     }
 }
 
-fn outdent(buffer: &TextBuffer, item: &ListItem) -> bool {
-    let marker = super::source_slice(buffer, item.marker.clone());
-    let width = if marker.starts_with('\t') {
+fn outdent_line(buffer: &TextBuffer, start: i32) -> bool {
+    let mut end = buffer.iter_at_offset(start);
+    let width = if end.char() == '\t' {
         1
     } else {
-        marker.chars().take(2).take_while(|c| *c == ' ').count()
+        let mut width = 0;
+        while width < 2 && !end.ends_line() && end.char() == ' ' {
+            end.forward_char();
+            width += 1;
+        }
+        width
     };
     if width > 0 {
-        delete(buffer, item.marker.start, item.marker.start + width as i32);
+        delete(buffer, start, start + width);
     }
     width > 0
+}
+
+fn outdent(buffer: &TextBuffer, item: &ListItem) -> bool {
+    outdent_line(buffer, item.marker.start)
+}
+
+fn continuation_starts(buffer: &TextBuffer, item: &ListItem) -> Vec<i32> {
+    let first = buffer.iter_at_offset(item.marker.start).line();
+    let last = buffer.iter_at_offset(item.content.end).line();
+    (first + 1..=last)
+        .filter_map(|line| buffer.iter_at_line(line).map(|iter| iter.offset()))
+        .collect()
+}
+
+fn move_item(buffer: &TextBuffer, item: &ListItem, backwards: bool) {
+    for start in continuation_starts(buffer, item).into_iter().rev() {
+        if backwards {
+            outdent_line(buffer, start);
+        } else {
+            buffer.insert(&mut buffer.iter_at_offset(start), INDENT);
+        }
+    }
+    if backwards {
+        outdent_line(buffer, item.marker.start);
+    } else {
+        buffer.insert(&mut buffer.iter_at_offset(item.marker.start), INDENT);
+    }
 }
 
 /// 항목을 풀어 평문으로 만든다. 들여쓴 항목은 먼저 한 단계 내어 쓴다.
@@ -118,20 +169,34 @@ fn indent_lines(buffer: &TextBuffer, document: &Document, backwards: bool) -> bo
         },
         |(a, b)| (a.offset(), b.offset()),
     );
-    let items: Vec<_> = document
+    let selected: Vec<_> = document
         .items
         .iter()
-        .filter(|item| item.content.end >= start && item.marker.start <= end)
+        .enumerate()
+        .filter(|(_, item)| item.content.end >= start && item.marker.start <= end)
+        .map(|(index, _)| index)
         .collect();
-    if items.is_empty() {
+    if selected.is_empty() {
         return false;
     }
+    let mut moving = vec![false; document.items.len()];
+    for root in selected {
+        moving[root] = true;
+        let item = &document.items[root];
+        if backwards && item.depth == 0 {
+            continue;
+        }
+        for (index, child) in document.items.iter().enumerate().skip(root + 1) {
+            if child.depth <= item.depth {
+                break;
+            }
+            moving[index] = true;
+        }
+    }
     buffer.begin_user_action();
-    for item in items.iter().rev() {
-        if backwards {
-            outdent(buffer, item);
-        } else {
-            buffer.insert(&mut buffer.iter_at_offset(item.marker.start), INDENT);
+    for (index, item) in document.items.iter().enumerate().rev() {
+        if moving[index] {
+            move_item(buffer, item, backwards);
         }
     }
     buffer.end_user_action();
@@ -158,10 +223,45 @@ pub(super) fn handle(
     {
         return indent_lines(&buffer, document, true);
     }
+    let at = cursor(&buffer);
+    if matches!(key, gdk::Key::Home | gdk::Key::KP_Home)
+        && (mods == gdk::ModifierType::empty() || mods == gdk::ModifierType::SHIFT_MASK)
+    {
+        let Some((_, item)) = document.item_at(at) else {
+            return false;
+        };
+        let target = visible_line_start(&buffer, item, at);
+        if mods == gdk::ModifierType::SHIFT_MASK {
+            let bound = buffer.iter_at_mark(&buffer.selection_bound());
+            buffer.select_range(&buffer.iter_at_offset(target), &bound);
+        } else {
+            buffer.place_cursor(&buffer.iter_at_offset(target));
+        }
+        return true;
+    }
+    if mods == gdk::ModifierType::SHIFT_MASK && matches!(key, gdk::Key::Return | gdk::Key::KP_Enter)
+    {
+        let found = buffer.selection_bounds().map_or_else(
+            || document.item_at(at),
+            |(start, end)| {
+                document.item_at(start.offset()).filter(|(_, item)| {
+                    start.offset() >= item.content.start && end.offset() <= item.content.end
+                })
+            },
+        );
+        let Some((_, item)) = found else {
+            return false;
+        };
+        let marker = super::source_slice(&buffer, item.marker.clone());
+        let indent = marker.chars().count();
+        buffer.begin_user_action();
+        buffer.insert_at_cursor(&format!("\n{}", " ".repeat(indent)));
+        buffer.end_user_action();
+        return true;
+    }
     if buffer.has_selection() {
         return false;
     }
-    let at = cursor(&buffer);
     let found = document.item_at(at);
     // 표식은 한 글자처럼 다룬다. 왼쪽으로 가면 표식을 건너 앞 줄 끝으로 간다.
     if key == gdk::Key::Left
@@ -183,7 +283,7 @@ pub(super) fn handle(
             let Some((index, item)) = found else {
                 return false;
             };
-            if item.content.start == item.content.end {
+            if !has_first_line_content(&buffer, item) {
                 // 빈 항목에서 한 번 더 누르면 목록을 끝낸다.
                 unlist(&buffer, item);
             } else {
@@ -229,7 +329,7 @@ pub(super) fn continue_after_commit(view: &TextView, document: &Document) {
     let Some((_, item)) = document.item_at(at.offset() - 1) else {
         return;
     };
-    if item.content.start < item.content.end {
+    if has_first_line_content(&buffer, item) {
         let next = next_marker(
             &super::source_slice(&buffer, item.marker.clone()),
             item.kind,
@@ -247,7 +347,7 @@ mod tests {
     fn fmt_003_next_marker_keeps_style_and_indent() {
         assert_eq!(next_marker("- ", ListKind::Bullet), "- ");
         assert_eq!(next_marker("  * ", ListKind::Bullet), "  * ");
-        assert_eq!(next_marker("- [x] ", ListKind::Task(true)), "- [ ] ");
+        assert_eq!(next_marker("- [x] ", ListKind::Task), "- [ ] ");
         assert_eq!(next_marker("9. ", ListKind::Ordered), "10. ");
         assert_eq!(next_marker("  3) ", ListKind::Ordered), "  4) ");
     }

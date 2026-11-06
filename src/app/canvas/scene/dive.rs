@@ -197,7 +197,7 @@ pub(in crate::app::canvas) fn play(v: &Rc<CanvasView>, done: impl FnOnce() + 'st
     let done = RefCell::new(Some(done));
     let began = Cell::new(None::<i64>);
     let warm = Cell::new((0, None::<i64>));
-    let log = std::env::var_os("LSM_FRAME_LOG").is_some();
+    let log = std::env::var_os("MEMOIVY_FRAME_LOG").is_some();
     let gaps = RefCell::new(Vec::<i64>::new());
     v.widgets.freeze.add_tick_callback(move |widget, clock| {
         let Some(v) = weak.upgrade() else {
@@ -253,7 +253,7 @@ pub(in crate::app::canvas) fn finish(v: &CanvasView) {
     super::board::set_camera(v, camera);
 }
 
-/// 실제 기기에서 전환 프레임을 잰다. `LSM_FRAME_LOG=1`일 때만 표준 오류로 남긴다.
+/// 실제 기기에서 전환 프레임을 잰다. `MEMOIVY_FRAME_LOG=1`일 때만 표준 오류로 남긴다.
 fn report(gaps: &[i64], period: i64) {
     if gaps.is_empty() {
         return;
@@ -265,7 +265,7 @@ fn report(gaps: &[i64], period: i64) {
         .map(|g| ((*g as f64 / period as f64).round() as i64 - 1).max(0))
         .sum();
     eprintln!(
-        "LSM dive frames={} refresh={:.1}ms p50={:.1}ms p95={:.1}ms max={:.1}ms dropped={}",
+        "MemoIvy frames={} refresh={:.1}ms p50={:.1}ms p95={:.1}ms max={:.1}ms dropped={}",
         ms.len(),
         period as f64 / 1000.,
         ms[ms.len() / 2],

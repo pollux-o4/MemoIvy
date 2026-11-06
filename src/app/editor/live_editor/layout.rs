@@ -37,7 +37,9 @@ impl LiveEditor {
             let base = view.left_margin();
             let mut widths: HashMap<String, i32> = HashMap::new();
             for item in &document.items {
-                let line = item.marker.start..item.content.end;
+                let mut first_line_end = buffer.iter_at_offset(item.content.start);
+                first_line_end.forward_to_line_end();
+                let line = item.marker.start..first_line_end.offset();
                 let text_x = base + GUTTER * (item.depth as i32 + 1);
                 let marker = super::super::source_slice(&buffer, item.marker.clone());
                 // pixel_size는 올림이라 본문이 밀린다. 실제 폭에 가장 가까운 픽셀을 쓴다.
@@ -60,6 +62,9 @@ impl LiveEditor {
                     ((text_x - width).max(0), -width)
                 };
                 wanted.entry(key).or_default().push(line);
+                for (line, _) in continuation_lines(&buffer, item) {
+                    wanted.entry((text_x, 0)).or_default().push(line);
+                }
             }
         }
         let mut tags = self.layout.paragraphs.borrow_mut();
@@ -159,6 +164,45 @@ impl LiveEditor {
             self.schedule();
         }
     }
+}
+
+/// 목록 항목에 속한 들여쓰기 이어쓰기 줄과 숨길 원문 접두부.
+pub(super) fn continuation_lines(
+    buffer: &TextBuffer,
+    item: &markdown::ListItem,
+) -> Vec<(Range<i32>, Range<i32>)> {
+    let mut line = buffer.iter_at_offset(item.content.start);
+    line.forward_to_line_end();
+    if line.offset() >= item.content.end || !line.forward_char() {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    while line.offset() <= item.content.end {
+        let start = line.offset();
+        let mut end = line;
+        end.forward_to_line_end();
+        let mut content = line;
+        while content.offset() < end.offset() && matches!(content.char(), ' ' | '\t') {
+            content.forward_char();
+        }
+        lines.push((start..end.offset(), start..content.offset()));
+        if end.offset() >= item.content.end || !end.forward_char() {
+            break;
+        }
+        line = end;
+    }
+    lines
+}
+
+pub(super) fn continuation_indents(
+    buffer: &TextBuffer,
+    item: &markdown::ListItem,
+) -> Vec<Range<i32>> {
+    continuation_lines(buffer, item)
+        .into_iter()
+        .map(|(_, indent)| indent)
+        .filter(|indent| !indent.is_empty())
+        .collect()
 }
 
 /// 선택이 닿은 줄 범위. 선택이 없으면 비어 있다.

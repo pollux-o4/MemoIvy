@@ -19,4 +19,5 @@ flowchart LR
 - 프런트는 `needs_tick`이 참일 때만 결과를 폴링하고, 오류 문구와 창 닫기는 직접 처리한다.
 - 저장 형식·단일 writer·내구성 계약: DATA-001, DATA-002, ADR-0004. 정상 닫기·실패 복구: SAVE-001, SAVE-002.
 
-- 내부 탐색은 `domain`(note·canvas·links), `notebook`(명령·저장 정책), `storage`(paths·save_queue·store)로 내려간다. `valid_position`이 편집과 파일 로드의 공통 좌표 규칙이다. C4 저장 탐색에서 구현 심볼을 찾는다.
+- 첨부 파일은 Notebook과 나란한 `Attachments`가 맡는다. 이미지 바이트는 GTK 스레드 밖에서 `AssetStore`로 원자 저장하고, 사용처 색인은 저장·삭제 이벤트 뒤 shell이 맞춘다. writer 큐를 거치지 않으며 메모 저장을 막지 않는다(DATA-003, ADR-0011).
+- 내부 탐색은 `domain`(note·canvas·links), `notebook`(명령·저장 정책), `storage`(paths·save_queue·store), `attachments`(files·usage)로 내려간다. `valid_position`이 편집과 파일 로드의 공통 좌표 규칙이다. C4 저장 탐색에서 구현 심볼을 찾는다.

@@ -49,17 +49,56 @@ pub(crate) struct Link {
 #[derive(Debug)]
 pub(crate) struct Task {
     pub range: Range<i32>,
-    pub checked: bool,
+    pub state: TaskState,
+    /// 목록 항목이 소유하는 체크면 그 항목의 단일 원본 인덱스다.
+    pub item: Option<usize>,
+}
+
+/// 체크 목록 상태. 진행 중은 Obsidian 계열 관례인 `[/]`로 저장한다.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TaskState {
+    Open,
+    Doing,
+    Done,
+}
+
+impl TaskState {
+    pub(crate) fn from_marker(marker: &str) -> Option<Self> {
+        match marker {
+            "[ ]" => Some(Self::Open),
+            "[/]" => Some(Self::Doing),
+            "[x]" | "[X]" => Some(Self::Done),
+            _ => None,
+        }
+    }
+
+    /// 원문 괄호 안 글자.
+    pub(crate) fn mark(self) -> &'static str {
+        match self {
+            Self::Open => " ",
+            Self::Doing => "/",
+            Self::Done => "x",
+        }
+    }
+
+    /// 클릭은 완료를, Shift+클릭은 진행 중을 켜고 끈다.
+    pub(crate) fn toggled(self, doing: bool) -> Self {
+        match (doing, self) {
+            (true, Self::Doing) | (false, Self::Done) => Self::Open,
+            (true, _) => Self::Doing,
+            (false, _) => Self::Done,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ListKind {
     Bullet,
     Ordered,
-    Task(bool),
+    Task,
 }
 
-/// 원문 첫 줄 기준의 목록 항목. 편집기는 이 범위로 표식 칸과 내어쓰기를 만든다.
+/// 원문 목록 항목. content는 첫 줄 본문부터 들여쓴 이어쓰기 줄 끝까지다.
 #[derive(Debug)]
 pub(crate) struct ListItem {
     /// 줄 시작부터 본문 직전까지. 들여쓰기·기호·체크 문법과 뒤 공백을 포함한다.
@@ -70,6 +109,36 @@ pub(crate) struct ListItem {
     pub kind: ListKind,
 }
 
+/// 첨부 참조 표기(DATA-003).
+pub(crate) const IMAGE_SCHEME: &str = "asset:";
+/// 원문에 기록할 수 있는 이미지 너비(px).
+pub(crate) const IMAGE_WIDTH: std::ops::RangeInclusive<i32> = 64..=4096;
+
+/// 한 줄 전체가 첨부 이미지 참조인 줄.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Image {
+    /// 줄 시작부터 끝(줄바꿈 제외)까지.
+    pub line: Range<i32>,
+    pub alt: String,
+    pub width: Option<i32>,
+    /// `asset:<해시>`.
+    pub target: String,
+}
+
+impl Image {
+    /// 너비만 바꾼 원문 한 줄. 이미지 문법의 생성 원본이다.
+    pub(crate) fn markup(alt: &str, width: Option<i32>, target: &str) -> String {
+        let alt: String = alt
+            .chars()
+            .filter(|c| !matches!(c, '[' | ']' | '|' | '\n'))
+            .collect();
+        match width {
+            Some(width) => format!("![{alt}|{width}]({target})"),
+            None => format!("![{alt}]({target})"),
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 pub(crate) struct Document {
     pub spans: Vec<Span>,
@@ -77,6 +146,7 @@ pub(crate) struct Document {
     pub links: Vec<Link>,
     pub tasks: Vec<Task>,
     pub items: Vec<ListItem>,
+    pub images: Vec<Image>,
 }
 
 impl Document {
@@ -108,13 +178,15 @@ pub(crate) struct Summary {
 pub(crate) enum LineMarker {
     Bullet,
     Number(String),
-    Task(bool),
+    Task(TaskState),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct PreviewLine {
     pub marker: Option<LineMarker>,
     pub depth: usize,
+    /// 앞선 목록 항목의 표식 폭을 유지해 본문 시작점을 맞춘다.
+    pub continuation: bool,
     pub text: String,
 }
 
@@ -139,7 +211,10 @@ pub(crate) struct LinkInfo {
 pub(crate) fn task_progress(text: &str) -> (usize, usize) {
     let tasks = parse(text).tasks;
     (
-        tasks.iter().filter(|task| task.checked).count(),
+        tasks
+            .iter()
+            .filter(|task| task.state == TaskState::Done)
+            .count(),
         tasks.len(),
     )
 }

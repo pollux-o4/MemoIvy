@@ -6,7 +6,7 @@ pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_pr
     let original =
         "# 제목😀\n**굵게** *기울임* ~~취소~~\n- [ ] 할 일\n[링크](https://example.com)\n\n";
     buffer.set_text(original);
-    let source = attach(&view);
+    let source = attach_editor(&view, None).0;
     buffer.place_cursor(&buffer.end_iter());
     drain();
     assert!(

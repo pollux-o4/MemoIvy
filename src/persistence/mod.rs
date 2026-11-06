@@ -5,13 +5,15 @@ mod storage;
 use storage::{paths, save_queue, store};
 mod domain;
 use domain::{canvas, links, nesting, note};
+mod attachments;
 mod navigation;
 mod notebook;
 
+pub(crate) use attachments::{AssetEntry, AssetId, AssetStore, Attachments, ImportError};
 pub(crate) use canvas::{CanvasNode, LIMIT};
 pub(crate) use navigation::Navigation;
 pub(crate) use nesting::MAX_DEPTH;
-pub(crate) use note::Note;
+pub(crate) use note::{now, Note};
 pub(crate) use notebook::{CanvasEdit, Notebook, NotebookEvent, SaveStatus};
 pub(crate) use notebook::{LoadError, SaveError};
 pub(crate) use paths::data_path;

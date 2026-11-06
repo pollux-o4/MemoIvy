@@ -1,11 +1,13 @@
 # OPS-002 · 백업·복원·저장 오류
 
 - 저장 위치: `data_path`가 원본이다.
-  - 유효한 절대 경로 XDG_DATA_HOME 아래 `linux-sticky-memo/notes.json`.
-  - 대체 경로: HOME 아래 `.local/share/linux-sticky-memo/notes.json`.
+  - 유효한 절대 경로 XDG_DATA_HOME 아래 `memoivy/notes.json`.
+  - 대체 경로: HOME 아래 `.local/share/memoivy/notes.json`.
+  - 일반 설치는 이전 `linux-sticky-memo` 폴더를 첫 실행 때 옮긴다. 두 폴더에 모두 메모가 있으면 기존 폴더를 보존한다.
+  - Snap은 별도 데이터 영역을 사용하므로 기존 일반 설치 데이터가 자동으로 보이지 않는다. 기존 메모를 옮기려면 백업·복원 절차를 이용한다.
 - 백업
   - 저장 오류를 해결하고 앱을 정상 종료한다.
-  - notes.json을 별도 위치에 복사하고 날짜를 기록한다.
+  - notes.json과 같은 폴더의 `assets/` 폴더(메모 이미지)를 함께 복사하고 날짜를 기록한다. `assets.json`은 다시 만들 수 있는 사용처 색인이라 빠져도 된다(DATA-003).
 - 복원
   - 앱을 종료하고 현재 파일을 별도 복사해 보관한다.
   - 선택한 백업의 JSON 문법을 확인한 뒤 저장 위치로 복사하고 소유자 전용 읽기·쓰기 권한을 설정한다.

@@ -69,3 +69,25 @@ pub(super) fn count(widget: &Widget, class: &str) -> usize {
     }
     total
 }
+
+/// 실제 CSS로 그린 창을 PNG로 남긴다. 화면 검토용 산출물이며 판정에 쓰지 않는다.
+pub(super) fn save_png(widget: &impl IsA<Widget>, path: &std::path::Path) {
+    let widget = widget.as_ref();
+    let paintable = gtk::WidgetPaintable::new(Some(widget));
+    let snapshot = gtk::Snapshot::new();
+    paintable.snapshot(&snapshot, widget.width() as f64, widget.height() as f64);
+    let (Some(node), Some(renderer)) = (
+        snapshot.to_node(),
+        widget.native().and_then(|n| n.renderer()),
+    ) else {
+        return;
+    };
+    renderer
+        .render_texture(&node, None)
+        .save_to_png(path)
+        .unwrap();
+}
+
+pub(super) fn find_class(widget: &Widget, class: &str) -> Option<Widget> {
+    find(widget, &|w| w.has_css_class(class))
+}

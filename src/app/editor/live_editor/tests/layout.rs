@@ -1,8 +1,7 @@
 use super::*;
 
 pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
-    let text =
-        "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
+    let text = "제목\n- 우유\n  - 저지방\n- [ ] 할 일\n- [x] 끝남\n      결과: 이어쓰기\n1. 번호\n- \n**굵게** 끝\n마지막 *줄*";
     let (window, view, source, editor) = shown_window(text);
     let buffer = view.buffer();
     // 입력 직후 첫 그림부터 본문이 제자리에 있어야 한다. 다음 프레임 보정에 기대지 않는다.
@@ -74,6 +73,57 @@ pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
         drain();
         still("delete");
     }
+    // 조합 중에도 세 단계 목록의 표식·본문 위계와 폭 보정은 움직이지 않는다.
+    buffer.set_text("- 실마리\n  - 에드센스 보완중 (2)\n    - \n  - 블로그\n  - 내용 보완 (1)");
+    editor.layout.hang_fix.borrow_mut().clear();
+    editor.refresh();
+    settle(30);
+    let content = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
+    let line_start = content.find("    - \n").unwrap();
+    let empty = content[..line_start].chars().count() as i32 + 6;
+    buffer.place_cursor(&buffer.iter_at_offset(empty));
+    editor.refresh();
+    let expected_x = 20 + GUTTER * 3;
+    let hang_fix = editor.layout.hang_fix.borrow().clone();
+    assert_eq!(
+        view.iter_location(&buffer.iter_at_offset(empty)).x(),
+        expected_x
+    );
+    view.emit_preedit_changed("ㄱ");
+    drain();
+    assert_eq!(
+        view.iter_location(&buffer.iter_at_offset(empty)).x(),
+        expected_x
+    );
+    assert_eq!(*editor.layout.hang_fix.borrow(), hang_fix);
+    view.emit_preedit_changed("");
+    drain();
+    // 선택한 체크 항목 문장을 IME 조합으로 교체해도 체크박스와 들여쓰기는 고정한다.
+    buffer.set_text("- 바깥\n  - [ ] 시작 안함");
+    editor.refresh();
+    settle(30);
+    let content = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
+    let start = content.find("시작 안함").unwrap();
+    let start = content[..start].chars().count() as i32;
+    buffer.select_range(
+        &buffer.iter_at_offset(buffer.end_iter().offset()),
+        &buffer.iter_at_offset(start),
+    );
+    editor.refresh();
+    let body_x = view.iter_location(&buffer.iter_at_offset(start)).x();
+    assert!(editor.widgets.tasks.borrow()[0].button.is_visible());
+    view.emit_preedit_changed("작");
+    buffer.insert_at_cursor("작");
+    drain();
+    assert_eq!(editor.document.borrow().items.len(), 2);
+    assert!(editor.widgets.tasks.borrow()[0].button.is_visible());
+    assert_eq!(
+        view.iter_location(&buffer.iter_at_offset(start)).x(),
+        body_x
+    );
+    view.emit_preedit_changed("");
+    drain();
+    assert_eq!(editor.document.borrow().items.len(), 2);
     // 기호 모양의 세로 중심이 옆 한글의 세로 중심과 1px 안에서 맞는다.
     buffer.set_text("* 가\n  * 가\n    * 가");
     editor.refresh();
@@ -152,6 +202,7 @@ pub(in crate::app) fn fmt_003_list_layout_and_hit_testing() {
         );
     }
     assert!(tagged(&buffer, offset("끝남"), "md-task-done"));
+    assert!(tagged(&buffer, offset("결과:"), "md-task-done"));
     assert!(!tagged(&buffer, offset("할 일"), "md-task-done"));
     // 번호는 글자 그대로 쓰고, 빈 항목도 줄이 접히지 않은 채 표식이 그려진다.
     assert!(!tagged(&buffer, offset("1. "), "md-marker"));
@@ -223,8 +274,8 @@ pub(super) fn checkbox_pointer_targets() {
             Some("default")
         );
         assert!(
-            bounds.width() >= CHECK_BOX as f32 && bounds.width() <= GUTTER as f32,
-            "target stays in marker gutter: {bounds:?}"
+            bounds.width() >= GUTTER as f32,
+            "touch target spans the marker gutter: {bounds:?}"
         );
         assert!(bounds.height() > 0.);
         let check = button.first_child().unwrap();
@@ -284,7 +335,7 @@ pub(super) fn checkbox_pointer_targets() {
     view.add_css_class("checkbox-target-test");
     buffer.place_cursor(&buffer.start_iter());
     editor.schedule();
-    until(|| editor.layout.frames.get() == 0 && !editor.pending.get());
+    until(|| editor.layout.frames.get() == 0 && !editor.refresh_pending());
     verify(0);
     let target = editor.document.borrow().items[10].content.start;
     buffer.place_cursor(&buffer.iter_at_offset(target));

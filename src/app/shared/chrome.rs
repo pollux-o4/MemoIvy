@@ -3,7 +3,7 @@ use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, Orientati
 
 // shortcut: 창 위치 복원·항상 위 고정은 대상 세션 지원을 미확인, 해당 기능 요청과 대상 세션 확정 시 검토.
 pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox, GtkBox) {
-    window.add_css_class("lsm-window");
+    window.add_css_class("memoivy-window");
     window.connect_notify_local(Some("maximized"), |w, _| {
         if w.is_maximized() {
             w.add_css_class("maximized");
@@ -68,7 +68,7 @@ pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox
     layout.set_end_widget(Some(&actions));
     bar.append(&layout);
     let handle = gtk::WindowHandle::new();
-    handle.add_css_class("lsm-titlebar");
+    handle.add_css_class("memoivy-titlebar");
     handle.set_child(Some(&bar));
     window.set_titlebar(Some(&handle));
     (bar, actions)

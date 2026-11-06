@@ -17,12 +17,12 @@ use gtk::{
 pub(in crate::app) fn build(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("스티키 메모")
+        .title("MemoIvy")
         .default_width(440)
         .default_height(600)
         .build();
     crate::app::shared::focus::watch(&window);
-    let (_, actions) = header(&window, "스티키 메모");
+    let (_, actions) = header(&window, "MemoIvy");
     let add = Button::new();
     let add_contents = GtkBox::new(Orientation::Horizontal, 4);
     add_contents.append(&icons::image(icons::ADD));
@@ -55,9 +55,14 @@ pub(in crate::app) fn build(app: &Application) {
     let search = library.search.clone();
     let mut notebook = store;
     commands::initialize_positions(&mut notebook);
-    let state = AppState::new(notebook, Navigation::beside(&path), library);
+    let state = AppState::new(
+        notebook,
+        Navigation::beside(&path),
+        crate::persistence::Attachments::beside(&path),
+        library,
+    );
     let canvas = Button::with_label("캔버스");
-    canvas.add_css_class("lsm-action");
+    canvas.add_css_class("memoivy-action");
     let st = state.clone();
     let a = app.clone();
     canvas.connect_clicked(move |_| commands::open_canvas(&st, &a, None));
@@ -92,7 +97,7 @@ fn build_contents(window: &ApplicationWindow, add: Button) -> LibraryView {
     outer.set_margin_top(16);
     outer.set_margin_bottom(16);
     let search = SearchEntry::new();
-    search.add_css_class("lsm-search");
+    search.add_css_class("memoivy-search");
     search.set_placeholder_text(Some("메모 검색"));
     search.set_tooltip_text(Some("메모 검색 · Ctrl+F"));
     outer.append(&search);

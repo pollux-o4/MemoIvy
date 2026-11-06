@@ -1,4 +1,4 @@
-from tools.behavior.lsm_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, OPEN_CANVAS)
+from tools.behavior.memoivy_driver import (call, wait_window, key, click, move, clip, binary, environment, write_notes, uri_handler, OPEN_CANVAS)
 # 검증: FMT-003, CANVAS-004. 합성 데이터로 링크 미리보기·목록 표식·캔버스 단축키를 실제 입력으로 확인한다.
 import json
 import os
@@ -9,7 +9,7 @@ import time
 import uuid
 from PIL import ImageChops, ImageGrab
 
-artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-markers'))
+artifacts = Path(os.environ.get('MEMOIVY_ARTIFACT_DIR', '/tmp/memoivy-markers'))
 artifacts.mkdir(parents=True, exist_ok=True)
 linked = '# 링크 메모\n[예시 이름](https://example.com/path) 뒤\n\n- [ ] 할 일\n- 기호\n1. 번호\n**굵게** 끝\n'
 ids = [str(uuid.uuid4()) for _ in range(5)]
@@ -33,7 +33,7 @@ def changed(before, box):
     return ImageChops.difference(before.crop(box), grab().crop(box)).getbbox() is not None
 
 
-with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
+with tempfile.TemporaryDirectory(prefix='memoivy-markers-') as tmp:
     env = environment(tmp)
     path = write_notes(tmp, [
         dict(id=id, text=text, color='yellow', modified=1, canvas=dict(position=[64 + 300 * i, 64], next=[], done=False))
@@ -45,12 +45,12 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
     config.mkdir()
     (config / 'settings.ini').write_text('[Settings]\ngtk-cursor-blink=false\n')
     log = open(artifacts / 'markers-app.log', 'w')
-    wm = sp.Popen([os.environ.get('LSM_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
+    wm = sp.Popen([os.environ.get('MEMOIVY_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=log, stderr=log)
     app = None
     try:
         time.sleep(.6)
         app = sp.Popen([binary], env=env, stdout=log, stderr=log)
-        library = wait_window('^스티키 메모$')
+        library = wait_window('^MemoIvy$')
         call('windowmove', library, '0', '0')
         call('windowfocus', library)
         move(library, *LINKED_NOTE)
@@ -171,7 +171,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-markers-') as tmp:
         key('ctrl+w')
         time.sleep(.6)
         assert app.poll() is None, 'closing with a visible card must not crash'
-        call('search', '--onlyvisible', '--name', '^스티키 메모$')
+        call('search', '--onlyvisible', '--name', '^MemoIvy$')
 
         # 캔버스
         call('windowfocus', library)

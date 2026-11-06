@@ -6,7 +6,7 @@ use uuid::Uuid;
 /// 모든 팝오버의 공통 모양과 등장 모션. 시작 클래스를 다음 프레임에 지워 CSS 전환을 일으킨다.
 pub(in crate::app) fn menu_popover(popover: &gtk::Popover) {
     popover.set_has_arrow(false);
-    popover.add_css_class("lsm-menu");
+    popover.add_css_class("memoivy-menu");
     popover.connect_closed(|popover| {
         if let Some(parent) = popover.parent() {
             parent.set_has_tooltip(true);
@@ -66,39 +66,60 @@ pub(in crate::app) fn confirm_delete(
     ids: Vec<Uuid>,
     name: Option<String>,
 ) {
-    let dialog = gtk::Window::builder()
-        .transient_for(parent)
-        .modal(true)
-        .title("메모 삭제")
-        .default_width(340)
-        .resizable(false)
-        .build();
-    dialog.add_css_class("lsm-confirm");
-    // 시스템 제목 표시줄 없이 내용만 보인다.
-    dialog.set_titlebar(Some(&GtkBox::new(Orientation::Horizontal, 0)));
-    let body = GtkBox::new(Orientation::Vertical, 6);
-    body.add_css_class("confirm-body");
     let question = match ids.len() {
         1 => "이 메모를 삭제할까요?".to_owned(),
         count => format!("메모 {count}개를 삭제할까요?"),
     };
-    let title = Label::new(Some(&question));
+    let detail = if ids.len() > 1 {
+        "삭제한 메모는 복구할 수 없습니다. 내용과 연결이 모두 사라져요."
+    } else {
+        "삭제한 메모는 복구할 수 없습니다."
+    };
+    let st = state.clone();
+    confirm(
+        parent,
+        &question,
+        name.as_deref(),
+        detail,
+        "삭제",
+        move || commands::delete_notes(&st, ids.clone()),
+    );
+}
+
+/// 되돌릴 수 없는 동작의 공용 확인창. 취소가 기본 응답이다.
+pub(in crate::app) fn confirm(
+    parent: &impl IsA<gtk::Window>,
+    question: &str,
+    subject: Option<&str>,
+    detail: &str,
+    accept_label: &str,
+    on_accept: impl Fn() + 'static,
+) {
+    let dialog = gtk::Window::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title(question)
+        .default_width(340)
+        .resizable(false)
+        .build();
+    dialog.add_css_class("memoivy-confirm");
+    // 시스템 제목 표시줄 없이 내용만 보인다.
+    dialog.set_titlebar(Some(&GtkBox::new(Orientation::Horizontal, 0)));
+    let body = GtkBox::new(Orientation::Vertical, 6);
+    body.add_css_class("confirm-body");
+    let title = Label::new(Some(question));
     title.set_xalign(0.);
     title.add_css_class("confirm-title");
     body.append(&title);
-    if let Some(name) = name {
-        let subject = Label::new(Some(&name));
+    if let Some(name) = subject {
+        let subject = Label::new(Some(name));
         subject.set_xalign(0.);
         subject.set_ellipsize(gtk::pango::EllipsizeMode::End);
         subject.set_max_width_chars(36);
         subject.add_css_class("confirm-subject");
         body.append(&subject);
     }
-    let detail = Label::new(Some(if ids.len() > 1 {
-        "삭제한 메모는 복구할 수 없습니다. 내용과 연결이 모두 사라져요."
-    } else {
-        "삭제한 메모는 복구할 수 없습니다."
-    }));
+    let detail = Label::new(Some(detail));
     detail.set_wrap(true);
     detail.set_xalign(0.);
     detail.add_css_class("confirm-detail");
@@ -108,7 +129,7 @@ pub(in crate::app) fn confirm_delete(
     actions.set_margin_top(14);
     let cancel = Button::with_label("취소");
     cancel.add_css_class("confirm-cancel");
-    let accept = Button::with_label("삭제");
+    let accept = Button::with_label(accept_label);
     accept.add_css_class("confirm-accept");
     actions.append(&cancel);
     actions.append(&accept);
@@ -121,10 +142,9 @@ pub(in crate::app) fn confirm_delete(
             dialog.close();
         }
     });
-    let st = state.clone();
     let weak = dialog.downgrade();
     accept.connect_clicked(move |_| {
-        commands::delete_notes(&st, ids.clone());
+        on_accept();
         if let Some(dialog) = weak.upgrade() {
             dialog.close();
         }
@@ -134,10 +154,23 @@ pub(in crate::app) fn confirm_delete(
     cancel.grab_focus();
 }
 
-fn popover_for(state: &State, _app: &Application, id: Uuid) -> gtk::Popover {
+fn popover_for(state: &State, app: &Application, id: Uuid) -> gtk::Popover {
     let pop = gtk::Popover::new();
     let body = GtkBox::new(Orientation::Vertical, 0);
     body.add_css_class("menu-body");
+    let files = menu_row(icons::FILES, "파일", None);
+    files.set_tooltip_text(Some("메모에 넣은 이미지와 사용처"));
+    let (st, a, close) = (state.clone(), app.clone(), pop.downgrade());
+    files.connect_clicked(move |_| {
+        if let Some(popover) = close.upgrade() {
+            popover.popdown();
+        }
+        commands::open_files(&st, &a);
+    });
+    body.append(&files);
+    let divider = gtk::Separator::new(Orientation::Horizontal);
+    divider.add_css_class("menu-divider");
+    body.append(&divider);
     let delete = menu_row(icons::TRASH, "삭제…", None);
     delete.add_css_class("destructive");
     let st = state.clone();

@@ -1,4 +1,4 @@
-use super::{Document, ListItem, ListKind, Span, Style, Task};
+use super::{Document, ListItem, ListKind, Span, Style, Task, TaskState};
 use std::ops::Range;
 
 pub(in crate::presentation::markdown) struct LineMark {
@@ -8,9 +8,16 @@ pub(in crate::presentation::markdown) struct LineMark {
     pub(in crate::presentation::markdown) body: usize,
     /// 들여쓰기 칸 수.
     pub(in crate::presentation::markdown) columns: usize,
+    /// 목록 표식 바로 뒤 본문 시작 칸. 체크 표식은 본문에 포함한다.
+    pub(in crate::presentation::markdown) continuation_indent: usize,
     pub(in crate::presentation::markdown) kind: ListKind,
+    pub(in crate::presentation::markdown) task_state: Option<TaskState>,
     /// 체크 괄호 범위(바이트).
-    check: Option<Range<usize>>,
+    pub(in crate::presentation::markdown) check: Option<Range<usize>>,
+}
+
+pub(in crate::presentation::markdown) fn indent_columns(text: &str) -> usize {
+    text.chars().map(|c| if c == '\t' { 4 } else { 1 }).sum()
 }
 
 /// 한 줄의 목록 표식. 쓰는 동안 바로 보여야 하므로 문단 뒤나 빈 항목도 줄 단위로 인식한다.
@@ -18,10 +25,7 @@ pub(in crate::presentation::markdown) struct LineMark {
 pub(in crate::presentation::markdown) fn line_mark(line: &str) -> Option<LineMark> {
     let body = line.trim_start_matches([' ', '\t']);
     let start = line.len() - body.len();
-    let columns = line[..start]
-        .chars()
-        .map(|c| if c == '\t' { 4 } else { 1 })
-        .sum();
+    let columns = indent_columns(&line[..start]);
     let bytes = body.as_bytes();
     let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
     let width = if matches!(bytes.first(), Some(b'-' | b'*' | b'+')) {
@@ -42,21 +46,25 @@ pub(in crate::presentation::markdown) fn line_mark(line: &str) -> Option<LineMar
             .count()
     };
     let mut body_at = pad(after);
+    let mut continuation_indent = columns + width + indent_columns(&line[after..body_at]);
     let mut kind = if digits > 0 {
         ListKind::Ordered
     } else {
         ListKind::Bullet
     };
     let mut check = None;
+    let mut task_state = None;
     if digits == 0 {
-        for (mark, checked) in [("[ ]", false), ("[x]", true), ("[X]", true)] {
-            if line[body_at..].starts_with(mark)
-                && matches!(line.as_bytes().get(body_at + 3), Some(b' ' | b'\t'))
-            {
-                check = Some(body_at..body_at + 3);
-                kind = ListKind::Task(checked);
-                body_at = pad(body_at + 3);
-                break;
+        if let Some(marker) = line.get(body_at..body_at + 3) {
+            if let Some(state) = TaskState::from_marker(marker) {
+                if matches!(line.as_bytes().get(body_at + 3), Some(b' ' | b'\t')) {
+                    check = Some(body_at..body_at + 3);
+                    task_state = Some(state);
+                    kind = ListKind::Task;
+                    let check_end = body_at + 3;
+                    body_at = pad(check_end);
+                    continuation_indent += 3 + indent_columns(&line[check_end..body_at]);
+                }
             }
         }
     }
@@ -64,7 +72,9 @@ pub(in crate::presentation::markdown) fn line_mark(line: &str) -> Option<LineMar
         start,
         body: body_at,
         columns,
+        continuation_indent,
         kind,
+        task_state,
         check,
     })
 }
@@ -76,13 +86,25 @@ pub(in crate::presentation::markdown) fn scan_items(
     doc: &mut Document,
 ) {
     let mut parents: Vec<usize> = Vec::new();
+    let mut continuation_indents = Vec::new();
+    let mut previous_item: Option<usize> = None;
     let mut at = 0;
     for raw in text.split_inclusive('\n') {
         let line_start = at;
         at += raw.len();
         let line = raw.trim_end_matches(['\n', '\r']);
         let Some(mark) = line_mark(line) else {
-            // 들여 쓴 이어짐 줄은 목록을 끊지 않는다.
+            let prefix_len = line.len() - line.trim_start_matches([' ', '\t']).len();
+            let indent = indent_columns(&line[..prefix_len]) as i32;
+            if let Some(index) =
+                previous_item.filter(|&index| indent >= continuation_indents[index] as i32)
+            {
+                doc.items[index].content.end = chars(line_start..line_start + line.len()).end;
+                previous_item = Some(index);
+            } else {
+                // 들여쓰기가 없는 빈 줄은 다음 목록 표식의 깊이만 유지하고 이어쓰기는 끝낸다.
+                previous_item = None;
+            }
             if !line.trim().is_empty() && !line.starts_with([' ', '\t']) {
                 parents.clear();
             }
@@ -100,23 +122,32 @@ pub(in crate::presentation::markdown) fn scan_items(
         let depth = parents.len();
         parents.push(mark.columns);
         let content = chars(line_start + mark.body..line_start + line.len());
-        if let (Some(check), ListKind::Task(checked)) = (&mark.check, mark.kind) {
-            doc.tasks.push(Task {
-                range: chars(line_start + check.start..line_start + check.end),
-                checked,
-            });
-            if checked && content.start < content.end {
-                doc.spans.push(Span {
-                    range: content.clone(),
-                    style: Style::TaskDone,
-                });
-            }
-        }
+        let item_index = doc.items.len();
         doc.items.push(ListItem {
             marker: chars(line_start..line_start + mark.body),
             content,
             depth,
             kind: mark.kind,
         });
+        if let (Some(check), Some(state)) = (&mark.check, mark.task_state) {
+            doc.tasks.push(Task {
+                range: chars(line_start + check.start..line_start + check.end),
+                state,
+                item: Some(item_index),
+            });
+        }
+        continuation_indents.push(mark.continuation_indent);
+        previous_item = Some(doc.items.len() - 1);
     }
+    doc.spans.extend(
+        doc.tasks
+            .iter()
+            .filter(|task| task.state == TaskState::Done)
+            .filter_map(|task| task.item.and_then(|index| doc.items.get(index)))
+            .filter(|item| item.content.start < item.content.end)
+            .map(|item| Span {
+                range: item.content.clone(),
+                style: Style::TaskDone,
+            }),
+    );
 }

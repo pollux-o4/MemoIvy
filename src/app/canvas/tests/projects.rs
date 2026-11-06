@@ -33,7 +33,7 @@ pub(in crate::app) fn project_001_levels_grouping_and_shortcuts() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("notes.json");
     let app = Application::builder()
-        .application_id("io.github.lsm.ProjectTest")
+        .application_id("io.github.pollux_o4.MemoIvy.ProjectTest")
         .build();
     app.register(None::<&gtk::gio::Cancellable>).unwrap();
     let (p, a, b, c) = (

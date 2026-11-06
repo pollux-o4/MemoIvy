@@ -148,7 +148,7 @@ pub(in crate::app) fn help(window: &ApplicationWindow) {
         .default_width(860)
         .resizable(false)
         .build();
-    dialog.add_css_class("lsm-help");
+    dialog.add_css_class("memoivy-help");
     let bar = gtk::CenterBox::new();
     bar.add_css_class("help-bar");
     let close = gtk::Button::new();

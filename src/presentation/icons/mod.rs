@@ -14,6 +14,9 @@ pub const ADD: &str = include_str!("actions/note/add.svg");
 pub const TRASH: &str = include_str!("actions/note/trash.svg");
 pub const KEYBOARD: &str = include_str!("actions/keyboard.svg");
 pub const SOURCE: &str = include_str!("actions/note/source.svg");
+pub const EXPAND: &str = include_str!("actions/media/expand.svg");
+pub const FILES: &str = include_str!("actions/media/files.svg");
+pub const COPY: &str = include_str!("actions/media/copy.svg");
 pub const UNDO: &str = include_str!("canvas/history/undo.svg");
 pub const REDO: &str = include_str!("canvas/history/redo.svg");
 pub const ZOOM_IN: &str = include_str!("canvas/zoom/zoom-in.svg");
@@ -135,6 +138,9 @@ mod tests {
             TRASH,
             KEYBOARD,
             SOURCE,
+            EXPAND,
+            FILES,
+            COPY,
             UNDO,
             REDO,
             ZOOM_IN,

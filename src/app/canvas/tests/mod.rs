@@ -237,7 +237,7 @@ fn connect_through_menu(v: &Rc<CanvasView>, target: Uuid) {
 }
 
 fn capture(v: &Rc<CanvasView>) {
-    let Ok(dir) = std::env::var("LSM_CANVAS_ARTIFACT_DIR") else {
+    let Ok(dir) = std::env::var("MEMOIVY_CANVAS_ARTIFACT_DIR") else {
         return;
     };
     std::fs::create_dir_all(&dir).unwrap();

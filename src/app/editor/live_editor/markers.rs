@@ -25,24 +25,47 @@ impl LiveEditor {
             button.add_css_class("md-checkbox");
             button.set_cursor_from_name(Some("default"));
             button.set_focusable(false);
-            button.set_tooltip_text(Some("완료 상태 변경 · Ctrl+Enter"));
+            button.set_tooltip_text(Some(
+                "완료 상태 변경 · Ctrl+Enter\n진행 중 표시 · Shift+클릭",
+            ));
             let offset = Rc::new(Cell::new(0));
             let position = offset.clone();
             let weak = Rc::downgrade(self);
             button.connect_toggled(move |_| {
                 if let Some(editor) = weak.upgrade() {
                     if !editor.widgets.syncing.get() {
-                        editor.toggle_task(position.get());
+                        editor.toggle_task(position.get(), false);
                     }
                 }
             });
+            // Shift+클릭은 체크 버튼 자체 클릭보다 먼저 가로채 진행 중으로 바꾼다.
+            let shift_click = gtk::GestureClick::new();
+            shift_click.set_propagation_phase(gtk::PropagationPhase::Capture);
+            let position = offset.clone();
+            let weak = Rc::downgrade(self);
+            shift_click.connect_pressed(move |gesture, _, _, _| {
+                if !gesture
+                    .current_event_state()
+                    .contains(gdk::ModifierType::SHIFT_MASK)
+                {
+                    return;
+                }
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                if let Some(editor) = weak.upgrade() {
+                    editor.toggle_task(position.get(), true);
+                }
+            });
+            button.add_controller(shift_click);
             view.add_overlay(&button, 0, 0);
             widgets.push(TaskWidget { button, offset });
         }
         self.widgets.syncing.set(true);
         for (widget, task) in widgets.iter().zip(&document.tasks) {
             widget.offset.set(task.range.start);
-            widget.button.set_active(task.checked);
+            widget.button.set_active(task.state == TaskState::Done);
+            widget
+                .button
+                .set_inconsistent(task.state == TaskState::Doing);
             widget.button.set_sensitive(view.is_editable());
             let iter = buffer.iter_at_offset(task.range.start);
             let mut end = iter;
@@ -65,8 +88,8 @@ impl LiveEditor {
                     &view,
                     &widget.button,
                     item,
-                    marker_end(&view, item.depth) - CHECK_BOX,
-                    CHECK_BOX,
+                    marker_x(&view, item.depth),
+                    GUTTER,
                     0,
                 );
             }
@@ -101,7 +124,8 @@ impl LiveEditor {
         }
     }
 
-    pub(super) fn toggle_task(self: &Rc<Self>, offset: i32) -> bool {
+    /// `doing`이면 진행 중을, 아니면 완료를 켜고 끈다.
+    pub(super) fn toggle_task(self: &Rc<Self>, offset: i32, doing: bool) -> bool {
         if self.input.composing.get() {
             return false;
         }
@@ -125,7 +149,7 @@ impl LiveEditor {
         let mut end = buffer.iter_at_offset(task.range.start + 2);
         buffer.begin_user_action();
         buffer.delete(&mut start, &mut end);
-        buffer.insert(&mut start, if task.checked { " " } else { "x" });
+        buffer.insert(&mut start, task.state.toggled(doing).mark());
         buffer.end_user_action();
         true
     }

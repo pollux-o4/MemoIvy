@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
     user["로컬 사용자 · Person"]
-    app["Linux Sticky Memo · Software System"]
+    app["MemoIvy · Software System"]
     desktop["Ubuntu 데스크톱 세션 · External System"]
     user -->|메모 작성·검색·정리| app
     app -->|창·입력·디스플레이 연동| desktop

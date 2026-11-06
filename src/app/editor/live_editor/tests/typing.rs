@@ -35,6 +35,24 @@ pub(in crate::app) fn fmt_003_typing_flow() {
     type_text("우유");
     assert!(press(gdk::Key::Tab, none));
     assert_eq!(text(&buffer), "메모\n- 사과\n  - 우유");
+    // Shift+Tab moves a nested item's continuation and descendants with it.
+    buffer.set_text("- 상위\n  - 부모\n    이어쓰기\n    - 자식\n      자식 이어쓰기\n- 형제");
+    buffer.place_cursor(&buffer.iter_at_offset("- 상위\n  - 부모".chars().count() as i32));
+    drain();
+    assert!(press(gdk::Key::ISO_Left_Tab, gdk::ModifierType::SHIFT_MASK));
+    assert_eq!(
+        text(&buffer),
+        "- 상위\n- 부모\n  이어쓰기\n  - 자식\n    자식 이어쓰기\n- 형제"
+    );
+    buffer.undo();
+    drain();
+    assert_eq!(
+        text(&buffer),
+        "- 상위\n  - 부모\n    이어쓰기\n    - 자식\n      자식 이어쓰기\n- 형제"
+    );
+    buffer.set_text("메모\n- 사과\n  - 우유");
+    buffer.place_cursor(&buffer.end_iter());
+    drain();
     assert!(press(gdk::Key::Return, none));
     assert_eq!(text(&buffer), "메모\n- 사과\n  - 우유\n  - ");
     // 빈 항목: 한 단계 내어 쓰고, 다시 누르면 목록이 끝난다.
@@ -52,6 +70,16 @@ pub(in crate::app) fn fmt_003_typing_flow() {
     buffer.undo();
     drain();
     assert_eq!(text(&buffer), "- [x] 끝남");
+    // Shift+Enter keeps a task continuation at the task text column, after `- [ ] `.
+    buffer.set_text("- [ ] 본문");
+    buffer.place_cursor(&buffer.end_iter());
+    drain();
+    assert!(press(gdk::Key::Return, gdk::ModifierType::SHIFT_MASK));
+    assert_eq!(text(&buffer), "- [ ] 본문\n      ");
+    assert_eq!(
+        editor.document.borrow().items[0].content.end,
+        buffer.end_iter().offset()
+    );
     // 번호: 사이에 끼우면 뒤 번호가 밀리고 undo 한 번으로 복구된다.
     buffer.set_text("1. 가\n2. 나\n  - 하위\n3. 다\n\n1. 별개");
     buffer.place_cursor(&buffer.iter_at_offset(4));

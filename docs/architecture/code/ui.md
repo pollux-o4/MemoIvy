@@ -16,7 +16,16 @@
 | 창 구성·본문 갱신 | editor의 `open_note`, live_editor의 `attach`·`schedule`·`refresh` |
 | 표시·입력 상태 | live_editor의 tags / `EditorTags`, layout / `LayoutState`, markers / `MarkerWidgets`, input / `InputState`·`PointerState` |
 | 원문 수정 | list_edit의 `handle`·`continue_after_commit`, formatting, `source_slice` |
+| 메모 이미지 | live_editor media의 `MediaHost`·`sync_images`·`place_images`, block의 `Block`, import의 `connect_import`·`placement`·`insert_lines`·`move_image`·`drop_target` |
 | 링크 카드 | link_preview의 `CardState`·`pointer_left`·`caret_left`; card의 위젯 구성·`fill` |
+
+## 파일 화면·공용 위젯
+
+| 관심사 | 탐색 키 |
+|---|---|
+| 파일 창 | files의 `FilesView`·`open`·`refresh`, grid의 `Grid`·`drag_source`, detail의 `Detail` |
+| 공용 위젯 | widgets의 `show_image`·`ASSET_MIME`·`animations_enabled`, shared의 `confirm` |
+| 사용처 갱신 | shell commands의 `reconcile_attachments`·`open_files` |
 
 ## 캔버스
 
@@ -29,7 +38,7 @@
 | 프로젝트 단계·전환 | controller commands의 `go_to`·`switch_scope`·`group_selected`·`move_into`, scene dive의 `capture`·`begin`·`play`·`pose`, panels navigator의 `sync` |
 | 보드 그리기 | scene paint의 `draw_backdrop`·backdrop `Backdrop`·edge_tiles `EdgeTiles`, board의 `set_camera`·`apply_camera`·`render`(다른 단계 카드 `parked`) |
 
-경계 검사: `architecture_tests`. GTK 시나리오 진입점은 `gtk_tests`, 조건 대기·탐색은 `test_support`; 실제 입력 스모크의 공통 기반은 `lsm_driver`다. 실행 절차: OPS-003.
+경계 검사: `architecture_tests`. GTK 시나리오 진입점은 `gtk_tests`, 조건 대기·탐색은 `test_support`; 실제 입력 스모크의 공통 기반은 `memoivy_driver`다. 실행 절차: OPS-003.
 
 - 캔버스 조율: `src/app/canvas/controller`의 window / `open`, commands / `mutate`·`step_history`, camera / `fit_rects`, view / `render`·`sync_selection`.
 - 카드 표현: `src/app/canvas/scene/cards`의 card·card_root·preview. geometry의 layout·camera·placement는 GTK 없이 검증한다.

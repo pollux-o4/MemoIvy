@@ -41,7 +41,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     outer.add_css_class(note.color());
     let palette = palette(state, app, id, note.color(), &outer, &header_bar);
     let canvas = Button::with_label("캔버스");
-    canvas.add_css_class("lsm-action");
+    canvas.add_css_class("memoivy-action");
     let st = state.clone();
     let a = app.clone();
     canvas.connect_clicked(move |_| commands::open_canvas(&st, &a, Some(id)));
@@ -55,7 +55,16 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
         .hexpand(true)
         .child(&view)
         .build();
-    let source = live_editor::attach(&view);
+    let st = state.clone();
+    let media = live_editor::MediaHost {
+        store: state.borrow().attachments.store(),
+        notice: Box::new(move |text| {
+            if let Some(editor) = st.borrow().views.windows.get(&id) {
+                editor.show_status(text, false);
+            }
+        }),
+    };
+    let source = live_editor::attach(&view, media);
     let menu = editor_menu(state, app, id, &window, &source);
     actions.append(&menu);
     outer.append(&scroll);
@@ -67,7 +76,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     status.set_hexpand(true);
     status_row.append(&status);
     let retry = Button::with_label("다시 시도");
-    retry.add_css_class("lsm-action");
+    retry.add_css_class("memoivy-action");
     retry.set_visible(false);
     let retry_state = state.clone();
     retry.connect_clicked(move |_| {

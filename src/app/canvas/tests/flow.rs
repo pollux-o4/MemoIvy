@@ -5,7 +5,7 @@ pub(in crate::app) fn canvas_001_widget_flow_and_recovery() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("notes.json");
     let app = Application::builder()
-        .application_id("io.github.lsm.CanvasTest")
+        .application_id("io.github.pollux_o4.MemoIvy.CanvasTest")
         .build();
     app.register(None::<&gtk::gio::Cancellable>).unwrap();
     let notes = (0..3)

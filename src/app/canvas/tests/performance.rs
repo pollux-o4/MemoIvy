@@ -1,8 +1,8 @@
 use super::*;
 
-/// PERF-002 프레임 측정. 릴리스 빌드에서 `LSM_CANVAS_PERF=1`일 때만 실행한다.
+/// PERF-002 프레임 측정. 릴리스 빌드에서 `MEMOIVY_CANVAS_PERF=1`일 때만 실행한다.
 pub(in crate::app) fn perf_002_frames() {
-    if std::env::var("LSM_CANVAS_PERF").is_err() {
+    if std::env::var("MEMOIVY_CANVAS_PERF").is_err() {
         return;
     }
     use std::time::Instant;
@@ -10,7 +10,7 @@ pub(in crate::app) fn perf_002_frames() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("notes.json");
     let app = Application::builder()
-        .application_id("io.github.lsm.CanvasPerf")
+        .application_id("io.github.pollux_o4.MemoIvy.CanvasPerf")
         .build();
     app.register(None::<&gtk::gio::Cancellable>).unwrap();
     let ids: Vec<Uuid> = (0..300).map(|_| Uuid::new_v4()).collect();
@@ -186,7 +186,7 @@ pub(in crate::app) fn perf_002_frames() {
     // 프로젝트 들어가기·나오기 전환. 처음 들어갈 때(카드 생성)와 다시 들어갈 때(재사용)를 나눠 본다.
     v.move_into(ids[1..40].to_vec(), Some(ids[0]));
     drain();
-    if let Ok(dir) = std::env::var("LSM_DIVE_FRAMES") {
+    if let Ok(dir) = std::env::var("MEMOIVY_DIVE_FRAMES") {
         dive_frames(&v, ids[0], std::path::Path::new(&dir));
     }
     for name in ["dive-first", "dive-again"] {

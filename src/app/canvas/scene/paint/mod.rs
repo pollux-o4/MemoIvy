@@ -196,7 +196,7 @@ struct Edge {
 
 /// 정적인 연결선은 타일 텍스처로 재사용하고, 신호·새 연결 애니메이션 중에는 곡선이 덮는 영역만 매 프레임 그린다.
 fn draw_edges(v: &CanvasView, snapshot: &gtk::Snapshot, width: f64, height: f64, edge: Rgba) {
-    let accent = token(v, "lsm_accent");
+    let accent = token(v, "memoivy_accent");
     let camera = v.session.camera.get();
     let visible = Rect::new(
         camera.x,
@@ -389,8 +389,8 @@ fn comet(
 }
 
 fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
-    let accent = token(v, "lsm_accent");
-    let guide_color = token(v, "lsm_danger");
+    let accent = token(v, "memoivy_accent");
+    let guide_color = token(v, "memoivy_danger");
     let camera = v.session.camera.get();
     let animated = v.widgets.window.settings().is_gtk_enable_animations();
     cr.save().expect("cairo save");
@@ -460,8 +460,8 @@ fn draw_hud(v: &CanvasView, cr: &cairo::Context) {
 }
 
 fn arrivals(v: &CanvasView, cr: &cairo::Context, id: Uuid, alpha: f64, elapsed: f64) {
-    let accent = token(v, "lsm_accent");
-    let done = token(v, "lsm_success");
+    let accent = token(v, "memoivy_accent");
+    let done = token(v, "memoivy_success");
     let nodes = v.session.nodes.borrow();
     let Some(node) = nodes.iter().find(|n| n.id == id) else {
         return;

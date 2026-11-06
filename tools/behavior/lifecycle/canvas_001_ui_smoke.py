@@ -1,4 +1,4 @@
-from tools.behavior.lsm_driver import (call, wait_window, key, click, x, clip, binary, environment, write_notes, OPEN_CANVAS)
+from tools.behavior.memoivy_driver import (call, wait_window, key, click, x, clip, binary, environment, write_notes, OPEN_CANVAS)
 # 검증: CANVAS-001·CANVAS-002. 합성 데이터의 실제 포인터·키보드·재시작 검사.
 import json
 import os
@@ -9,7 +9,7 @@ import time
 import uuid
 from PIL import ImageChops, ImageGrab
 
-artifacts = Path(os.environ.get('LSM_ARTIFACT_DIR', '/tmp/lsm-keyboard'))
+artifacts = Path(os.environ.get('MEMOIVY_ARTIFACT_DIR', '/tmp/memoivy-keyboard'))
 artifacts.mkdir(parents=True, exist_ok=True)
 original = '기존 메모'
 
@@ -30,17 +30,17 @@ SECOND_CARD = (520, 142)
 VIEW_CENTER = (580, 403)
 
 
-with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
+with tempfile.TemporaryDirectory(prefix='memoivy-canvas-') as tmp:
     env = environment(tmp)
     ids=[str(uuid.uuid4()) for _ in range(2)]
     path = write_notes(tmp, [dict(id=id,text='A very long shared title '+str(i)+'\nUnique context '+str(i),color=['yellow','blue'][i],modified=1,canvas=dict(position=[64+320*i,64],next=[],done=False)) for i,id in enumerate(ids)])
     log=open(artifacts/'canvas-app.log','w')
-    wm=sp.Popen([os.environ.get('LSM_OPENBOX','openbox'),'--sm-disable'],env=env,stdout=log,stderr=log)
+    wm=sp.Popen([os.environ.get('MEMOIVY_OPENBOX','openbox'),'--sm-disable'],env=env,stdout=log,stderr=log)
     app=None
     try:
         time.sleep(.6)
         app=sp.Popen([binary],env=env,stdout=log,stderr=log)
-        library=wait_window('^스티키 메모$')
+        library=wait_window('^MemoIvy$')
         call('windowfocus',library)
         click(library, *OPEN_CANVAS)
         canvas=wait_window('^메모 캔버스$')
@@ -166,7 +166,7 @@ with tempfile.TemporaryDirectory(prefix='lsm-canvas-') as tmp:
         key('ctrl+w')
         assert app.wait(timeout=8)==0
         app=sp.Popen([binary],env=env,stdout=log,stderr=log)
-        library=wait_window('^스티키 메모$')
+        library=wait_window('^MemoIvy$')
         assert json.loads(path.read_text())==data,'restart changed memo identity or layout'
         call('windowfocus',library)
         key('ctrl+w')

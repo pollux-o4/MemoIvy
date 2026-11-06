@@ -127,6 +127,7 @@ fn tick(state: &State) -> glib::ControlFlow {
                 }
                 state.borrow().views.library.add.set_sensitive(true);
                 refresh_all(state, &app);
+                commands::reconcile_attachments(state);
             }
             NotebookEvent::Saved => {
                 let s = state.borrow();
@@ -134,6 +135,8 @@ fn tick(state: &State) -> glib::ControlFlow {
                 for editor in s.views.windows.values() {
                     editor.show_status("저장됨", false);
                 }
+                drop(s);
+                commands::reconcile_attachments(state);
             }
             NotebookEvent::SaveFailed(error) | NotebookEvent::OperationFailed(error) => {
                 let mut s = state.borrow_mut();
@@ -203,7 +206,7 @@ pub(in crate::app) fn save_002_close_failure_and_idle_timer() {
     use super::state::AppState;
     use crate::app::test_support::until;
     let app = gtk::Application::builder()
-        .application_id("io.github.lsm.LifecycleTest")
+        .application_id("io.github.pollux_o4.MemoIvy.LifecycleTest")
         .build();
     app.register(None::<&gtk::gio::Cancellable>).unwrap();
     let dir = tempfile::tempdir().unwrap();

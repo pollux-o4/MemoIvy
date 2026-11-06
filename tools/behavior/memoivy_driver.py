@@ -5,9 +5,9 @@ from pathlib import Path
 import subprocess as sp
 import time
 
-x = os.environ.get('LSM_XDOTOOL', 'xdotool')
-clip = os.environ.get('LSM_XCLIP', 'xclip')
-binary = os.environ.get('LSM_BINARY', 'target/debug/linux-sticky-memo')
+x = os.environ.get('MEMOIVY_XDOTOOL', 'xdotool')
+clip = os.environ.get('MEMOIVY_XCLIP', 'xclip')
+binary = os.environ.get('MEMOIVY_BINARY', 'target/debug/memoivy')
 
 # Window-relative controls shared by the smoke scenarios.
 CLOSE = (34, 26)
@@ -56,7 +56,7 @@ def environment(tmp):
 
 
 def write_notes(tmp, notes):
-    path = Path(tmp) / 'linux-sticky-memo/notes.json'
+    path = Path(tmp) / 'memoivy/notes.json'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(notes))
     return path
@@ -70,8 +70,8 @@ def uri_handler(tmp, env):
     capture.write_text('import sys\nfrom pathlib import Path\nPath(' + repr(str(uri_log)) + ').write_text(sys.argv[1])\n')
     # Desktop Exec quotes paths independently of shell quoting.
     executable = str(capture).replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$')
-    (apps / 'lsm-uri-test.desktop').write_text('[Desktop Entry]\nType=Application\nName=LSM URI test\nExec=/usr/bin/python3 "' + executable + '" %u\nMimeType=x-scheme-handler/https;\n')
+    (apps / 'memoivy-uri-test.desktop').write_text('[Desktop Entry]\nType=Application\nName=MemoIvy URI test\nExec=/usr/bin/python3 "' + executable + '" %u\nMimeType=x-scheme-handler/https;\n')
     config = Path(env['XDG_CONFIG_HOME'])
     config.mkdir(parents=True, exist_ok=True)
-    (config / 'mimeapps.list').write_text('[Default Applications]\nx-scheme-handler/https=lsm-uri-test.desktop;\n')
+    (config / 'mimeapps.list').write_text('[Default Applications]\nx-scheme-handler/https=memoivy-uri-test.desktop;\n')
     return uri_log

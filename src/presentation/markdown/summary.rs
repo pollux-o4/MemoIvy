@@ -1,4 +1,7 @@
-use super::{list::line_mark, plain_line, LineMarker, ListKind, PreviewLine, PreviewRow, Summary};
+use super::{
+    list::{indent_columns, line_mark},
+    plain_line, LineMarker, ListKind, PreviewLine, PreviewRow, Summary,
+};
 
 const PREVIEW_CHARS: usize = 240;
 const PREVIEW_LINES: usize = 12;
@@ -9,6 +12,7 @@ pub(crate) fn summary(text: &str) -> Summary {
     let mut summary = Summary::default();
     let mut has_title = false;
     let mut fence: Option<&str> = None;
+    let mut owner: Option<(LineMarker, usize, usize)> = None;
     for line in text.lines() {
         let trimmed = line.trim_start();
         let opener = ["```", "~~~"]
@@ -17,11 +21,13 @@ pub(crate) fn summary(text: &str) -> Summary {
         let literal = match (fence, opener) {
             (Some(open), Some(f)) if f == open => {
                 fence = None;
+                owner = None;
                 continue;
             }
             (Some(_), _) => true,
             (None, Some(f)) => {
                 fence = Some(f);
+                owner = None;
                 continue;
             }
             (None, None) => false,
@@ -32,10 +38,24 @@ pub(crate) fn summary(text: &str) -> Summary {
             summary.remaining += usize::from(trimmed.chars().any(char::is_alphanumeric));
             continue;
         }
-        let (marker, depth, rest) = if literal {
-            (None, 0, line)
+        let (marker, depth, rest, continuation) = if literal {
+            owner = None;
+            (None, 0, line, false)
+        } else if let Some((marker, depth, rest, indent)) = classify(line) {
+            owner = Some((marker.clone(), depth, indent));
+            (Some(marker), depth, rest, false)
         } else {
-            classify(line)
+            let indent_bytes = line.len() - line.trim_start_matches([' ', '\t']).len();
+            let indent = indent_columns(&line[..indent_bytes]);
+            if let Some((marker, depth, _required)) = owner
+                .as_ref()
+                .filter(|(_, _, required)| indent >= *required)
+            {
+                (Some(marker.clone()), *depth, line.trim_start(), true)
+            } else {
+                owner = None;
+                (None, 0, line, false)
+            }
         };
         let plain = if literal {
             line.trim().to_owned()
@@ -62,6 +82,7 @@ pub(crate) fn summary(text: &str) -> Summary {
                 marker,
                 depth,
                 text: plain,
+                continuation,
             });
         } else {
             summary.remaining += 1;
@@ -71,13 +92,11 @@ pub(crate) fn summary(text: &str) -> Summary {
 }
 
 /// 목록 표식과 깊이만 읽는다. 카드 요약은 줄 단위라 문서 전체를 파싱하지 않는다.
-fn classify(line: &str) -> (Option<LineMarker>, usize, &str) {
-    let Some(mark) = line_mark(line) else {
-        return (None, 0, line);
-    };
+fn classify(line: &str) -> Option<(LineMarker, usize, &str, usize)> {
+    let mark = line_mark(line)?;
     let marker = match mark.kind {
         ListKind::Bullet => LineMarker::Bullet,
-        ListKind::Task(checked) => LineMarker::Task(checked),
+        ListKind::Task => LineMarker::Task(mark.task_state?),
         ListKind::Ordered => {
             let end = line[mark.start..]
                 .find(['.', ')'])
@@ -85,7 +104,12 @@ fn classify(line: &str) -> (Option<LineMarker>, usize, &str) {
             LineMarker::Number(line[mark.start..end].to_owned())
         }
     };
-    (Some(marker), mark.columns / 2, &line[mark.body..])
+    Some((
+        marker,
+        mark.columns / 2,
+        &line[mark.body..],
+        mark.continuation_indent,
+    ))
 }
 
 /// 표시 줄 예산 안에서 행을 고른다. 돌려주는 수는 담지 못한 원본 줄 수다.

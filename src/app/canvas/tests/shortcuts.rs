@@ -16,7 +16,7 @@ fn confirm_dialog(v: &CanvasView) -> Option<gtk::Window> {
         .into_iter()
         .filter_map(|w| w.downcast::<gtk::Window>().ok())
         .find(|w| {
-            w.has_css_class("lsm-confirm")
+            w.has_css_class("memoivy-confirm")
                 && w.is_visible()
                 && w.transient_for().as_ref() == Some(v.widgets.window.upcast_ref())
         })
@@ -33,7 +33,7 @@ pub(in crate::app) fn canvas_004_markers_shortcuts_and_delete() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("notes.json");
     let app = Application::builder()
-        .application_id("io.github.lsm.CanvasMarkersTest")
+        .application_id("io.github.pollux_o4.MemoIvy.CanvasMarkersTest")
         .build();
     app.register(None::<&gtk::gio::Cancellable>).unwrap();
     let ids: Vec<Uuid> = (0..5).map(|_| Uuid::new_v4()).collect();

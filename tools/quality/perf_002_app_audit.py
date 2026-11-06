@@ -5,9 +5,9 @@ import json, os, re, statistics, subprocess as sp, tempfile, time, uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-x = os.environ.get('LSM_XDOTOOL', 'xdotool')
-binary = os.environ.get('LSM_BINARY', str(ROOT / 'target/release/linux-sticky-memo'))
-NOTES = int(os.environ.get('LSM_AUDIT_NOTES', '300'))
+x = os.environ.get('MEMOIVY_XDOTOOL', 'xdotool')
+binary = os.environ.get('MEMOIVY_BINARY', str(ROOT / 'target/release/memoivy'))
+NOTES = int(os.environ.get('MEMOIVY_AUDIT_NOTES', '300'))
 
 
 def call(*args):
@@ -43,15 +43,15 @@ def rss_mb(pid):
 
 
 def run_once():
-    tmp = tempfile.mkdtemp(prefix='lsm-audit-')
+    tmp = tempfile.mkdtemp(prefix='memoivy-audit-')
     env = dict(os.environ, GDK_BACKEND='x11', GDK_DEBUG='no-portals', GTK_USE_PORTAL='0', GIO_USE_VFS='local', GTK_A11Y='none', XDG_DATA_HOME=tmp, XDG_CONFIG_HOME=tmp + '/c')
-    seed(Path(tmp) / 'linux-sticky-memo/notes.json')
-    wm = sp.Popen([os.environ.get('LSM_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+    seed(Path(tmp) / 'memoivy/notes.json')
+    wm = sp.Popen([os.environ.get('MEMOIVY_OPENBOX', 'openbox'), '--sm-disable'], env=env, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     time.sleep(.5)
     begin = time.perf_counter()
     app = sp.Popen([binary], env=env, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     try:
-        library = wait_window('^스티키 메모$')
+        library = wait_window('^MemoIvy$')
         started = time.perf_counter() - begin
         call('windowmove', library, '0', '0'); call('windowfocus', library); time.sleep(.3)
         call('mousemove', '--window', library, '300', '24')
@@ -109,14 +109,14 @@ def contrast():
     for theme in ('light', 'dark'):
         t = tokens(theme)
         solid = lambda k: rgb(t[k][0])
-        pairs = [('lsm_text', 'lsm_bg'), ('lsm_muted', 'lsm_bg'), ('lsm_text', 'lsm_raised'), ('lsm_muted', 'lsm_raised'), ('lsm_on_accent', 'lsm_accent'), ('lsm_danger', 'lsm_raised')]
+        pairs = [('memoivy_text', 'memoivy_bg'), ('memoivy_muted', 'memoivy_bg'), ('memoivy_text', 'memoivy_raised'), ('memoivy_muted', 'memoivy_raised'), ('memoivy_on_accent', 'memoivy_accent'), ('memoivy_danger', 'memoivy_raised')]
         for fg, bg in pairs:
             r = ratio(over(rgb(t[fg][0]), t[fg][1], solid(bg)), solid(bg))
             if r < 4.5:
                 failures.append((theme, fg, bg, round(r, 2)))
-        r = ratio([1, 1, 1], solid('lsm_danger_fill'))
+        r = ratio([1, 1, 1], solid('memoivy_danger_fill'))
         if r < 4.5:
-            failures.append((theme, 'white', 'lsm_danger_fill', round(r, 2)))
+            failures.append((theme, 'white', 'memoivy_danger_fill', round(r, 2)))
         for note in ('yellow', 'pink', 'blue', 'green', 'purple'):
             bg = solid('note_' + note)
             for fg, floor in (('note_text', 4.5), ('note_muted', 4.5)):
@@ -124,12 +124,12 @@ def contrast():
                 if r < floor:
                     failures.append((theme, fg, note, round(r, 2)))
             # 완료 카드는 전체 불투명도를 낮춘다. 제목 대비를 보드 배경 위에서 다시 계산한다.
-            faded_bg = over(bg, DONE_OPACITY, solid('lsm_bg'))
-            faded = over(rgb(t['note_text'][0]), DONE_OPACITY, solid('lsm_bg'))
+            faded_bg = over(bg, DONE_OPACITY, solid('memoivy_bg'))
+            faded = over(rgb(t['note_text'][0]), DONE_OPACITY, solid('memoivy_bg'))
             r = ratio(faded, faded_bg)
             if r < 4.5:
                 failures.append((theme, 'done-title', note, round(r, 2)))
-            faded = over(over(rgb(t['note_muted'][0]), t['note_muted'][1], bg), DONE_OPACITY, solid('lsm_bg'))
+            faded = over(over(rgb(t['note_muted'][0]), t['note_muted'][1], bg), DONE_OPACITY, solid('memoivy_bg'))
             r = ratio(faded, faded_bg)
             if r < 3:
                 failures.append((theme, 'done-preview', note, round(r, 2)))

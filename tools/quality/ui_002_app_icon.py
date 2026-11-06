@@ -4,7 +4,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gio, Gtk
 
-app = Gio.DesktopAppInfo.new("io.github.lsm.LinuxStickyMemo.desktop")
+app = Gio.DesktopAppInfo.new("io.github.pollux_o4.MemoIvy.desktop")
 assert app is not None, "앱 메뉴 항목을 찾을 수 없습니다"
 settings = Gio.Settings.new("org.gnome.desktop.interface")
 theme = Gtk.IconTheme.new()

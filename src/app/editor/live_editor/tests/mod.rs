@@ -19,7 +19,7 @@ fn shown_window(text: &str) -> (gtk::Window, TextView, CheckButton, Rc<LiveEdito
     view.buffer().set_text(text);
     // 실제 편집 창과 같은 순서: 스크롤 뷰에 넣은 뒤 붙인다.
     let scroll = gtk::ScrolledWindow::builder().child(&view).build();
-    let (source, editor) = attach_editor(&view);
+    let (source, editor) = attach_editor(&view, None);
     let window = gtk::Window::builder()
         .default_width(420)
         .default_height(320)
@@ -30,7 +30,7 @@ fn shown_window(text: &str) -> (gtk::Window, TextView, CheckButton, Rc<LiveEdito
         view.is_mapped()
             && view.width() > 0
             && view.height() > 0
-            && !editor.pending.get()
+            && !editor.refresh_pending()
             && editor.layout.frames.get() == 0
     });
     (window, view, source, editor)

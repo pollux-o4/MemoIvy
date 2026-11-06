@@ -79,6 +79,7 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
             // Text layout validates after tag changes; settle overlays on the following frames.
             if !editor.input.composing.get() && editor.layout.frames.get() > 0 {
                 editor.sync_tasks();
+                editor.place_images();
                 editor.layout.frames.set(editor.layout.frames.get() - 1);
                 if editor.layout.frames.get() == 0 {
                     editor.correct_hang();
@@ -163,7 +164,7 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
 
 pub(super) fn source_toggle(editor: &Rc<LiveEditor>) -> CheckButton {
     let source = CheckButton::with_label("Markdown 원문 보기");
-    source.add_css_class("lsm-action");
+    source.add_css_class("memoivy-action");
     source.set_tooltip_text(Some("Markdown 원문 표시 · 기본은 실시간 서식 편집"));
     let state = editor.clone();
     source.connect_toggled(move |button| {
@@ -204,7 +205,14 @@ pub(super) fn connect_gestures(view: &TextView, editor: &Rc<LiveEditor>) {
                 link_preview::open_url(&view, &link.url);
                 gesture.set_state(gtk::EventSequenceState::Claimed);
             }
-        } else if !view.buffer().has_selection() && state.toggle_task(offset) {
+        } else if !view.buffer().has_selection()
+            && state.toggle_task(
+                offset,
+                gesture
+                    .current_event_state()
+                    .contains(gdk::ModifierType::SHIFT_MASK),
+            )
+        {
             gesture.set_state(gtk::EventSequenceState::Claimed);
         }
     });
@@ -286,8 +294,8 @@ pub(super) fn connect_keys(view: &TextView, editor: Rc<LiveEditor>, source: &Che
                 }
                 if view.is_editable() && !editor.source.get() {
                     // 대기 중인 갱신을 먼저 반영해 커서와 항목 범위가 어긋나지 않게 한다.
-                    if editor.pending.get() {
-                        editor.refresh();
+                    if editor.refresh_pending() {
+                        editor.refresh_now();
                     }
                     let document = editor.document.borrow();
                     if list_edit::handle(&view, &document, key, modifiers) {
@@ -321,7 +329,7 @@ pub(super) fn connect_keys(view: &TextView, editor: Rc<LiveEditor>, source: &Che
                             buffer.iter_at_offset(task.range.start).line() == cursor.line()
                         })
                         .map(|task| task.range.start);
-                    if task.is_some_and(|offset| editor.toggle_task(offset)) {
+                    if task.is_some_and(|offset| editor.toggle_task(offset, false)) {
                         return glib::Propagation::Stop;
                     }
                     // 체크 항목이 아니면 커서 아래 링크를 연다. 키보드만으로 링크를 여는 경로다.

@@ -23,6 +23,19 @@ description = "빌드 후 앱 메뉴·바탕화면 설치본 갱신"
 depends = ["build"]
 run = "./integration/install.sh"
 
+[tasks.package]
+description = "Snap 패키지 빌드"
+run = "mise run package:snap"
+
+[tasks."package:snap"]
+description = "Snap 패키지 빌드 (버전은 Cargo.toml에서 읽음)"
+run = "snapcraft pack --output ."
+
+[tasks."deploy:snap"]
+description = "Snap Store stable 채널에 빌드 후 배포"
+depends = ["package:snap"]
+run = "bash tools/deploy-snap.sh"
+
 # 테스트는 모두 가상 화면(Xvfb)에서 돈다. 뒤에 붙인 인자는 cargo test로 넘어간다.
 # 예: mise run test fmt_003, mise run test:editor -- --nocapture
 [tasks.test]
@@ -44,6 +57,10 @@ run = "dbus-run-session -- xvfb-run -a cargo test --locked -- fmt_ app::editor p
 [tasks."test:canvas"]
 description = "캔버스·프로젝트 (canvas_*, project_*, nav_*, app::canvas)"
 run = "dbus-run-session -- xvfb-run -a cargo test --locked -- canvas project_ nav_"
+
+[tasks."test:files"]
+description = "첨부·파일 화면 (data_003, fmt_004, file_001)"
+run = "dbus-run-session -- xvfb-run -a cargo test --locked -- data_003 fmt_004 file_001"
 
 [tasks."test:storage"]
 description = "저장소·노트북"

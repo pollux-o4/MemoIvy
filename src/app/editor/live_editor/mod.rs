@@ -2,7 +2,7 @@ use super::{
     link_preview::{self, LinkPreview},
     list_edit,
 };
-use crate::presentation::markdown::{self, Document, ListKind, Style};
+use crate::presentation::markdown::{self, Document, ListKind, Style, TaskState};
 use gtk::{gdk, glib, pango, prelude::*, CheckButton, TextBuffer, TextTag, TextView};
 use std::{
     cell::{Cell, RefCell},
@@ -14,8 +14,6 @@ use std::{
 /// 목록 한 단계가 차지하는 표식 칸. 표식은 칸 오른쪽에 붙여 본문과 늘 MARKER_GAP만큼 띄운다.
 const GUTTER: i32 = 24;
 const MARKER_GAP: i32 = 6;
-/// CSS `.md-checkbox check` 13px + 테두리 1.5px × 2.
-const CHECK_BOX: i32 = 16;
 const HANG_FIX_LIMIT: i32 = 6;
 
 struct TaskWidget {
@@ -26,11 +24,6 @@ struct TaskWidget {
 /// 표식 칸의 왼쪽. 태그 변경 직후의 낡은 글자 위치에 끌려가지 않도록 여백으로 계산한다.
 fn marker_x(view: &TextView, depth: usize) -> i32 {
     view.left_margin() + GUTTER * depth as i32
-}
-
-/// 표식 칸의 오른쪽 끝(본문에서 MARKER_GAP 앞).
-fn marker_end(view: &TextView, depth: usize) -> i32 {
-    marker_x(view, depth) + GUTTER - MARKER_GAP
 }
 
 /// (왼쪽 여백, 첫 줄 들여쓰기) 조합마다 하나씩 재사용한다. 값이 몇 가지뿐이라 늘어나지 않는다.
@@ -45,32 +38,49 @@ struct LiveEditor {
     pointer: PointerState,
     layout: LayoutState,
     preview: Rc<LinkPreview>,
+    media: MediaState,
     dirty: Cell<bool>,
     restyle: Cell<bool>,
-    pending: Cell<bool>,
+    refresh_source: RefCell<Option<glib::SourceId>>,
     source: Cell<bool>,
 }
 
 impl LiveEditor {
     fn schedule(self: &Rc<Self>) {
-        if self.pending.replace(true) {
-            return;
-        }
-        let editor = self.clone();
-        glib::idle_add_local_once(move || {
-            editor.pending.set(false);
-            editor.refresh();
-        });
+        self.schedule_at(glib::Priority::DEFAULT_IDLE);
     }
 
     /// 글이 바뀌면 그리기(GDK_PRIORITY_REDRAW)보다 먼저 맞춘다. 늦으면 낡은 배치로 한 프레임 그려졌다가 바뀐다.
     fn schedule_edit(self: &Rc<Self>) {
-        self.schedule();
+        self.schedule_at(glib::Priority::HIGH_IDLE);
+    }
+
+    fn schedule_at(self: &Rc<Self>, priority: glib::Priority) {
+        let mut source_id = self.refresh_source.borrow_mut();
+        if let Some(id) = source_id.take() {
+            if priority >= glib::Priority::DEFAULT_IDLE {
+                *source_id = Some(id);
+                return;
+            }
+            id.remove();
+        }
         let editor = self.clone();
-        glib::idle_add_local_full(glib::Priority::HIGH_IDLE, move || {
+        *source_id = Some(glib::idle_add_local_full(priority, move || {
+            editor.refresh_source.borrow_mut().take();
             editor.refresh();
             glib::ControlFlow::Break
-        });
+        }));
+    }
+
+    fn refresh_pending(&self) -> bool {
+        self.refresh_source.borrow().is_some()
+    }
+
+    fn refresh_now(self: &Rc<Self>) {
+        if let Some(source) = self.refresh_source.borrow_mut().take() {
+            source.remove();
+        }
+        self.refresh();
     }
 
     fn refresh(self: &Rc<Self>) {
@@ -79,16 +89,7 @@ impl LiveEditor {
         };
         let buffer = view.buffer();
         if self.input.composing.get() {
-            // 조합 중 확정된 글자로 빈 항목이 채워지면 표식 폭이 달라진다. 글자·커서는 건드리지 않고 들여쓰기만 맞춘다.
-            if self.dirty.replace(false) {
-                let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
-                *self.document.borrow_mut() = markdown::parse(&text);
-                self.restyle.set(true);
-            }
-            let document = self.document.borrow();
-            let selected = selected_lines(&buffer);
-            self.sync_paragraphs(&view, &document, &selected);
-            self.settle_paragraphs(&view, &document, &selected);
+            // 조합 중간 버퍼는 목록 문법이 잠시 깨질 수 있다. 기존 레이아웃을 유지하고 확정 후 다시 읽는다.
             return;
         }
         let start = buffer.start_iter();
@@ -158,6 +159,16 @@ impl LiveEditor {
                     .filter(|item| !self.source.get() && hides_marker(item, &selected))
                     .map(|item| item.marker.clone()),
             )
+            .chain(if self.source.get() {
+                Vec::new()
+            } else {
+                document
+                    .items
+                    .iter()
+                    .flat_map(|item| layout::continuation_indents(&buffer, item))
+                    .collect()
+            })
+            .chain(self.quiet_image_tails(&document, &active))
             .collect();
         reconcile(&buffer, &self.tags.hidden, hidden);
         // 기호·체크는 위젯으로 그리고 표식 글자는 보이지 않게 한다. 선택 중에도 같고 복사는 원문이다.
@@ -177,6 +188,7 @@ impl LiveEditor {
         drop(document);
         self.sync_theme(&view);
         self.sync_tasks();
+        self.sync_images(&view, &self.document.borrow());
         self.layout.frames.set(2);
         // 입력으로 움직인 커서는 링크 안에 있어도 카드를 띄우지 않는다.
         let edited = self.input.edited.replace(false);
@@ -189,6 +201,7 @@ impl LiveEditor {
 mod input;
 mod layout;
 mod markers;
+pub(in crate::app) mod media;
 mod tags;
 
 use input::{connect_gestures, connect_keys, connect_updates, source_toggle};
@@ -196,6 +209,8 @@ use input::{InputState, PointerState};
 use layout::LayoutState;
 use layout::{active_lines, hides_marker, selected_lines};
 use markers::MarkerWidgets;
+pub(in crate::app) use media::MediaHost;
+use media::MediaState;
 use tags::{create_tags, reconcile, EditorTags};
 
 /// 본문 여백과 줄 간격. 목록 표식 칸과 원문 내어쓰기가 이 값을 기준으로 계산된다.
@@ -216,11 +231,11 @@ pub(in crate::app) fn configure(view: &TextView) {
         .add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
-pub(in crate::app) fn attach(view: &TextView) -> CheckButton {
-    attach_editor(view).0
+pub(in crate::app) fn attach(view: &TextView, media: MediaHost) -> CheckButton {
+    attach_editor(view, Some(media)).0
 }
 
-fn attach_editor(view: &TextView) -> (CheckButton, Rc<LiveEditor>) {
+fn attach_editor(view: &TextView, media: Option<MediaHost>) -> (CheckButton, Rc<LiveEditor>) {
     let buffer = view.buffer();
     buffer.set_enable_undo(true);
     let tags = create_tags(&buffer);
@@ -234,15 +249,17 @@ fn attach_editor(view: &TextView) -> (CheckButton, Rc<LiveEditor>) {
         pointer: PointerState::default(),
         layout: LayoutState::default(),
         preview,
+        media: MediaState::new(media),
         dirty: Cell::new(true),
         restyle: Cell::new(true),
-        pending: Cell::new(false),
+        refresh_source: RefCell::new(None),
         source: Cell::new(false),
     });
     editor.refresh();
     connect_updates(view, &buffer, &editor);
     let source = source_toggle(&editor);
     connect_gestures(view, &editor);
+    media::connect_import(view, &editor);
     connect_keys(view, editor.clone(), &source);
     (source, editor)
 }

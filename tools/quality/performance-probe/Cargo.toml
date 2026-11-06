@@ -1,5 +1,5 @@
 [package]
-name = "lsm-performance-probe"
+name = "memoivy-performance-probe"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,6 @@ edition = "2021"
 gtk = { package = "gtk4", version = "0.9" }
 
 [[bin]]
-name = "lsm-performance-probe"
+name = "memoivy-performance-probe"
 path = "src/perf_001.rs"
 test = false

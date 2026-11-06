@@ -37,6 +37,7 @@ impl Card {
         head.append(&title_marker);
         let title = Label::new(None);
         title.set_xalign(0.);
+        title.set_valign(gtk::Align::Baseline);
         title.set_hexpand(true);
         title.set_ellipsize(gtk::pango::EllipsizeMode::End);
         title.add_css_class("card-title");
@@ -139,7 +140,10 @@ impl Card {
         let unseen = unseen + node.remaining;
         self.more.set_visible(unseen > 0);
         self.more.set_text(&format!("외 {unseen}줄"));
-        if matches!(node.title_marker, Some(markdown::LineMarker::Task(true))) {
+        if matches!(
+            node.title_marker,
+            Some(markdown::LineMarker::Task(markdown::TaskState::Done))
+        ) {
             self.title.add_css_class("line-done");
         } else {
             self.title.remove_css_class("line-done");

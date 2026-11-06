@@ -1,6 +1,6 @@
 //! 카드·패널이 함께 쓰는 구조화된 미리보기. 체크·기호·번호를 잃지 않고 읽기 전용으로 그린다.
 //! 일반 문단 메모는 행 하나뿐이라 카드 수가 많아도 위젯이 크게 늘지 않는다.
-use crate::presentation::markdown::{LineMarker, PreviewLine, PreviewRow, BULLETS};
+use crate::presentation::markdown::{LineMarker, PreviewLine, PreviewRow, TaskState, BULLETS};
 use gtk::{pango, prelude::*, Box as GtkBox, Label, Orientation};
 use std::cell::RefCell;
 
@@ -17,17 +17,24 @@ pub(in crate::app::canvas) fn marker_label() -> Label {
 }
 
 pub(in crate::app::canvas) fn set_marker(label: &Label, marker: Option<&LineMarker>, depth: usize) {
-    for class in ["task", "checked", "bullet", "number"] {
+    for class in ["task", "checked", "doing", "bullet", "number"] {
         label.remove_css_class(class);
     }
+    label.set_valign(if matches!(marker, Some(LineMarker::Number(_))) {
+        gtk::Align::Baseline
+    } else {
+        gtk::Align::Start
+    });
     label.set_visible(marker.is_some());
     match marker {
-        Some(LineMarker::Task(checked)) => {
+        Some(LineMarker::Task(state)) => {
             label.add_css_class("task");
-            if *checked {
-                label.add_css_class("checked");
+            match state {
+                TaskState::Done => label.add_css_class("checked"),
+                TaskState::Doing => label.add_css_class("doing"),
+                TaskState::Open => {}
             }
-            label.set_text(if *checked { "✓" } else { "" });
+            label.set_text(if *state == TaskState::Done { "✓" } else { "" });
         }
         Some(LineMarker::Bullet) => {
             label.add_css_class("bullet");
@@ -54,6 +61,7 @@ impl Row {
         let text = Label::new(None);
         text.set_xalign(0.);
         text.set_yalign(0.);
+        text.set_valign(gtk::Align::Baseline);
         text.set_wrap_mode(pango::WrapMode::WordChar);
         text.set_ellipsize(pango::EllipsizeMode::End);
         text.set_max_width_chars(1);
@@ -67,16 +75,18 @@ impl Row {
         let PreviewLine {
             marker,
             depth,
+            continuation,
             text,
         } = &row.line;
         self.root
             .set_margin_start(DEPTH_INDENT * (*depth).min(MAX_DEPTH) as i32);
         set_marker(&self.marker, marker.as_ref(), *depth);
+        self.marker.set_opacity(if *continuation { 0. } else { 1. });
         self.text.set_text(text);
         // 한 줄이면 줄바꿈을 꺼야 Label의 높이 측정이 어긋나지 않는다.
         self.text.set_wrap(row.max_lines > 1);
         self.text.set_lines(row.max_lines);
-        if matches!(marker, Some(LineMarker::Task(true))) {
+        if matches!(marker, Some(LineMarker::Task(TaskState::Done))) {
             self.text.add_css_class("line-done");
         } else {
             self.text.remove_css_class("line-done");

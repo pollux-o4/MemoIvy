@@ -39,6 +39,13 @@ pub(super) enum Press {
     Toggle(Uuid),
 }
 
+/// 시스템 드래그 임계값을 사용해 터치패드의 미세한 흔들림을 클릭으로 처리한다.
+pub(super) fn drag_threshold() -> f64 {
+    gtk::Settings::default()
+        .map(|settings| f64::from(settings.gtk_dnd_drag_threshold().max(1)))
+        .unwrap_or(8.)
+}
+
 impl Interaction {
     pub fn is_idle(&self) -> bool {
         matches!(self, Interaction::Idle)

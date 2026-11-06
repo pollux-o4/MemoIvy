@@ -4,7 +4,7 @@
 flowchart LR
     user["사용자"]
     desktop["Ubuntu 세션"]
-    subgraph system["Linux Sticky Memo"]
+    subgraph system["MemoIvy"]
         launcher["실행기 · C executable"]
         app["메모·캔버스 앱 · Rust / GTK executable"]
         notes[("메모·배치·연결 · JSON file")]

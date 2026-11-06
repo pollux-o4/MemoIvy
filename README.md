@@ -1,6 +1,6 @@
-# Linux Sticky Memo
+# MemoIvy
 
-Ubuntu용 Rust/GTK 스티키 메모. 목록 검색, 독립 편집 창, 색상 변경, 자동 저장을 제공한다.
+Linux용 Rust/GTK 스티키 메모. 목록 검색, 독립 편집 창, 색상 변경, 자동 저장을 제공한다.
 
 Markdown 서식은 입력하는 화면에 실시간 반영된다. 커서·선택이 있는 줄은 문법을 보여준다. 체크는 클릭·Ctrl+Enter, 링크 열기는 Ctrl+클릭을 사용하고 링크 위에 머무르면 실제 주소를 미리 보여 준다. 원문 보기·서식 도움말은 더보기 메뉴에 두고, 원문 전환은 Ctrl+Shift+M도 지원한다. 앱·서식 단축키 전체 안내는 F1로 연다.
 
@@ -8,6 +8,7 @@ Markdown 서식은 입력하는 화면에 실시간 반영된다. 커서·선택
 
 - 환경 준비: `mise bootstrap` — Ubuntu 시스템 패키지와 Rust 설치. GTK 4.10 이상 필요.
 - 개발 실행: `mise run dev`.
-- 설치·갱신: `mise run install` — 릴리스 빌드 후 Super 앱 메뉴·바탕화면 설치본 갱신. 실행 중인 앱은 종료 후 다시 연다.
+- 설치·갱신: `mise run install` — 릴리스 빌드 후 MemoIvy 앱 메뉴·바탕화면 설치본 갱신. 실행 중인 앱은 종료 후 다시 연다.
+- Snap 패키지 빌드: `mise run package` 또는 `mise run package:snap`.
 - 검사: `mise run check`. 릴리스 빌드만 수행하려면 `mise run build`.
 - 상세 안내: `docs`에서 설치·복구·개발 검증 관심사로 검색.
