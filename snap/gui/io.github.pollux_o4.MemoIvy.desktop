@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=MemoIvy
+Comment=Sticky notes connected like ivy
+Exec=memoivy
+Icon=io.github.pollux_o4.MemoIvy
+Terminal=false
+Categories=Office;Utility;
+StartupNotify=true
+StartupWMClass=io.github.pollux_o4.MemoIvy

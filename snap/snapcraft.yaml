@@ -1,0 +1,65 @@
+name: memoivy
+title: MemoIvy
+base: core24
+summary: A calm place for sticky notes
+description: |
+  MemoIvy is a lightweight sticky note app for Linux. Keep notes close,
+  arrange them on a canvas, and connect related ideas.
+license: MIT
+website: https://github.com/pollux-o4/MemoIvy
+source-code: https://github.com/pollux-o4/MemoIvy
+issues: https://github.com/pollux-o4/MemoIvy/issues
+contact: https://github.com/pollux-o4/MemoIvy/issues
+adopt-info: memoivy
+grade: stable
+confinement: strict
+
+slots:
+  memoivy-dbus:
+    interface: dbus
+    bus: session
+    name: io.github.pollux_o4.MemoIvy
+
+parts:
+  memoivy:
+    plugin: nil
+    source: .
+    build-snaps:
+      - rustup/latest/stable
+    build-packages:
+      - libgtk-4-dev
+      - pkg-config
+    build-environment:
+      - LD_LIBRARY_PATH: ""
+    override-pull: |
+      craftctl default
+      version="$(sed -n 's/^version = \"\(.*\)\"$/\1/p' "$CRAFT_PART_SRC/Cargo.toml" | head -n 1)"
+      craftctl set version="$version"
+    override-build: |
+      set -eu
+      export PATH="$HOME/.cargo/bin:$PATH"
+      rustup default 1.99.1
+      cargo build --release --locked
+      install -Dm755 "$CRAFT_PART_BUILD/target/release/memoivy" \
+        "$CRAFT_PART_INSTALL/bin/memoivy"
+      install -Dm644 "$CRAFT_PART_SRC/snap/gui/io.github.pollux_o4.MemoIvy.desktop" \
+        "$CRAFT_PART_INSTALL/usr/share/applications/io.github.pollux_o4.MemoIvy.desktop"
+      install -Dm644 "$CRAFT_PART_SRC/integration/memoivy.svg" \
+        "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/io.github.pollux_o4.MemoIvy.svg"
+
+apps:
+  memoivy:
+    extensions:
+      - gnome
+    command: bin/memoivy
+    desktop: usr/share/applications/io.github.pollux_o4.MemoIvy.desktop
+    common-id: io.github.pollux_o4.MemoIvy
+    plugs:
+      - home
+      - desktop
+      - wayland
+      - x11
+      - opengl
+      - gsettings
+    slots:
+      - memoivy-dbus
