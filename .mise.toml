@@ -33,7 +33,7 @@ run = "snapcraft pack --output ."
 
 [tasks."deploy:snap"]
 description = "Snap Store stable 채널에 빌드 후 배포"
-depends = ["package:snap"]
+depends = ["test:snap-gtk", "package:snap"]
 run = "bash tools/deploy-snap.sh"
 
 # 테스트는 모두 가상 화면(Xvfb)에서 돈다. 뒤에 붙인 인자는 cargo test로 넘어간다.
@@ -65,6 +65,10 @@ run = "dbus-run-session -- xvfb-run -a cargo test --locked -- data_003 fmt_004 f
 [tasks."test:storage"]
 description = "저장소·노트북"
 run = "cargo test --locked persistence"
+
+[tasks."test:snap-gtk"]
+description = "Snap 런타임 GTK로 테스트 (배포 전 필수, 인자로 이름 거르기)"
+run = "tools/quality/test-snap-gtk.sh"
 
 [tasks."test:arch"]
 description = "아키텍처 경계 (ADR-0010)"

@@ -337,9 +337,28 @@ pub(super) fn checkbox_pointer_targets() {
     editor.schedule();
     until(|| editor.layout.frames.get() == 0 && !editor.refresh_pending());
     verify(0);
+    // GTK 4.18(Snap gnome-46 런타임)은 스크롤만으로는 오버레이 자식을 다시 배치하지 않는다.
+    // 표식이 문서 좌표에 남으면 줄과의 거리가 스크롤 값만큼 벌어진다.
+    let offset_from_line = |index: usize| {
+        let button = editor.widgets.tasks.borrow()[index].button.clone();
+        let content = editor.document.borrow().items[index].content.start;
+        let (top, _) = view.line_yrange(&buffer.iter_at_offset(content));
+        let (_, line_y) = view.buffer_to_window_coords(gtk::TextWindowType::Widget, 0, top);
+        button.compute_bounds(&view).unwrap().y() - line_y as f32
+    };
+    let resting = offset_from_line(0);
     let target = editor.document.borrow().items[10].content.start;
     buffer.place_cursor(&buffer.iter_at_offset(target));
     view.scroll_to_iter(&mut buffer.iter_at_offset(target), 0., true, 0., 0.5);
+    until(|| editor.layout.frames.get() == 0 && !editor.refresh_pending());
+    drain();
+    for index in [5, 10, 20] {
+        assert!(
+            (offset_from_line(index) - resting).abs() <= 1.,
+            "marker {index} follows its line after scrolling: {} vs {resting}",
+            offset_from_line(index)
+        );
+    }
     until(|| {
         let button = editor.widgets.tasks.borrow()[10].button.clone();
         let bounds = button.compute_bounds(&view).unwrap();

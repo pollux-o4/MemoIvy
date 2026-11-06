@@ -6,6 +6,7 @@
   - `mise run test` — GTK 편집 위젯 검증 포함, Xvfb 필요.
   - `cargo clippy --locked -- -D warnings`
   - `cargo build --locked`
+- Snap GTK 검사: 배포 전 필수(`mise run deploy:snap`이 먼저 실행). `mise run test:snap-gtk [이름]`이 같은 테스트를 Snap gnome 런타임의 GTK(현재 4.18)로 돌린다. 시스템 GTK에서는 GTK가 대신 처리해 숨는 차이(예: 스크롤 때 오버레이 재배치)를 잡는다. 런타임 경로는 MEMOIVY_SNAP_GTK_RUNTIME으로 바꾼다.
 - SAVE-001 UI smoke: 저장·닫기 변경 시 실행.
   - 전제: debug 빌드, Xvfb, Openbox, xdotool.
   - `timeout 30s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.save_001_ui_smoke`

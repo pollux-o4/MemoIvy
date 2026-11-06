@@ -127,6 +127,11 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
         adjustment.connect_value_changed(move |_| {
             if let Some(editor) = scrolled.upgrade() {
                 editor.preview.hide();
+                // GTK 4.18 이하(Snap gnome-46 런타임)는 스크롤 때 오버레이 표식을 다시 배치하지 않아
+                // 표식이 문서 좌표에 남는다. 4.22는 스스로 하므로 여기서는 재배치만 요청한다.
+                if let Some(view) = editor.view.upgrade() {
+                    view.queue_allocate();
+                }
             }
         });
         // 긴 문서는 뒤늦게 줄 높이가 확정되므로 표식 위치도 다시 맞춘다.
