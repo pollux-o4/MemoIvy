@@ -17,5 +17,5 @@
 - 실패 대응
   - 실행 로그: `~/.local/share/memoivy-launch.log`.
   - SVG 로더·GTK 버전·설치 대상은 `launcher`, `install` 검색으로 확인한다.
-- Snap 설치 파일: `mise run package` 또는 `mise run package:snap`. Snap 버전은 Cargo manifest에서 읽는다.
+- Snap 설치 파일: `mise run package` 또는 `mise run package:snap`. Snap 버전은 Cargo manifest에서 읽는다. 패키징 전에 MemoIvy 파트를 정리해 이동·삭제된 소스가 이전 빌드에 남지 않게 한다.
 - 제거: 설치기의 출력 대상인 앱·실행기·메뉴·아이콘·폴더 링크를 제거한다. 메모 데이터의 보관·복원은 OPS-002를 따른다.

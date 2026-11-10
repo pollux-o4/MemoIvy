@@ -30,7 +30,8 @@ run = "mise run package:snap"
 
 [tasks."package:snap"]
 description = "Snap 패키지 빌드 (버전은 Cargo.toml에서 읽음)"
-run = "snapcraft pack --output ."
+# 파일 이동·삭제 후 Snapcraft 증분 소스에 이전 모듈이 남지 않게 한다.
+run = ["snapcraft clean memoivy", "snapcraft pack --output ."]
 
 [tasks."deploy:snap"]
 description = "Snap Store stable 채널에 빌드 후 배포"
