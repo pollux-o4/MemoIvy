@@ -29,6 +29,12 @@ sudo snap refresh memoivy
 snap run memoivy
 ```
 
+이전에 로컬 `.snap` 파일로 설치해 “스토어에서 알 수 없음” 오류가 나면, 한 번만 Store 배포본으로 전환하세요.
+
+```bash
+sudo snap refresh memoivy --amend --channel=stable
+```
+
 Snap은 자동 업데이트도 지원합니다. 수동 업데이트 전에는 앱을 정상 종료하고, 완료 후 다시 열어 주세요.
 
 일반 설치에서 Snap으로 바꾸면 데이터 저장 영역이 달라 기존 메모가 자동으로 나타나지 않습니다. 전환 전 **백업·복원**(OPS-002) 절차를 확인하세요.

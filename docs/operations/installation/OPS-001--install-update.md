@@ -1,6 +1,7 @@
 # OPS-001 · 설치·업데이트
 
 - Snap 설치·업데이트: snapd가 있는 Linux 데스크톱에서 `sudo snap install memoivy`, 수동 갱신은 앱을 정상 종료한 뒤 `sudo snap refresh memoivy`. 실행은 `snap run memoivy`. Snap은 자동 갱신도 지원한다. 배포 채널은 latest/stable이며 배포본은 Snap Store에서 확인한다.
+- 로컬 `.snap` 설치본에서 “스토어에서 알 수 없음” 오류가 나면 앱 종료 후 `sudo snap refresh memoivy --amend --channel=stable`로 한 번 전환한다. 이후 일반 refresh·자동 갱신을 사용한다.
 - 일반 설치 → Snap 전환은 데이터가 자동 이전되지 않는다. 변경 전 OPS-002에 따라 백업한다.
 - 소스 빌드 전제: Linux 데스크톱, mise, GTK 4.10 이상.
   - Rust 선택은 `.mise.toml`, 크레이트·GTK 기능은 Cargo manifest가 원본이다.
