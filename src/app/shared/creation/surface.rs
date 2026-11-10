@@ -53,6 +53,8 @@ mod imp {
             #[cfg(test)]
             self.allocations.set(self.allocations.get() + 1);
             let (w, h) = self.origin.get();
+            self.heading.measure(gtk::Orientation::Horizontal, -1);
+            self.heading.measure(gtk::Orientation::Vertical, w);
             self.heading.allocate(
                 w,
                 h,
