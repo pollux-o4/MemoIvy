@@ -1,6 +1,6 @@
 //! 메모 캔버스 프런트엔드 모듈. 화면 API는 `open`·`refresh`·`update_status`·`CanvasView::destroy`다.
 //! 초기 배치·빈자리 계산, 지금 보는 프로젝트(`scope_for`), 묶기 완료(`adopt`)는 shell 명령의 보조 진입점이다.
-//! 캔버스는 한 번에 한 단계(scope)를 보여 준다. 자식이 있는 메모는 들어갈 수 있는 프로젝트 카드가 된다.
+//! 캔버스는 한 번에 한 단계(scope)를 보여 준다. 명시적 프로젝트는 비어 있어도 들어갈 수 있는 프로젝트 카드가 된다.
 //!
 //! - `model`: GTK 없는 규칙 (카메라·정렬·선택·스프링)
 //! - `scene`: 보드 위 그림과 카드 위젯
@@ -25,7 +25,6 @@ use crate::app::{
         state::{AppState, State},
     },
 };
-use crate::presentation::icons;
 use gtk::{
     prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, DrawingArea, Fixed, Label,
     Orientation, Overlay, Revealer,

@@ -1,4 +1,4 @@
-//! 메모 안에 메모를 담는 포함 관계. 자식이 있는 메모가 곧 프로젝트다.
+//! 메모 안에 메모를 담는 포함 관계와 프로젝트 정체성.
 use super::note::Note;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -56,6 +56,25 @@ pub fn valid(notes: &[Note]) -> bool {
 pub fn can_create_in(notes: &[Note], parent: Option<Uuid>) -> bool {
     let Some(parent) = parent else { return true };
     depth(&parents(notes), parent).is_some_and(|d| d < MAX_DEPTH)
+}
+
+/// 새 프로젝트가 최소 한 단계의 내용을 담을 수 있어야 한다.
+pub fn can_create_project_in(notes: &[Note], parent: Option<Uuid>) -> bool {
+    parent.is_none_or(|id| depth(&parents(notes), id).is_some_and(|d| d + 1 < MAX_DEPTH))
+}
+
+/// 포함 관계·기존 고정 기록을 명시적 프로젝트로 승격하고, 비워져도 유지한다.
+pub fn promote_projects(notes: &mut [Note]) -> bool {
+    let parents: std::collections::HashSet<_> =
+        notes.iter().filter_map(|n| n.canvas.parent).collect();
+    let mut changed = false;
+    for note in notes {
+        if (parents.contains(&note.id) || note.canvas.pinned) && !note.canvas.project {
+            note.canvas.project = true;
+            changed = true;
+        }
+    }
+    changed
 }
 
 /// id를 하위 메모와 함께 parent 안으로 옮길 수 있는가.

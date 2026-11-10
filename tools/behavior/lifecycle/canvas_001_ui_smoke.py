@@ -56,12 +56,14 @@ with tempfile.TemporaryDirectory(prefix='memoivy-canvas-') as tmp:
         initial_notes = json.loads(path.read_text())
         call('mousemove', '--window', canvas, *map(str, camera_origin))
         time.sleep(.2)
-        def camera_input(action, label):
+        def camera_input(action, label, horizontal=False):
             # 포인터·호버 변화만으로 카메라 이동 검사가 통과하지 않게 같은 곳으로 치운다.
             call('mousemove', '0', '0')
+            time.sleep(.45)
             before = ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop(body_box)
             call('mousemove', '--window', canvas, *map(str, camera_origin))
             action()
+            time.sleep(.45)
             call('mousemove', '0', '0')
             deadline = time.monotonic() + 3
             while True:
@@ -70,8 +72,28 @@ with tempfile.TemporaryDirectory(prefix='memoivy-canvas-') as tmp:
                     break
                 assert time.monotonic() < deadline, label + ' must move rendered cards'
                 time.sleep(.02)
+            if horizontal:
+                def yellow_bounds(image):
+                    red, green, blue = image.convert('RGB').split()
+                    warm = ImageChops.subtract(red, blue).point(lambda value: 255 if value > 18 else 0)
+                    gold = ImageChops.subtract(green, blue).point(lambda value: 255 if value > 8 else 0)
+                    bounds = ImageChops.multiply(warm, gold).getbbox()
+                    assert bounds, 'fixture yellow card must be visible'
+                    return bounds
+                a, b = yellow_bounds(before), yellow_bounds(after)
+                assert abs(a[0]-b[0]) > 10, label + ' must move horizontally'
+                assert abs(a[1]-b[1]) <= 1 and abs(a[3]-b[3]) <= 1, label + ' must preserve vertical position'
+                assert abs((a[2]-a[0])-(b[2]-b[0])) <= 1, label + ' must preserve zoom'
             assert json.loads(path.read_text()) == initial_notes, label + ' must not move note positions'
         camera_input(lambda: call('click', '5'), 'wheel pan')
+        def shift_wheel(button):
+            call('keydown', 'shift')
+            try:
+                call('click', button)
+            finally:
+                call('keyup', 'shift')
+        camera_input(lambda: shift_wheel('5'), 'Shift+wheel right', horizontal=True)
+        camera_input(lambda: shift_wheel('4'), 'Shift+wheel left', horizontal=True)
         def zoom_wheel():
             call('keydown', 'ctrl')
             try:
@@ -172,7 +194,7 @@ with tempfile.TemporaryDirectory(prefix='memoivy-canvas-') as tmp:
         key('ctrl+w')
         assert app.wait(timeout=8)==0
         assert not any(x in (artifacts/'canvas-app.log').read_text() for x in ['panicked at','Gtk-CRITICAL'])
-        print('PASS: wheel pan/anchored zoom/middle-button pan, pointer selection/drag, Tab/arrow movement, marquee/align/undo, port link, double-click open, small window, close/flush, restart identity/layout')
+        print('PASS: wheel pan/Shift+wheel horizontal pan/anchored zoom/middle-button pan, pointer selection/drag, Tab/arrow movement, marquee/align/undo, port link, double-click open, small window, close/flush, restart identity/layout')
     finally:
         if app and app.poll() is None: app.terminate();app.wait(timeout=5)
         wm.terminate();wm.wait(timeout=5)

@@ -4,7 +4,7 @@ pub(super) struct EditorTags {
     pub styles: Vec<(Style, TextTag)>,
     pub hidden: TextTag,
     pub syntax: TextTag,
-    // 표식은 투명하게 남겨 빈 항목의 커서·줄 위치를 보존한다.
+    // 목록 문법은 레이아웃에서 제외하고 표식은 TextView가 직접 그린다.
     pub marker: TextTag,
     pub link_hover: TextTag,
     /// 커서가 없는 이미지 줄의 원문. 이미지 아래 흐린 한 줄로 남는다.
@@ -47,7 +47,7 @@ pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
             Style::Heading1,
             TextTag::builder()
                 .name("md-h1")
-                .scale(1.6)
+                .scale(crate::presentation::typography::EDITOR_H1)
                 .weight(700)
                 .build(),
         ),
@@ -55,7 +55,7 @@ pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
             Style::Heading2,
             TextTag::builder()
                 .name("md-h2")
-                .scale(1.3)
+                .scale(crate::presentation::typography::EDITOR_H2)
                 .weight(700)
                 .build(),
         ),
@@ -95,20 +95,16 @@ pub(super) fn create_tags(buffer: &TextBuffer) -> EditorTags {
     ];
     let hidden = TextTag::builder().name("md-hidden").invisible(true).build();
     let syntax = TextTag::builder().name("md-syntax").build();
-    let marker = TextTag::builder()
-        .name("md-marker")
-        // Pango는 알파 0을 '지정 안 함'으로 읽어 불투명하게 그린다. 보이지 않을 만큼만 남긴다.
-        .foreground_rgba(&gdk::RGBA::new(0., 0., 0., 0.002))
-        .build();
+    let marker = TextTag::builder().name("md-marker").invisible(true).build();
     let link_hover = TextTag::builder().name("md-link-hover").build();
     let media_quiet = TextTag::builder()
         .name("md-media-quiet")
-        .scale(0.7)
+        .scale(crate::presentation::typography::EDITOR_MEDIA_QUIET)
         .foreground_rgba(&gdk::RGBA::new(0., 0., 0., 0.002))
         .build();
     let media_source = TextTag::builder()
         .name("md-media-source")
-        .scale(0.85)
+        .scale(crate::presentation::typography::EDITOR_MEDIA_SOURCE)
         .build();
     for (_, tag) in &tags {
         buffer.tag_table().add(tag);

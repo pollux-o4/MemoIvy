@@ -181,3 +181,6 @@ pub(in crate::app) fn project_001_levels_grouping_and_shortcuts() {
     assert_eq!(parent(&state, c), None);
     until(|| ids(&v).contains(&a) && ids(&v).contains(&c));
 }
+
+mod creation;
+pub(in crate::app) use creation::project_003_new_menu_and_empty_project;

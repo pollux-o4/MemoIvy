@@ -1,6 +1,15 @@
 use crate::presentation::icons;
 use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, Orientation};
 
+pub(in crate::app) fn canvas_button(label: &str) -> Button {
+    let button = Button::new();
+    button.set_child(Some(&icons::image(icons::FLOW)));
+    button.add_css_class("icon-button");
+    button.set_tooltip_text(Some(label));
+    button.update_property(&[gtk::accessible::Property::Label(label)]);
+    button
+}
+
 // shortcut: 창 위치 복원·항상 위 고정은 대상 세션 지원을 미확인, 해당 기능 요청과 대상 세션 확정 시 검토.
 pub(in crate::app) fn header(window: &ApplicationWindow, title: &str) -> (GtkBox, GtkBox) {
     window.add_css_class("memoivy-window");

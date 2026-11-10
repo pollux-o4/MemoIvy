@@ -79,6 +79,29 @@ pub(in crate::app) fn canvas_002_viewport(v: &Rc<CanvasView>) {
         card,
         "zoom preserves native widgets and focus"
     );
+    stop_camera(v);
+    scene::board::set_camera(v, goal(1.));
+    let size = viewport(v);
+    let anchor = (size.0 / 2., size.1 / 2.);
+    let world = v.session.camera.get().to_world(anchor);
+    let zoom_begin = Instant::now();
+    zoom_by(v, 0.8);
+    v.motion.borrow_mut().last = Some(zoom_begin);
+    advance(v, zoom_begin + Duration::from_millis(90));
+    let intermediate = v.session.camera.get();
+    zoom_by(v, 0.8);
+    assert_eq!(
+        v.session.camera.get(),
+        intermediate,
+        "retarget must not jump"
+    );
+    let target = motion_target(v);
+    let anchored = target.to_world(anchor);
+    assert!((target.zoom - 0.64).abs() < 1e-6);
+    assert!((anchored.0 - world.0).abs() < 1e-6);
+    assert!((anchored.1 - world.1).abs() < 1e-6);
+    assert!(!advance(v, zoom_begin + Duration::from_millis(1800)));
+    assert!(v.motion.borrow().camera.is_none());
     settings.set_gtk_enable_animations(false);
     camera_to(v, goal(1.));
     assert_eq!(v.session.camera.get().zoom, 1.);

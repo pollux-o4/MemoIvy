@@ -1,4 +1,4 @@
-//! FMT-004 메모 이미지. 참조 줄 위에 줄 간격으로 자리를 만들고 그 자리에 이미지 위젯을 올린다.
+//! FMT-004 메모 이미지. 문서 앵커가 공간을 예약하고 이미지 오버레이가 표시·입력을 맡는다.
 //! 원문은 그대로 두고 너비·빼기만 원문 편집으로 반영해 undo·저장 계약을 그대로 따른다.
 mod block;
 mod import;
@@ -49,6 +49,80 @@ impl MediaState {
 }
 
 impl LiveEditor {
+    /// 이미지 위젯을 원문 줄 안의 GTK 앵커로 붙여 텍스트와 같은 레이아웃 패스에서 배치한다.
+    pub(super) fn sync_image_anchors(
+        self: &Rc<Self>,
+        view: &TextView,
+        buffer: &TextBuffer,
+        document: &mut Document,
+    ) {
+        if self.media.host.is_none() {
+            return;
+        }
+        let map = anchors::AnchorMap::read(buffer);
+        for (_, offset) in map.placeholders() {
+            let start = buffer.iter_at_offset(offset);
+            let mut end = start;
+            end.forward_char();
+            buffer.apply_tag(&self.tags.hidden, &start, &end);
+        }
+        let mut blocks = self.media.blocks.borrow_mut();
+        while blocks.len() < document.images.len() {
+            let block = Block::new(self);
+            buffer.tag_table().add(&block.spacing);
+            blocks.push(block);
+        }
+        for (index, block) in blocks.iter().enumerate() {
+            let target = document.images.get(index).map(|image| image.line.start);
+            let Some(anchor) = block.anchor.borrow().clone() else {
+                continue;
+            };
+            let map = anchors::AnchorMap::read(buffer);
+            let current = map
+                .children()
+                .find(|(_, _, candidate)| *candidate == &anchor)
+                .map(|(logical, _, _)| logical);
+            if current == target {
+                continue;
+            }
+            if let Some((_, actual, _)) = map
+                .children()
+                .find(|(_, _, candidate)| *candidate == &anchor)
+            {
+                view.remove(&block.reservation);
+                let mut start = buffer.iter_at_offset(actual);
+                let mut end = start;
+                end.forward_char();
+                self.anchor_mutation.set(true);
+                buffer.delete(&mut start, &mut end);
+                self.anchor_mutation.set(false);
+            }
+            block.anchor.borrow_mut().take();
+        }
+        for (index, image) in document.images.iter().enumerate() {
+            if blocks[index].anchor.borrow().is_some() {
+                continue;
+            }
+            let map = anchors::AnchorMap::read(buffer);
+            if let Some((_, _, anchor)) = map
+                .children()
+                .find(|(logical, _, _)| *logical == image.line.start)
+            {
+                blocks[index].anchor.replace(Some(anchor.clone()));
+                view.add_child_at_anchor(&blocks[index].reservation, anchor);
+                continue;
+            }
+            let actual = map.to_buffer(image.line.start);
+            let mut iter = buffer.iter_at_offset(actual);
+            let anchor = gtk::TextChildAnchor::new();
+            self.anchor_mutation.set(true);
+            buffer.insert_child_anchor(&mut iter, &anchor);
+            self.anchor_mutation.set(false);
+            blocks[index].anchor.replace(Some(anchor.clone()));
+            view.add_child_at_anchor(&blocks[index].reservation, &anchor);
+        }
+    }
+
     /// 이미지 줄의 위젯·간격·원문 태그를 맞춘다. refresh 끝에서 부른다.
     pub(super) fn sync_images(self: &Rc<Self>, view: &TextView, document: &Document) {
         let images: &[markdown::Image] = if self.source.get() || self.media.host.is_none() {
@@ -57,13 +131,7 @@ impl LiveEditor {
             &document.images
         };
         let buffer = view.buffer();
-        let mut blocks = self.media.blocks.borrow_mut();
-        while blocks.len() < images.len() {
-            let block = Block::new(self);
-            view.add_overlay(&block.root, 0, 0);
-            buffer.tag_table().add(&block.spacing);
-            blocks.push(block);
-        }
+        let blocks = self.media.blocks.borrow_mut();
         let active = active_lines(&buffer);
         let mut quiet = Vec::new();
         let mut revealed = Vec::new();
@@ -78,6 +146,25 @@ impl LiveEditor {
             let available = (view.width() - x - view.right_margin()).max(0);
             block.x.set(x);
             block.bind(image, texture, available, view.is_editable());
+            if block.root.parent().is_none() {
+                view.add_overlay(&block.root, 0, 0);
+            }
+            let weak_block = Rc::downgrade(block);
+            let weak_view = view.downgrade();
+            self.layout.allocations.borrow_mut().push(Box::new(move || {
+                let (Some(block), Some(view)) = (weak_block.upgrade(), weak_view.upgrade()) else {
+                    return;
+                };
+                if !block.root.is_visible() {
+                    return;
+                }
+                let Some(line) = block.line() else {
+                    return;
+                };
+                let iter = view.buffer().iter_at_offset(line.start);
+                let (top, _) = view.line_yrange(&iter);
+                view.move_overlay(&block.root, block.x.get(), top + TOP);
+            }));
             reconcile(&buffer, &block.spacing, vec![image.line.clone()]);
             if image.line.end >= active.start && image.line.start <= active.end {
                 revealed.push(image.line.clone());
@@ -88,7 +175,6 @@ impl LiveEditor {
         drop(blocks);
         reconcile(&buffer, &self.tags.media_quiet, quiet);
         reconcile(&buffer, &self.tags.media_source, revealed);
-        self.place_images();
     }
 
     /// 커서가 없는 이미지 줄은 첫 글자만 투명하게 남기고 나머지를 숨긴다.
@@ -107,21 +193,6 @@ impl LiveEditor {
             .filter(|image| image.line.end < active.start || image.line.start > active.end)
             .map(|image| image.line.start + 1..image.line.end)
             .collect()
-    }
-
-    /// 각 이미지를 자기 줄 위 간격에 놓는다. 줄 높이가 확정되는 프레임마다 다시 부른다.
-    pub(super) fn place_images(&self) {
-        let Some(view) = self.view.upgrade() else {
-            return;
-        };
-        let buffer = view.buffer();
-        for block in self.media.blocks.borrow().iter() {
-            let Some(line) = block.line() else {
-                continue;
-            };
-            let (top, _) = view.line_yrange(&buffer.iter_at_offset(line.start));
-            view.move_overlay(&block.root, block.x.get(), top + TOP);
-        }
     }
 
     /// 읽은 텍스처. 처음 보는 대상은 화면 밖 스레드에서 읽고 끝나면 다시 그린다.
@@ -194,7 +265,7 @@ impl LiveEditor {
                 // 들여쓰기는 두고 문법만 바꾼다.
                 let source = super::super::source_slice(&buffer, image.line.clone());
                 let indent = source.chars().take_while(|c| c.is_whitespace()).count() as i32;
-                let mut start = buffer.iter_at_offset(image.line.start + indent);
+                let mut start = buffer.iter_at_offset(image.line.start + 1 + indent);
                 let mut end = buffer.iter_at_offset(image.line.end);
                 buffer.delete(&mut start, &mut end);
                 buffer.insert(&mut start, &line);

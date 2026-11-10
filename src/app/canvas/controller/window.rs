@@ -22,14 +22,6 @@ pub(in crate::app) fn open(state: &State, app: &Application, selected: Option<Uu
     crate::app::shared::focus::watch(&window);
     crate::app::shared::shortcuts::attach(&window, state);
     let (_, actions) = header(&window, "메모 캔버스");
-    let add = Button::new();
-    let add_contents = GtkBox::new(Orientation::Horizontal, 4);
-    add_contents.append(&icons::image(icons::ADD));
-    add_contents.append(&Label::new(Some("새 메모")));
-    add.set_child(Some(&add_contents));
-    add.add_css_class("new-note");
-    add.set_tooltip_text(Some("새 메모 · Ctrl+N"));
-    actions.append(&add);
 
     let root = Overlay::new();
     root.add_css_class("canvas-root");
@@ -145,14 +137,7 @@ pub(in crate::app) fn open(state: &State, app: &Application, selected: Option<Uu
     if let Some(id) = selected {
         view.session.selection.borrow_mut().set([id]);
     }
-    let weak = Rc::downgrade(&view);
-    add.connect_clicked(move |_| {
-        if let Some(v) = weak.upgrade() {
-            if let Some(st) = v.state.upgrade() {
-                shell_commands::new_note(&st, v.session.scope.get());
-            }
-        }
-    });
+    actions.append(&panels::creation::build(&view));
     scene::paint::attach(&view);
     scene::dive::attach(&view);
     input::attach(&view);

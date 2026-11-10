@@ -48,3 +48,23 @@ flowchart TB
 ```
 
 `controller`는 기존 `CanvasView`의 조율 책임을 나눠 구현한다. 저장 원본은 Notebook에만 두고 세션의 위치·카드는 화면용 파생 상태로 유지한다. 모델 내부는 geometry(카메라·배치·정렬), selection, history, spring으로 탐색한다. C4 UI 탐색에서 코드 진입점을 찾는다.
+
+## 목록·공유 생성·저장 결과
+
+```mermaid
+flowchart LR
+    list["library · 검색·갱신"] --> cards["cards · 카드·섹션·본문"]
+    list --> menu["shared creation · 생성 선택"]
+    canvas["canvas panels · 현재 단계"] --> menu
+    menu --> surface["Surface · GSK 모핑"]
+    list --> policy["shell commands · 생성 실행·허용 조합"]
+    canvas --> policy
+    policy --> notebook["Notebook · 깊이·원자 생성"]
+    notebook --> events["lifecycle events · 저장 결과 반영"]
+    timer["lifecycle · 폴링 조율"] --> events
+    timer --> closing["closing · 종료 대기·완료"]
+```
+
+생성 메뉴는 기능 화면을 참조하지 않고 주입된 콜백만 호출한다. 카드 조립과 본문·섹션 모션은 각각의 하위 모듈에 두며 저장 원본을 복제하지 않는다. 공유 메뉴는 행·확인창·메모 동작을 구분한다.
+
+- paint 루트는 그리기 연결·HUD 갱신만 조율한다. background는 격자·배경, edges는 연결선·곡선·타일 캐시, hud는 선택·가이드·연결 미리보기를 소유한다. 기존 EdgeTiles와 Backdrop 진입점은 유지한다.

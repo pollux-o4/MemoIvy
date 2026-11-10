@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MemoIvy · Ivy 아이콘 스터디</title>
+<style>
+:root{color-scheme:light;--bg:#f4f3ee;--surface:#fffefa;--text:#23382c;--muted:#697469;--line:#d9ded3;--accent:#286344;--stage:#f0f0e7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,sans-serif}body.dark{color-scheme:dark;--bg:#171e1a;--surface:#202a23;--text:#e6ecdf;--muted:#a5b1a4;--line:#3e4c41;--accent:#afd397;--stage:#18211b}
+main{max-width:1100px;margin:auto;padding:40px 28px}header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}header>div{min-width:0}.eyebrow{font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--muted)}h1{font-size:clamp(28px,4vw,42px);line-height:1.2;letter-spacing:-.05em;margin:12px 0}h2{font-size:19px;margin:0 0 8px}p{margin:0;color:var(--muted)}
+button{font:inherit;cursor:pointer;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 13px}button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}#theme{flex-shrink:0;white-space:nowrap}a{color:var(--accent);text-underline-offset:4px}
+.toolbar{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:26px 0 18px;border-top:1px solid var(--line);padding-top:18px}.baseline{display:flex;align-items:center;gap:10px;flex:1;min-width:180px;font-size:12px;color:var(--muted)}.baseline img{width:32px;height:32px}.note{display:block;margin-top:4px}.controls{display:flex;flex-wrap:wrap;gap:5px}.controls button[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.grid{display:grid;grid-template-columns:minmax(0,700px);justify-content:center}.card{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}.stage{height:280px;background:var(--stage);display:grid;place-items:center;margin:10px;border-radius:11px}.hero-icon{width:var(--icon-size,144px);height:var(--icon-size,144px)}.info{min-width:0;align-self:center;padding:22px}.description{font-size:13px}.sizes{display:flex;flex-wrap:wrap;align-items:end;gap:17px;padding:18px 0;border-bottom:1px solid var(--line);margin-bottom:16px}.sample{text-align:center;font:10px/1.5 ui-monospace,monospace;color:var(--muted)}.sample img{display:block;margin:0 auto 7px}.actions{display:flex;justify-content:space-between;align-items:center;gap:8px}.actions a,.revision{font-size:12px}.revision{color:var(--muted)}
+.reference{max-width:700px;margin:26px auto 0;border-top:1px solid var(--line);padding-top:18px}.reference h2{font-size:15px}.reference p,.reference a{font-size:13px}.reference a{display:inline-block;margin-top:8px}footer{margin-top:24px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:16px}
+@media(max-width:560px){main{padding:24px 20px}header{gap:12px}.card{grid-template-columns:1fr}.stage{height:210px}.info{padding:20px}.controls button{font-size:12px;padding:7px 10px}footer{display:block}}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="eyebrow">MEMOIVY / SELECTED ICON</div><h1>작은 기록에, 자라는 잎.</h1><p>노란 메모와 ivy의 세 갈래 잎. 실제 아이비를 참고해 잎의 윤곽과 덩굴의 연결을 다시 그렸습니다.</p></div><button id="theme" aria-pressed="false">어두운 배경</button></header>
+<div class="toolbar"><div class="baseline"><img src="../../integration/memoivy.svg?v=ivy-b" alt="적용한 MemoIvy 아이콘"><span>B 아이콘 적용<span class="note">앱·Snap·README가 같은 SVG를 사용합니다.</span></span></div><div class="controls" role="group" aria-label="대표 아이콘 크기"><button data-size="96" aria-pressed="false">96px</button><button data-size="144" aria-pressed="true">144px</button><button data-size="176" aria-pressed="false">176px</button></div></div>
+<div class="grid"><article class="card"><div class="stage"><img class="hero-icon" src="../../integration/memoivy.svg?v=ivy-b" alt="노란 메모 왼쪽에 아이비 잎 세 장이 자라는 MemoIvy 아이콘"></div><div class="info"><h2>B / 자라나는 기록</h2><p class="description">선택한 아이콘. 넓은 세 갈래 잎과 밝은 잎맥, 번갈아 뻗는 잎자루가 메모 왼쪽을 따라 자랍니다.</p><div class="sizes" aria-label="작은 크기 비교"><div class="sample"><img src="../../integration/memoivy.svg?v=ivy-b" width="16" height="16" alt="16px 미리보기">16px</div><div class="sample"><img src="../../integration/memoivy.svg?v=ivy-b" width="24" height="24" alt="24px 미리보기">24px</div><div class="sample"><img src="../../integration/memoivy.svg?v=ivy-b" width="32" height="32" alt="32px 미리보기">32px</div><div class="sample"><img src="../../integration/memoivy.svg?v=ivy-b" width="48" height="48" alt="48px 미리보기">48px</div></div><div class="actions"><a href="../../integration/memoivy.svg" target="_blank" rel="noopener">SVG 원본 ↗</a><span class="revision">적용 완료</span></div></div></article></div>
+<section class="reference"><h2>형태 참고</h2><p>Oregon State University의 English ivy 사진에서 넓은 잎 면·길게 나온 중앙 갈래·방사형 잎맥·엇갈린 잎자루를 확인했습니다. 사진을 복제하지 않고 SVG를 직접 그렸습니다.</p><a href="https://landscapeplants.oregonstate.edu/plants/hedera-helix" target="_blank" rel="noopener">실제 아이비 사진 보기 ↗</a></section>
+<footer><span>SVG 원본 · integration/memoivy.svg · 외부 라이브러리 없음</span><span>작은 크기에서는 잎의 윤곽과 메모의 식별성을 함께 확인하세요.</span></footer>
+</main>
+<script>
+document.querySelector('#theme').onclick=function(){const dark=document.body.classList.toggle('dark');this.setAttribute('aria-pressed',dark);this.textContent=dark?'밝은 배경':'어두운 배경'};
+document.querySelectorAll('[data-size]').forEach(button=>button.onclick=()=>{document.documentElement.style.setProperty('--icon-size',button.dataset.size+'px');document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',b===button))});
+
+</script>
+</body>
+</html>

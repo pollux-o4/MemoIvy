@@ -1,4 +1,5 @@
 //! 보드 위에 떠 있는 도구. 조립·배선(build·wire)과 상태 반영(sync)을 분리한다.
+pub(super) mod creation;
 mod inspector;
 mod navigator;
 mod toolbar;

@@ -11,6 +11,7 @@ pub const RESTORE: &str = include_str!("window/restore.svg");
 pub const PALETTE: &str = include_str!("actions/palette.svg");
 pub const MORE: &str = include_str!("actions/more.svg");
 pub const ADD: &str = include_str!("actions/note/add.svg");
+pub const NOTE: &str = include_str!("actions/note/note.svg");
 pub const TRASH: &str = include_str!("actions/note/trash.svg");
 pub const KEYBOARD: &str = include_str!("actions/keyboard.svg");
 pub const SOURCE: &str = include_str!("actions/note/source.svg");
@@ -32,7 +33,6 @@ pub const ENTER: &str = include_str!("canvas/project/enter.svg");
 pub const HOME: &str = include_str!("canvas/navigation/home.svg");
 pub const PIN: &str = include_str!("canvas/navigation/pin.svg");
 pub const CHEVRON: &str = include_str!("canvas/navigation/chevron.svg");
-pub const CHEVRON_DOWN: &str = include_str!("canvas/navigation/chevron-down.svg");
 pub const UP: &str = include_str!("canvas/project/up.svg");
 pub const ALIGN_LEFT: &str = include_str!("align/position/left.svg");
 pub const ALIGN_CENTER_X: &str = include_str!("align/spacing/center-x.svg");
@@ -135,6 +135,7 @@ mod tests {
             PALETTE,
             MORE,
             ADD,
+            NOTE,
             TRASH,
             KEYBOARD,
             SOURCE,
@@ -151,6 +152,7 @@ mod tests {
             OPEN,
             SIGNAL,
             HELP,
+            CHEVRON,
             ALIGN_LEFT,
             ALIGN_CENTER_X,
             ALIGN_RIGHT,
