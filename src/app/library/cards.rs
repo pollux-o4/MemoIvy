@@ -7,27 +7,16 @@ use crate::persistence::Note;
 use crate::presentation::icons;
 use gtk::{prelude::*, Application, Box as GtkBox, Button, Label, Orientation};
 use std::{
-    cell::{Cell, RefCell},
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeSet, HashMap},
     hash::{Hash, Hasher},
 };
 use uuid::Uuid;
 
-thread_local! {
-    static SHOWN: Cell<u64> = const { Cell::new(0) };
-    /// 접어 둔 프로젝트. 화면 상태라 저장하지 않는다.
-    static COLLAPSED: RefCell<HashSet<Uuid>> = RefCell::new(HashSet::new());
-}
-
-fn list_key(notes: &[Note], query: &str, grouped: bool) -> u64 {
+fn list_key(notes: &[Note], query: &str, grouped: bool, expanded: &BTreeSet<Uuid>) -> u64 {
     let mut hasher = DefaultHasher::new();
     query.hash(&mut hasher);
     grouped.hash(&mut hasher);
-    COLLAPSED.with(|c| {
-        let mut ids: Vec<_> = c.borrow().iter().copied().collect();
-        ids.sort();
-        ids.hash(&mut hasher);
-    });
+    expanded.hash(&mut hasher);
     for note in notes {
         note.id().hash(&mut hasher);
         note.text().hash(&mut hasher);
@@ -49,7 +38,7 @@ struct Row<'a> {
 
 /// 형제끼리는 프로젝트를 먼저, 그 안에서는 하위 전체의 최근 수정 순으로 늘어놓는다.
 /// 할 일 파싱은 메모마다 한 번, 하위 합계는 아래에서 위로 한 번만 더한다.
-fn tree(notes: &[Note]) -> Vec<Row<'_>> {
+fn tree<'a>(notes: &'a [Note], expanded: &BTreeSet<Uuid>) -> Vec<Row<'a>> {
     let mut children: HashMap<Option<Uuid>, Vec<&Note>> = HashMap::new();
     for note in notes {
         children.entry(note.canvas().parent).or_default().push(note);
@@ -78,6 +67,7 @@ fn tree(notes: &[Note]) -> Vec<Row<'_>> {
         children: &HashMap<Option<Uuid>, Vec<&'a Note>>,
         totals: &HashMap<Uuid, (usize, usize, u64)>,
         out: &mut Vec<Row<'a>>,
+        expanded: &BTreeSet<Uuid>,
     ) {
         let mut siblings: Vec<_> = children
             .get(&parent)
@@ -96,14 +86,14 @@ fn tree(notes: &[Note]) -> Vec<Row<'_>> {
                 children: count,
                 tasks: (done, all),
             });
-            let open = !COLLAPSED.with(|c| c.borrow().contains(&note.id()));
+            let open = expanded.contains(&note.id());
             if count > 0 && open {
-                walk(Some(note.id()), depth + 1, children, totals, out);
+                walk(Some(note.id()), depth + 1, children, totals, out, expanded);
             }
         }
     }
     let mut out = Vec::with_capacity(notes.len());
-    walk(None, 0, &children, &totals, &mut out);
+    walk(None, 0, &children, &totals, &mut out, expanded);
     out
 }
 
@@ -132,16 +122,16 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
     let query = s.views.library.search.text().to_string();
     let grouped = s.views.library.grouped.is_active() && query.is_empty();
     // 캔버스 배치만 바뀌면 목록은 그대로다. 다시 만들면 스크롤·호버가 끊긴다.
-    let key = list_key(s.notebook.notes(), &query, grouped);
-    if SHOWN.with(|shown| shown.replace(key)) == key {
+    let key = list_key(
+        s.notebook.notes(),
+        &query,
+        grouped,
+        s.views.library.preferences.borrow().expanded(),
+    );
+    if s.views.library.shown.replace(Some(key)) == Some(key) {
         drop(s);
         return;
     }
-    // 지워진 프로젝트의 접힘 상태는 버린다.
-    COLLAPSED.with(|c| {
-        let ids: HashSet<_> = s.notebook.notes().iter().map(|n| n.id()).collect();
-        c.borrow_mut().retain(|id| ids.contains(id));
-    });
     let library = &s.views.library;
     while let Some(child) = library.list.first_child() {
         library.list.remove(&child);
@@ -171,7 +161,7 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         library.list.append(&empty_state(query.is_empty()));
     }
     if grouped {
-        for row in tree(all) {
+        for row in tree(all, library.preferences.borrow().expanded()) {
             library.list.append(&card(
                 state,
                 app,
@@ -258,7 +248,14 @@ fn card(state: &State, app: &Application, note: &Note, kind: CardKind) -> GtkBox
     let project = children > 0;
     if project {
         card.add_css_class("project");
-        let collapsed = COLLAPSED.with(|c| c.borrow().contains(&id));
+        let collapsed = !state
+            .borrow()
+            .views
+            .library
+            .preferences
+            .borrow()
+            .expanded()
+            .contains(&id);
         let toggle = Button::new();
         toggle.set_child(Some(&icons::image(if collapsed {
             icons::CHEVRON
@@ -266,20 +263,45 @@ fn card(state: &State, app: &Application, note: &Note, kind: CardKind) -> GtkBox
             icons::CHEVRON_DOWN
         })));
         toggle.add_css_class("card-toggle");
+        toggle.set_widget_name(&id.to_string());
+        toggle.update_state(&[gtk::accessible::State::Expanded(Some(!collapsed))]);
         toggle.set_valign(gtk::Align::Center);
         let label = if collapsed { "펼치기" } else { "접기" };
         toggle.set_tooltip_text(Some(label));
-        toggle.update_property(&[gtk::accessible::Property::Label(label)]);
+        let accessible_label = format!(
+            "{} {label}",
+            if summary.title.is_empty() {
+                "빈 메모"
+            } else {
+                &summary.title
+            }
+        );
+        toggle.update_property(&[gtk::accessible::Property::Label(&accessible_label)]);
         let st = state.clone();
         let a = app.clone();
         toggle.connect_clicked(move |_| {
-            COLLAPSED.with(|c| {
-                let mut c = c.borrow_mut();
-                if !c.remove(&id) {
-                    c.insert(id);
-                }
+            let s = st.borrow();
+            let result = s.views.library.preferences.borrow_mut().toggle(id, |other| {
+                s.notebook.notes().iter().any(|note| note.canvas().parent == Some(*other))
             });
+            if let Err(error) = result {
+                crate::app::shared::message(&s.views.library.window, "목록 상태 저장 오류", &format!("이번 펼침 상태를 저장하지 못했어요. 다시 실행하면 이전 상태로 돌아갑니다.\n{error}"));
+            }
+            drop(s);
             refresh(&st, &a);
+            // 목록 재생성 뒤에도 같은 펼침 버튼에서 키보드 조작을 이어 간다.
+            let mut row = st.borrow().views.library.list.first_child();
+            while let Some(widget) = row {
+                let mut child = widget.first_child();
+                while let Some(control) = child {
+                    if control.widget_name() == id.to_string() {
+                        control.grab_focus();
+                        return;
+                    }
+                    child = control.next_sibling();
+                }
+                row = widget.next_sibling();
+            }
         });
         card.append(&toggle);
     }
@@ -424,7 +446,7 @@ mod tests {
         let child = note("포트폴리오\n- [x] a\n- [ ] b", 50, Some(pid));
         let loose = note("낱장 메모", 40, None);
         let notes = vec![loose, child, project];
-        let rows = tree(&notes);
+        let rows = tree(&notes, &BTreeSet::from([pid]));
         let shape: Vec<_> = rows
             .iter()
             .map(|r| (note_title(r.note.text()), r.depth, r.children, r.tasks))
@@ -439,8 +461,6 @@ mod tests {
         );
         let by_id: HashMap<_, _> = notes.iter().map(|n| (n.id(), n)).collect();
         assert_eq!(location(&by_id, &notes[1]), "취업하기");
-        COLLAPSED.with(|c| c.borrow_mut().insert(pid));
-        assert_eq!(tree(&notes).len(), 2);
-        COLLAPSED.with(|c| c.borrow_mut().clear());
+        assert_eq!(tree(&notes, &BTreeSet::new()).len(), 2);
     }
 }

@@ -1,12 +1,17 @@
 pub(crate) mod icons;
 pub(crate) mod markdown;
 pub(crate) mod theme;
+pub(crate) mod typography;
 
 use gtk::prelude::*;
+
+pub(crate) const FONT_CSS: &str =
+    "* { font-family: \"Noto Sans CJK KR\", \"Noto Sans KR\", sans-serif; }";
 
 const LIGHT: &str = include_str!("styles/themes/tokens-light.css");
 const DARK: &str = include_str!("styles/themes/tokens-dark.css");
 const STYLES: &str = concat!(
+    include_str!("styles/typography.css"),
     include_str!("styles/base.css"),
     include_str!("styles/menus.css"),
     include_str!("styles/views/library.css"),
@@ -22,7 +27,7 @@ pub(crate) fn install() {
     };
     let tokens = gtk::CssProvider::new();
     let provider = gtk::CssProvider::new();
-    provider.load_from_data(STYLES);
+    provider.load_from_data(&format!("{FONT_CSS}{STYLES}"));
     gtk::style_context_add_provider_for_display(
         &display,
         &tokens,

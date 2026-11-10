@@ -1,6 +1,6 @@
 use crate::{
     app::canvas::CanvasView,
-    persistence::{Attachments, Navigation, Notebook},
+    persistence::{Attachments, LibraryPreferences, Navigation, Notebook},
 };
 use gtk::{prelude::*, ApplicationWindow, Box as GtkBox, Button, Label, SearchEntry, TextView};
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
@@ -26,6 +26,8 @@ pub(in crate::app) struct LibraryView {
     pub search: SearchEntry,
     /// 켜면 프로젝트별 묶음, 끄면 최근 수정 순 목록.
     pub grouped: gtk::ToggleButton,
+    pub preferences: RefCell<LibraryPreferences>,
+    pub shown: std::cell::Cell<Option<u64>>,
     pub error: Label,
     pub add: Button,
 }
@@ -112,6 +114,8 @@ impl AppState {
             Navigation::beside(&path),
             Attachments::beside(&path),
             LibraryView {
+                preferences: RefCell::new(LibraryPreferences::beside(&path)),
+                shown: std::cell::Cell::new(None),
                 window: ApplicationWindow::new(app),
                 list: GtkBox::new(gtk::Orientation::Vertical, 0),
                 count: Label::new(None),

@@ -6,11 +6,13 @@ use storage::{paths, save_queue, store};
 mod domain;
 use domain::{canvas, links, nesting, note};
 mod attachments;
+mod library_preferences;
 mod navigation;
 mod notebook;
 
 pub(crate) use attachments::{AssetEntry, AssetId, AssetStore, Attachments, ImportError};
 pub(crate) use canvas::{CanvasNode, LIMIT};
+pub(crate) use library_preferences::LibraryPreferences;
 pub(crate) use navigation::Navigation;
 pub(crate) use nesting::MAX_DEPTH;
 pub(crate) use note::{now, Note};

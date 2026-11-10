@@ -1,4 +1,5 @@
 //! 목록을 쓰는 동안의 키 동작. 원문을 바꾸는 작업은 모두 한 번의 undo로 되돌린다.
+use crate::app::editor::live_editor::anchors::AnchorMap;
 use crate::presentation::markdown::{Document, ListItem, ListKind};
 use gtk::{gdk, prelude::*, TextBuffer, TextView};
 
@@ -16,9 +17,8 @@ fn cursor(buffer: &TextBuffer) -> i32 {
 }
 
 fn has_first_line_content(buffer: &TextBuffer, item: &ListItem) -> bool {
-    let mut end = buffer.iter_at_offset(item.content.start);
-    end.forward_to_line_end();
-    end.offset() > item.content.start
+    let start = buffer.iter_at_offset(item.content.start);
+    !start.ends_line() && !start.is_end()
 }
 
 /// 목록에서 Home은 숨겨진 표식이나 이어쓰기 들여쓰기 앞이 아닌 보이는 본문 시작으로 이동한다.
@@ -156,7 +156,8 @@ fn split(view: &TextView, document: &Document, index: usize, item: &ListItem) {
             .fold(0u64, |value, digit| value * 10 + u64::from(digit - b'0'));
         renumber_after(&buffer, document, index, number + 1);
     }
-    buffer.insert_at_cursor(&format!("\n{next}"));
+    buffer.insert_at_cursor("\n");
+    buffer.insert_at_cursor(&next);
     buffer.end_user_action();
     view.scroll_mark_onscreen(&buffer.get_insert());
 }
@@ -271,7 +272,9 @@ pub(super) fn handle(
             return false;
         };
         if item.marker.start > 0 {
-            buffer.place_cursor(&buffer.iter_at_offset(item.marker.start - 1));
+            let source_start = AnchorMap::read(&buffer).to_source(item.marker.start);
+            let target = AnchorMap::read(&buffer).to_buffer_before_anchor(source_start - 1);
+            buffer.place_cursor(&buffer.iter_at_offset(target));
         }
         return true;
     }
@@ -300,10 +303,12 @@ pub(super) fn handle(
         }
         gdk::Key::Delete => {
             // 다음 줄이 항목이면 표식까지 지워 본문만 이어 붙인다.
+            let map = AnchorMap::read(&buffer);
+            let source_at = map.to_source(at);
             let Some(next) = document
                 .items
                 .iter()
-                .find(|item| item.marker.start == at + 1)
+                .find(|item| map.to_source(item.marker.start) == source_at + 1)
             else {
                 return false;
             };

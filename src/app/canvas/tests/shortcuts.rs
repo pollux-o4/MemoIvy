@@ -1,4 +1,66 @@
 use super::*;
+use crate::presentation::markdown::{LineMarker, PreviewLine, PreviewRow, TaskState};
+
+pub(in crate::app) fn canvas_m1_preview_marker_ink_regression() {
+    crate::presentation::install();
+    let preview = scene::preview::Preview::new();
+    preview.set(
+        &(1..=3)
+            .map(|depth| PreviewRow {
+                line: PreviewLine {
+                    marker: Some(LineMarker::Bullet),
+                    depth,
+                    continuation: false,
+                    text: "가나다".into(),
+                },
+                max_lines: 1,
+            })
+            .chain([PreviewRow {
+                line: PreviewLine {
+                    marker: Some(LineMarker::Task(TaskState::Done)),
+                    depth: 3,
+                    continuation: false,
+                    text: "가나다".into(),
+                },
+                max_lines: 1,
+            }])
+            .collect::<Vec<_>>(),
+    );
+    let window = gtk::Window::builder().child(&preview.root).build();
+    window.present();
+    until(|| preview.root.is_mapped() && preview.root.width() > 0);
+    settle(20);
+
+    let scale = f64::from(gtk::pango::SCALE);
+    let mut failures = Vec::new();
+    for (index, (marker_label, text_label)) in preview.ink_test_rows().iter().enumerate() {
+        let (marker_ink, _) = marker_label.layout().extents();
+        let marker_top = marker_label
+            .compute_point(&preview.root, &gtk::graphene::Point::new(0., 0.))
+            .unwrap()
+            .y();
+        let text_top = text_label
+            .compute_point(&preview.root, &gtk::graphene::Point::new(0., 0.))
+            .unwrap()
+            .y();
+        let anchor = crate::presentation::typography::line_anchor(
+            &text_label.layout(),
+            &text_label.create_pango_layout(Some("x")),
+            None,
+        );
+        let marker_center =
+            f64::from(marker_top) + f64::from(marker_ink.y() + marker_ink.height() / 2) / scale;
+        let target = f64::from(text_top) + anchor.line_top + anchor.baseline - anchor.x_center;
+        let delta = (marker_center - target).abs();
+        println!("M1 canvas_row={index} marker_ink_center={marker_center:.2}px first_line_x_height_center={target:.2}px delta={delta:.2}px");
+        if delta > 1.0 {
+            failures.push(format!("canvas preview row {index}: {delta}px"));
+        }
+    }
+    window.destroy();
+    drain();
+    assert!(failures.is_empty(), "{}", failures.join("; "));
+}
 
 fn press(v: &CanvasView, key: gtk::gdk::Key, modifiers: gtk::gdk::ModifierType) -> bool {
     let controllers = v.widgets.window.observe_controllers();

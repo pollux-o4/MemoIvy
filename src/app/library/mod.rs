@@ -51,7 +51,7 @@ pub(in crate::app) fn build(app: &Application) {
             return;
         }
     };
-    let library = build_contents(&window, add.clone());
+    let library = build_contents(&window, add.clone(), &path);
     let search = library.search.clone();
     let mut notebook = store;
     commands::initialize_positions(&mut notebook);
@@ -89,7 +89,7 @@ fn show_load_error(window: &ApplicationWindow, message: &str) {
     crate::app::shared::message(window, "저장 오류", message);
 }
 
-fn build_contents(window: &ApplicationWindow, add: Button) -> LibraryView {
+fn build_contents(window: &ApplicationWindow, add: Button, path: &std::path::Path) -> LibraryView {
     let outer = GtkBox::new(Orientation::Vertical, 16);
     outer.add_css_class("library");
     outer.set_margin_start(20);
@@ -133,6 +133,8 @@ fn build_contents(window: &ApplicationWindow, add: Button) -> LibraryView {
     outer.append(&error);
     window.set_child(Some(&outer));
     LibraryView {
+        preferences: std::cell::RefCell::new(crate::persistence::LibraryPreferences::beside(path)),
+        shown: std::cell::Cell::new(None),
         window: window.clone(),
         list,
         count,

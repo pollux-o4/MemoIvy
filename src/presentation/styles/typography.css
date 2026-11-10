@@ -1,0 +1,12 @@
+/* GTK CSS has no numeric variables; role classes are the shared scale tokens. */
+.type-caption, .status, .link-warning, .menu-hint, .swatch, .help-section, .memoivy-help .help-key, .help-syntax, .count, .empty-sub, .segmented > button, .card-location, .task-chip, .canvas-summary, .canvas-status, .zoom-value, .tool-text, .card-meta, .panel-section, .panel-hint { font-size: .80em; font-weight: 400; line-height: normal; }
+.type-meta, .link-address, .link-action, .preview, .md-image-placeholder, .files-heading, .card-preview, .panel-muted, .crumb, .shortcut-chip { font-size: .88em; font-weight: 400; line-height: normal; }
+.type-body, .header-title, .help-key, .line-marker, .line-marker.number, .canvas-empty-sub, .confirm-detail, .card.nested .card-title { font-size: .96em; font-weight: 400; line-height: normal; }
+.type-title, .card-title, .confirm-title, .panel-title { font-size: 1.04em; font-weight: 600; line-height: normal; }
+.type-display, .canvas-empty-title { font-size: 1.14em; font-weight: 600; line-height: normal; }
+
+.memoivy-action, .link-action, .help-key, .memoivy-help .help-key, .confirm-subject, .confirm-cancel, .confirm-accept, .zoom-value, .card-title.placeholder, .crumb, .shortcut-chip, .segmented > button { font-weight: 500; }
+.new-note, .header-title, .card-title, .link-title, checkbutton.menu-row:checked, .help-section, .confirm-title, .confirm-accept, .canvas-dock.failed .canvas-status, .tool-text, .panel-title, .panel-section, .card-project, .crumb.current, .crumb.current:disabled, .files-heading, .card-location, .task-chip { font-weight: 600; }
+.link-badge, .swatch, .line-marker.bullet, .md-bullet, .card.project .card-title { font-weight: 700; }
+.line-marker.task { font-weight: 800; }
+.menu-row, .panel-row, .panel-row > button { font-weight: 400; }

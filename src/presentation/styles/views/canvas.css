@@ -4,8 +4,8 @@
 .canvas-dock, .canvas-align { padding: 4px; }
 .canvas-dock { transition: box-shadow 200ms ease-out; }
 .canvas-dock.failed { box-shadow: 0 0 0 1.5px @memoivy_danger, 0 2px 6px @memoivy_shadow, 0 12px 32px @memoivy_shadow; }
-.canvas-dock.failed .canvas-status { color: @memoivy_danger; font-weight: 600; }
-.canvas-summary, .canvas-status { color: @memoivy_muted; font-size: .84em; }
+.canvas-dock.failed .canvas-status { color: @memoivy_danger; }
+.canvas-summary, .canvas-status { color: @memoivy_muted; }
 
 .tool, .tool > button { min-width: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_text; transition: background-color 110ms ease-out, opacity 110ms ease-out, transform 110ms ease-out; }
 .tool > button { color: inherit; }
@@ -16,9 +16,9 @@
 .tool.danger:hover { background-color: @memoivy_danger_hover; color: @memoivy_danger; }
 .tool.small { min-width: 26px; min-height: 26px; color: @memoivy_muted; }
 .tool.small:hover { background-color: @memoivy_danger_hover; color: @memoivy_danger; }
-.zoom-value { min-width: 46px; font-size: .84em; font-weight: 500; }
+.zoom-value { min-width: 46px; }
 .tool-divider { min-width: 1px; margin: 7px 4px; background: @memoivy_hairline; }
-.tool-text { min-height: 26px; padding: 0 10px; border: 0; border-radius: 8px; background: @memoivy_danger_fill; background-image: none; color: white; font-size: .84em; font-weight: 600; box-shadow: none; }
+.tool-text { min-height: 26px; padding: 0 10px; border: 0; border-radius: 8px; background: @memoivy_danger_fill; background-image: none; color: white; box-shadow: none; }
 
 /* 카드 */
 .canvas-card { padding: 13px 14px 11px; border-radius: 14px; color: @note_text; box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 1px 2px @memoivy_shadow, 0 6px 18px @memoivy_shadow; opacity: 1; transform: none; transition: box-shadow 170ms ease-out, opacity 170ms ease-out, transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out; outline: 2px solid transparent; outline-offset: 3px; }
@@ -33,16 +33,15 @@
 .canvas-card.entering { opacity: 0; transform: scale(.92); transition: none; }
 .canvas-card.done { opacity: .84; }
 .canvas-card.done .card-title { text-decoration-line: line-through; text-decoration-color: alpha(@note_text, .5); }
-.card-title.placeholder { color: @note_muted; font-weight: 500; }
-.card-preview { color: @note_muted; font-size: .88em; transition: opacity 180ms ease-out; }
+.card-title.placeholder { color: @note_muted; }
+.card-preview { color: @note_muted; transition: opacity 180ms ease-out; }
 .card-preview .line-done, .canvas-card .card-title.line-done { text-decoration-line: line-through; text-decoration-color: alpha(@note_text, .5); }
 .card-preview .line-done { opacity: .72; }
 /* 읽기 전용 표식: 숫자는 본문 기준선에 맞추고 체크·기호는 첫 줄 높이에 맞춘다 */
-.line-marker { min-width: 14px; margin-top: 2px; color: @note_muted; font-size: .94em; }
-.line-marker.task { min-width: 12px; min-height: 12px; border-radius: 4px; font-size: 10px; font-weight: 800; }
-.line-marker.bullet { font-weight: 700; }
-.line-marker.number { min-width: 0; margin-top: 0; font-size: 1em; font-feature-settings: "tnum"; }
-.card-meta { color: @note_muted; font-size: .8em; min-height: 18px; transition: opacity 180ms ease-out; }
+.line-marker { min-width: 14px; color: @note_muted; }
+.line-marker.task { min-width: 12px; min-height: 12px; border-radius: 4px; font-size: 10px; }
+.line-marker.number { min-width: 0; font-feature-settings: "tnum"; }
+.card-meta { color: @note_muted; min-height: 18px; transition: opacity 180ms ease-out; }
 .card-meta drawingarea { min-width: 16px; min-height: 16px; }
 .far .card-preview, .far .card-meta, .far .canvas-card .line-marker { opacity: 0; }
 .far .canvas-card { box-shadow: inset 0 0 0 1px alpha(#000000, .05); transition: none; }
@@ -61,12 +60,12 @@
 .canvas-inspector { padding: 14px; }
 .tool.small.panel-close { margin: -4px -4px 0 0; }
 .tool.small.panel-close:hover { background-color: @memoivy_hover; color: @memoivy_text; }
-.panel-title { font-weight: 600; font-size: 1.02em; }
-.panel-muted { color: @memoivy_muted; font-size: .88em; }
-.panel-section { color: @memoivy_muted; font-size: .8em; font-weight: 600; margin: 4px 0 -6px 4px; }
-.panel-hint { color: @memoivy_muted; font-size: .84em; padding: 8px 10px; }
+.panel-title { }
+.panel-muted { color: @memoivy_muted; }
+.panel-section { color: @memoivy_muted; margin: 4px 0 -6px 4px; }
+.panel-hint { color: @memoivy_muted; padding: 8px 10px; }
 .panel-group { border-radius: 10px; background: alpha(@memoivy_text, .04); padding: 3px; }
-.panel-row, .panel-row > button { padding: 0 7px; min-height: 30px; border-radius: 7px; border: 0; background: transparent; background-image: none; box-shadow: none; color: @memoivy_text; font-weight: 400; transition: background-color 100ms ease-out; }
+.panel-row, .panel-row > button { padding: 0 7px; min-height: 30px; border-radius: 7px; border: 0; background: transparent; background-image: none; box-shadow: none; color: @memoivy_text; transition: background-color 100ms ease-out; }
 .panel-row > button { padding: 0 7px; }
 menubutton.panel-row { padding: 0; }
 .panel-row:hover, .panel-row > button:hover { background-color: @memoivy_hover; }
@@ -83,8 +82,8 @@ menubutton.panel-row { padding: 0; }
 .color-dot.green { background: @dot_green; }
 .color-dot.purple { background: @dot_purple; }
 
-.canvas-empty-title { font-size: 1.14em; font-weight: 600; }
-.canvas-empty-sub { color: @memoivy_muted; font-size: .92em; }
+.canvas-empty-title { }
+.canvas-empty-sub { color: @memoivy_muted; }
 
 /* 프로젝트 카드 · 겹쳐 쌓인 종이로 "안에 더 있다"를 보여 주고, 호버하면 살짝 펼쳐진다 */
 .canvas-card.project.yellow { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 5px 0 -2px shade(@note_yellow, .8), 0 10px 0 -4px shade(@note_yellow, .62), 0 14px 26px @memoivy_shadow; }
@@ -99,7 +98,7 @@ menubutton.panel-row { padding: 0; }
 .canvas-card.project.purple:hover { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 7px 0 -2px shade(@note_purple, .8), 0 14px 0 -4px shade(@note_purple, .62), 0 18px 32px @memoivy_shadow; }
 .far .canvas-card.project { box-shadow: inset 0 0 0 1px alpha(#000000, .05), 0 10px 0 -5px alpha(@note_text, .14); }
 .canvas-card.drop-target { outline: 2px dashed @memoivy_accent; outline-offset: 5px; transform: scale(1.035); }
-.card-project { color: @note_text; font-weight: 600; }
+.card-project { color: @note_text; }
 .card-enter { min-width: 22px; min-height: 22px; padding: 0; margin: -2px 2px 0 0; border: 0; border-radius: 7px; background: alpha(@note_text, .08); background-image: none; box-shadow: none; color: @note_text; opacity: .7; transition: opacity 130ms ease-out, background-color 130ms ease-out, transform 130ms cubic-bezier(.2, .9, .3, 1.3); }
 .canvas-card:hover .card-enter, .canvas-card.selected .card-enter { opacity: 1; }
 .card-enter:hover { background: @memoivy_accent; color: @memoivy_on_accent; transform: scale(1.08); }
@@ -112,17 +111,17 @@ progressbar.card-progress > trough > progress { min-height: 4px; border-radius: 
 
 /* 경로·바로가기 */
 .canvas-crumbs { padding: 3px; }
-.crumb { min-height: 28px; padding: 0 9px; border: 0; border-radius: 9px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_muted; font-weight: 500; font-size: .9em; transition: background-color 110ms ease-out, color 110ms ease-out; }
+.crumb { min-height: 28px; padding: 0 9px; border: 0; border-radius: 9px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_muted; transition: background-color 110ms ease-out, color 110ms ease-out; }
 .crumb:hover { background-color: @memoivy_hover; color: @memoivy_text; }
 .crumb:active { background-color: @memoivy_press; }
-.crumb.current, .crumb.current:disabled { color: @memoivy_text; font-weight: 600; opacity: 1; }
+.crumb.current, .crumb.current:disabled { color: @memoivy_text; opacity: 1; }
 .crumb drawingarea { color: inherit; }
 .crumb-separator { color: alpha(@memoivy_muted, .6); margin: 0 -4px; }
 .crumb-more { color: @memoivy_muted; padding: 0 4px; }
 .tool.small.crumb-pin { margin-left: 2px; color: @memoivy_muted; }
 .tool.small.crumb-pin:hover { background-color: @memoivy_hover; color: @dot_yellow; }
 .tool.small.crumb-pin.active { color: @dot_yellow; }
-.shortcut-chip { min-height: 30px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background-image: none; font-size: .86em; font-weight: 500; transition: transform 150ms cubic-bezier(.2, .9, .3, 1.3), box-shadow 150ms ease-out, background-color 110ms ease-out; }
+.shortcut-chip { min-height: 30px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background-image: none; transition: transform 150ms cubic-bezier(.2, .9, .3, 1.3), box-shadow 150ms ease-out, background-color 110ms ease-out; }
 .shortcut-chip:hover { transform: translateY(-1px); background-color: shade(@memoivy_raised, 1.08); }
 .shortcut-chip:active { transform: scale(.97); }
 .chip-pin { color: @dot_yellow; min-width: 16px; min-height: 16px; }

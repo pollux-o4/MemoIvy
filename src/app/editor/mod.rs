@@ -14,7 +14,7 @@ use crate::app::{
 use crate::presentation::icons;
 use gtk::{
     prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
-    ScrolledWindow, TextView,
+    ScrolledWindow,
 };
 use uuid::Uuid;
 
@@ -47,8 +47,7 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     canvas.connect_clicked(move |_| commands::open_canvas(&st, &a, Some(id)));
     actions.append(&canvas);
     actions.append(&palette);
-    let view = TextView::new();
-    live_editor::configure(&view);
+    let view = live_editor::new_view();
     view.buffer().set_text(note.text());
     let scroll = ScrolledWindow::builder()
         .vexpand(true)
@@ -87,9 +86,15 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     window.set_child(Some(&outer));
     let st = state.clone();
     view.buffer().connect_changed(move |buffer| {
-        let text = buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), true)
-            .to_string();
+        let text = live_editor::plain_text(buffer, &buffer.start_iter(), &buffer.end_iter());
+        if st
+            .borrow()
+            .notebook
+            .note(id)
+            .is_some_and(|note| note.text() == text)
+        {
+            return;
+        }
         st.borrow_mut().notebook.set_text(id, text);
         mark(&st);
     });
@@ -210,11 +215,9 @@ fn editor_menu(
 }
 
 fn source_slice(buffer: &gtk::TextBuffer, range: std::ops::Range<i32>) -> String {
-    buffer
-        .text(
-            &buffer.iter_at_offset(range.start),
-            &buffer.iter_at_offset(range.end),
-            true,
-        )
-        .to_string()
+    live_editor::plain_text(
+        buffer,
+        &buffer.iter_at_offset(range.start),
+        &buffer.iter_at_offset(range.end),
+    )
 }

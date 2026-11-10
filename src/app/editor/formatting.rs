@@ -36,7 +36,8 @@ pub(super) fn handle(view: &TextView, key: gdk::Key, modifiers: gdk::ModifierTyp
             _ => crate::presentation::markdown::Style::Strike,
         };
         let width = prefix.chars().count() as i32;
-        let full = buffer.text(&buffer.start_iter(), &buffer.end_iter(), true);
+        let full =
+            super::live_editor::plain_text(&buffer, &buffer.start_iter(), &buffer.end_iter());
         if crate::presentation::markdown::parse(&full)
             .spans
             .iter()
@@ -53,9 +54,11 @@ pub(super) fn handle(view: &TextView, key: gdk::Key, modifiers: gdk::ModifierTyp
         if end.line_offset() == 0 && end.line() > start.line() {
             end.backward_char();
         }
-        end.forward_to_line_end();
+        if !end.ends_line() {
+            end.forward_to_line_end();
+        }
     }
-    let text = buffer.text(&start, &end, true);
+    let text = super::live_editor::plain_text(&buffer, &start, &end);
     let offset = start.offset();
     let (replacement, mut selection) = transform(&text, prefix, suffix, line);
     if line && !had_selection {

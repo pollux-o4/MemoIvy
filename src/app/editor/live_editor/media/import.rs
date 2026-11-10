@@ -196,7 +196,7 @@ impl LiveEditor {
         if !end.ends_line() {
             end.forward_to_line_end();
         }
-        let blank = buffer.text(&start, &end, true).trim().is_empty();
+        let blank = super::plain_text(buffer, &start, &end).trim().is_empty();
         let document = self.document.borrow();
         let indent = document
             .item_at(end.offset())

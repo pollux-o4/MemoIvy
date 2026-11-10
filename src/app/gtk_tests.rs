@@ -84,6 +84,25 @@ scenario!(
     super::editor::live_editor::tests::fmt_003_list_layout_and_hit_testing
 );
 scenario!(
+    fmt_003_empty_nested_item_keeps_next_paragraph_x,
+    super::editor::live_editor::tests::fmt_003_empty_nested_item_keeps_next_paragraph_x
+);
+#[test]
+fn canvas_m1_preview_marker_ink_regression() {
+    isolated(
+        "canvas_m1_preview_marker_ink_regression",
+        super::canvas::tests::canvas_m1_preview_marker_ink_regression,
+    );
+}
+
+#[test]
+fn fmt_003_m1_typography_ink_regression() {
+    isolated(
+        "fmt_003_m1_typography_ink_regression",
+        super::editor::live_editor::tests::fmt_003_m1_typography_ink_regression,
+    );
+}
+scenario!(
     fmt_003_typing_flow,
     super::editor::live_editor::tests::fmt_003_typing_flow
 );
@@ -92,10 +111,27 @@ scenario!(
     super::editor::live_editor::media::tests::fmt_004_image_blocks
 );
 scenario!(
+    fmt_004_image_overlay_tracks_reserved_line_each_frame,
+    super::editor::live_editor::media::tests::fmt_004_image_overlay_tracks_reserved_line_each_frame
+);
+scenario!(
+    fmt_004_image_anchor_storage_roundtrip,
+    super::editor::live_editor::media::tests::fmt_004_image_anchor_storage_roundtrip
+);
+scenario!(
+    fmt_004_image_anchor_clipboard_and_delete,
+    super::editor::live_editor::media::tests::fmt_004_image_anchor_clipboard_and_delete
+);
+scenario!(
     file_001_files_view,
     super::files::tests::file_001_files_view
 );
 scenario!(
     fmt_003_link_preview_lifecycle,
     super::editor::live_editor::tests::fmt_003_link_preview_lifecycle
+);
+
+scenario!(
+    fmt_003_wrapped_list_columns,
+    super::editor::live_editor::tests::fmt_003_wrapped_list_columns
 );

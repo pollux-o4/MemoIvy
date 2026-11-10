@@ -38,6 +38,16 @@
 - FMT-003·CANVAS-004 링크 미리보기·목록 표식·보드 단축키
   - FMT-001과 같은 환경에서 `timeout 90s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.editor.fmt_003_canvas_004_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다.
   - 줄 간격 클릭, 링크 머무르기·입력·Esc·키보드 열기·카드가 뜬 채 닫기, 삭제 취소·수락, 완료 단축키를 확인한다. Broadway는 팝오버 그림자 여백만큼 위치가 어긋나므로 위치 판단은 X11에서 한다.
+- FMT-003 좁은 창 목록 회귀
+  - FMT-001과 같은 환경에서 `dbus-run-session -- xvfb-run -a python3 -m tools.behavior.editor.fmt_003_wrap_ui_smoke`.
+  - 380·620px 창의 첫 줄·자동 줄바꿈 열, 체크 클릭, 입력·undo, 원문 복사·저장·재열기 확인. 캡처: `/tmp/memoivy-wrap-e2e`.
+- FMT-003 Enter 문단 경계 회귀
+  - `mise run test fmt_003_empty_nested_item_keeps_next_paragraph_x`: 30가지 깊이 구성에서 실제 Enter·빈 항목 종료·조합·undo와 다음 본문 위치 확인.
+  - FMT-001 환경에서 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.editor.fmt_003_enter_ui_smoke`.
+  - 실제 키 입력·다음 항목 픽셀·한 줄 높이·복사·undo/redo·저장·재열기 확인. 캡처: `/tmp/memoivy-enter-e2e`. 어두운 테마와 Snap GTK에서도 반복한다.
+- FMT-004 이미지 포인터 회귀
+  - FMT-001 환경에서 `dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.editor.fmt_004_image_ui_smoke`.
+  - 체크박스와 이미지가 공존할 때 호버·더블클릭·확대·크기 조절·빼기·undo·원문/파일 보존 확인. 캡처: `/tmp/memoivy-image-e2e`. 어두운 테마·Snap GTK에서도 반복한다.
 - FOCUS-001 입력 소유권
   - FMT-001과 같은 환경에서 `timeout 30s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.input.focus_001_ui_smoke`.
   - 마우스 창 전환 5회, 메모 저장 내용과 검색어 불변을 확인한다. 실제 Wayland·한글 IME 검증과 구분한다.

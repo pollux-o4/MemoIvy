@@ -5,6 +5,7 @@ use crate::{
     persistence::{Note, Notebook, SaveStatus},
 };
 use model::layout::Align;
+pub(in crate::app) use shortcuts::canvas_m1_preview_marker_ink_regression;
 
 fn note(text: String, position: [f64; 2], next: Vec<Uuid>, id: Uuid) -> Note {
     serde_json::from_value(serde_json::json!({

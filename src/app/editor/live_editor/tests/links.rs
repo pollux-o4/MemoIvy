@@ -90,7 +90,7 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     settle(30);
     // 커서가 링크에 머무르면 키보드로도 뜨고, 벗어나면 닫힌다.
     view.grab_focus();
-    buffer.place_cursor(&buffer.iter_at_offset(2));
+    buffer.place_cursor(&source_iter(&buffer, 2));
     drain();
     editor.sync_caret_preview();
     until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
@@ -101,18 +101,18 @@ pub(in crate::app) fn fmt_003_link_preview_lifecycle() {
     buffer.place_cursor(&buffer.end_iter());
     until(&|| !editor.preview.is_shown());
     // Esc로 닫으면 같은 링크 안에서 움직여도 다시 뜨지 않고, 벗어났다 오면 뜬다.
-    buffer.place_cursor(&buffer.iter_at_offset(2));
+    buffer.place_cursor(&source_iter(&buffer, 2));
     drain();
     editor.sync_caret_preview();
     until(|| editor.preview.is_shown() && editor.preview.card_is_mapped());
     editor.preview.dismiss();
-    buffer.place_cursor(&buffer.iter_at_offset(3));
+    buffer.place_cursor(&source_iter(&buffer, 3));
     settle(160);
     assert!(!editor.preview.is_shown(), "dismissed stays dismissed");
     buffer.place_cursor(&buffer.end_iter());
     drain();
     // 조합 중에는 뜨지 않는다.
-    buffer.place_cursor(&buffer.iter_at_offset(2));
+    buffer.place_cursor(&source_iter(&buffer, 2));
     view.emit_preedit_changed("한");
     settle(160);
     assert!(!editor.preview.is_shown());

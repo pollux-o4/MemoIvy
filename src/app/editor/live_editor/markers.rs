@@ -1,30 +1,123 @@
 use super::*;
 
+// shortcut: 기존 사용자 정의 체크의 호버·눌림 시각 상태 미반영, 체크 상호작용 스타일 정비 시 반영.
+#[allow(deprecated)]
+fn draw_task_marker(
+    area: &gtk::DrawingArea,
+    cr: &gtk::cairo::Context,
+    center_y: f64,
+    state: TaskState,
+) {
+    let size = 16.0;
+    let x = (f64::from(GUTTER) - size) / 2.0;
+    let y = center_y - size / 2.0;
+    let border = area.color();
+    let accent = area
+        .style_context()
+        .lookup_color("memoivy_accent")
+        .unwrap_or(border);
+    let set_color = |color: gdk::RGBA, alpha: f64| {
+        cr.set_source_rgba(
+            f64::from(color.red()),
+            f64::from(color.green()),
+            f64::from(color.blue()),
+            f64::from(color.alpha()) * alpha,
+        );
+    };
+    cr.new_path();
+    cr.arc(
+        x + size - 4.0,
+        y + 4.0,
+        4.0,
+        1.5 * std::f64::consts::PI,
+        2.0 * std::f64::consts::PI,
+    );
+    cr.arc(
+        x + size - 4.0,
+        y + size - 4.0,
+        4.0,
+        0.0,
+        0.5 * std::f64::consts::PI,
+    );
+    cr.arc(
+        x + 4.0,
+        y + size - 4.0,
+        4.0,
+        0.5 * std::f64::consts::PI,
+        std::f64::consts::PI,
+    );
+    cr.arc(
+        x + 4.0,
+        y + 4.0,
+        4.0,
+        std::f64::consts::PI,
+        1.5 * std::f64::consts::PI,
+    );
+    cr.close_path();
+    match state {
+        TaskState::Done => {
+            set_color(accent, 1.0);
+            let _ = cr.fill_preserve();
+            set_color(accent, 1.0);
+            cr.set_line_width(1.5);
+            cr.stroke().ok();
+            let foreground = area
+                .style_context()
+                .lookup_color("memoivy_on_accent")
+                .unwrap_or_else(|| gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
+            set_color(foreground, 1.0);
+            cr.set_line_width(1.8);
+            cr.set_line_cap(gtk::cairo::LineCap::Round);
+            cr.set_line_join(gtk::cairo::LineJoin::Round);
+            cr.move_to(x + 4.0, y + 8.0);
+            cr.line_to(x + 7.0, y + 11.0);
+            cr.line_to(x + 12.0, y + 5.0);
+            cr.stroke().ok();
+        }
+        TaskState::Doing => {
+            set_color(border, 0.46);
+            cr.set_line_width(1.5);
+            cr.stroke().ok();
+            cr.rectangle(x + 1.0, y + 1.0, size / 2.0 - 1.0, size - 2.0);
+            set_color(accent, 1.0);
+            let _ = cr.fill();
+        }
+        TaskState::Open => {
+            set_color(border, 0.46);
+            cr.set_line_width(1.5);
+            cr.stroke().ok();
+        }
+    }
+}
+
+type DrawMarker = Box<dyn Fn(&gtk::Snapshot)>;
+
 #[derive(Default)]
 pub(super) struct MarkerWidgets {
     pub tasks: RefCell<Vec<TaskWidget>>,
-    pub bullets: RefCell<Vec<gtk::Label>>,
+    pub bullets: RefCell<Vec<gtk::DrawingArea>>,
     pub syncing: Cell<bool>,
+    pub draws: RefCell<Vec<DrawMarker>>,
 }
 
 impl LiveEditor {
-    pub(super) fn sync_tasks(self: &Rc<Self>) {
-        let Some(view) = self.view.upgrade() else {
-            return;
-        };
+    pub(super) fn sync_tasks(self: &Rc<Self>, view: &TextView, document: &Document) {
+        self.widgets.draws.borrow_mut().clear();
         let buffer = view.buffer();
-        let document = self.document.borrow();
-        self.sync_bullets(&view, &document);
+        self.sync_bullets(view, document);
         let mut widgets = self.widgets.tasks.borrow_mut();
-        // shortcut: GTK overlay에는 공개 제거 API가 없어 창 안에서 최대 개수만큼 재사용, GTK가 제거 API를 제공하면 회수 정책 재검토.
         for widget in widgets.iter().skip(document.tasks.len()) {
             widget.button.set_visible(false);
+            widget.slot.set_visible(false);
         }
         while widgets.len() < document.tasks.len() {
             let button = gtk::CheckButton::new();
             button.add_css_class("md-checkbox");
             button.set_cursor_from_name(Some("default"));
             button.set_focusable(false);
+            button.set_halign(gtk::Align::End);
+            button.set_opacity(0.0);
+            button.set_size_request(GUTTER, -1);
             button.set_tooltip_text(Some(
                 "완료 상태 변경 · Ctrl+Enter\n진행 중 표시 · Shift+클릭",
             ));
@@ -56,8 +149,23 @@ impl LiveEditor {
                 }
             });
             button.add_controller(shift_click);
-            view.add_overlay(&button, 0, 0);
-            widgets.push(TaskWidget { button, offset });
+            let marker = gtk::DrawingArea::new();
+            marker.add_css_class("md-task-marker");
+            marker.set_can_target(false);
+            marker.set_halign(gtk::Align::End);
+            let slot = gtk::Overlay::new();
+            slot.set_size_request(GUTTER, -1);
+            slot.set_child(Some(&marker));
+            slot.add_overlay(&button);
+            button.set_size_request(GUTTER, -1);
+            let state = Rc::new(Cell::new(TaskState::Open));
+            widgets.push(TaskWidget {
+                button,
+                slot,
+                marker,
+                state,
+                offset,
+            });
         }
         self.widgets.syncing.set(true);
         for (widget, task) in widgets.iter().zip(&document.tasks) {
@@ -66,6 +174,8 @@ impl LiveEditor {
             widget
                 .button
                 .set_inconsistent(task.state == TaskState::Doing);
+            widget.state.set(task.state);
+            widget.marker.queue_draw();
             widget.button.set_sensitive(view.is_editable());
             let iter = buffer.iter_at_offset(task.range.start);
             let mut end = iter;
@@ -83,15 +193,70 @@ impl LiveEditor {
                 });
             let visible = !self.source.get() && item.is_some();
             widget.button.set_visible(visible);
+            widget.slot.set_visible(visible);
             if let (true, Some(item)) = (visible, item) {
-                place_marker(
-                    &view,
-                    &widget.button,
-                    item,
-                    marker_x(&view, item.depth),
-                    GUTTER,
-                    0,
+                let x = marker_x(view, item.depth);
+                let line_metrics = crate::presentation::typography::line_anchor(
+                    &view.create_pango_layout(Some("가")),
+                    &view.create_pango_layout(Some("x")),
+                    None,
                 );
+                let ascent = line_metrics.ascent.ceil() as i32;
+                let marker = widget.marker.clone();
+                let state = widget.state.clone();
+                let weak_view = view.downgrade();
+                let content = item.content.start;
+                let x_center = line_metrics.x_center;
+                marker.set_content_width(GUTTER);
+                marker.set_content_height(ascent);
+                marker.set_size_request(GUTTER, ascent);
+                let marker_draw = marker.clone();
+                self.widgets
+                    .draws
+                    .borrow_mut()
+                    .push(Box::new(move |snapshot| {
+                        let area = &marker_draw;
+                        let Some(view) = weak_view.upgrade() else {
+                            return;
+                        };
+                        let Some(bounds) = area.compute_bounds(&view) else {
+                            return;
+                        };
+                        let cairo = snapshot.append_cairo(&bounds);
+                        cairo.translate(f64::from(bounds.x()), f64::from(bounds.y()));
+                        let cr = &cairo;
+                        let iter = view.buffer().iter_at_offset(content);
+                        let line_y = view.cursor_locations(Some(&iter)).0.y();
+                        let (_, line_top) =
+                            view.buffer_to_window_coords(gtk::TextWindowType::Widget, 0, line_y);
+                        let area_top = area
+                            .compute_point(&view, &gtk::graphene::Point::new(0.0, 0.0))
+                            .map_or(0.0, |point| f64::from(point.y()));
+                        let center_y =
+                            f64::from(line_top) + line_metrics.baseline - x_center - area_top;
+                        draw_task_marker(area, cr, center_y, state.get());
+                    }));
+                widget.slot.set_size_request(GUTTER, ascent);
+                widget.button.set_size_request(GUTTER, ascent);
+                widget.button.set_opacity(0.0);
+                if widget.slot.parent().is_none() {
+                    view.add_overlay(&widget.slot, 0, 0);
+                }
+                let slot = widget.slot.clone();
+                let weak = view.downgrade();
+                self.layout.allocations.borrow_mut().push(Box::new(move || {
+                    if let Some(view) = weak.upgrade() {
+                        let line_y = view
+                            .cursor_locations(Some(&view.buffer().iter_at_offset(content)))
+                            .0
+                            .y();
+                        let y = (f64::from(line_y) + line_metrics.baseline
+                            - x_center
+                            - f64::from(ascent) / 2.)
+                            .round() as i32;
+                        view.move_overlay(&slot, x, y);
+                    }
+                }));
             }
         }
         self.widgets.syncing.set(false);
@@ -109,18 +274,77 @@ impl LiveEditor {
             widget.set_visible(false);
         }
         while widgets.len() < bullets.len() {
-            let label = gtk::Label::new(None);
-            label.add_css_class("md-bullet");
-            label.set_can_target(false);
-            label.set_xalign(1.0);
-            view.add_overlay(&label, 0, 0);
-            widgets.push(label);
+            let marker = gtk::DrawingArea::new();
+            marker.add_css_class("md-bullet");
+            marker.set_can_target(false);
+            widgets.push(marker);
         }
-        for (label, item) in widgets.iter().zip(&bullets) {
-            label.set_text(markdown::BULLETS[item.depth.min(markdown::BULLETS.len() - 1)]);
-            label.set_visible(true);
+        for (area, item) in widgets.iter().zip(&bullets) {
             let x = marker_x(view, item.depth);
-            place_marker(view, label, item, x, GUTTER - MARKER_GAP, ink_offset(label));
+            let width = GUTTER - MARKER_GAP;
+            let anchor = crate::presentation::typography::line_anchor(
+                &view.create_pango_layout(Some("가")),
+                &view.create_pango_layout(Some("x")),
+                None,
+            );
+            let ascent = anchor.ascent.ceil() as i32;
+            let glyph = markdown::BULLETS[item.depth.min(markdown::BULLETS.len() - 1)];
+            let weak_view = view.downgrade();
+            let content = item.content.start;
+            area.set_content_width(width);
+            area.set_content_height(ascent);
+            area.set_size_request(width, ascent);
+            area.set_halign(gtk::Align::Start);
+            let marker_draw = area.clone();
+            self.widgets
+                .draws
+                .borrow_mut()
+                .push(Box::new(move |snapshot| {
+                    let area = &marker_draw;
+                    let Some(view) = weak_view.upgrade() else {
+                        return;
+                    };
+                    let Some(bounds) = area.compute_bounds(&view) else {
+                        return;
+                    };
+                    let layout = area.create_pango_layout(Some(glyph));
+                    let (ink, logical) = layout.pixel_extents();
+                    let line_y = view
+                        .cursor_locations(Some(&view.buffer().iter_at_offset(content)))
+                        .0
+                        .y();
+                    let (_, line_top) =
+                        view.buffer_to_window_coords(gtk::TextWindowType::Widget, 0, line_y);
+                    let center_y = f64::from(line_top) + anchor.baseline - anchor.x_center;
+                    // Pango supplies fallback glyphs, matching the text instead of Cairo's toy font API.
+                    snapshot.save();
+                    snapshot.translate(&gtk::graphene::Point::new(
+                        bounds.x() + (width - logical.width()) as f32,
+                        (center_y - f64::from(ink.y()) - f64::from(ink.height()) / 2.0) as f32,
+                    ));
+                    snapshot.append_layout(&layout, &area.color());
+                    snapshot.restore();
+                }));
+            area.set_visible(true);
+            area.set_margin_start(0);
+            if area.parent().is_none() {
+                view.add_overlay(area, 0, 0);
+            }
+            let marker = area.clone();
+            let weak = view.downgrade();
+            self.layout.allocations.borrow_mut().push(Box::new(move || {
+                if let Some(view) = weak.upgrade() {
+                    let line_y = view
+                        .cursor_locations(Some(&view.buffer().iter_at_offset(content)))
+                        .0
+                        .y();
+                    let y = (f64::from(line_y) + anchor.baseline
+                        - anchor.x_center
+                        - f64::from(ascent) / 2.)
+                        .round() as i32;
+                    view.move_overlay(&marker, x, y);
+                }
+            }));
         }
     }
 
@@ -145,51 +369,27 @@ impl LiveEditor {
             return false;
         };
         let buffer = view.buffer();
-        let mut start = buffer.iter_at_offset(task.range.start + 1);
-        let mut end = buffer.iter_at_offset(task.range.start + 2);
+        let Some(item) = task.item.and_then(|index| document.items.get(index)) else {
+            return false;
+        };
+        let mut start = buffer.iter_at_offset(item.marker.start);
+        start.set_line_offset(0);
+        let mut end = start;
+        end.forward_to_line_end();
+        while start.offset() < end.offset() && start.char() != '[' {
+            start.forward_char();
+        }
+        if start.offset() >= end.offset() || !start.forward_char() {
+            return false;
+        }
+        let mut end = start;
+        if !end.forward_char() {
+            return false;
+        }
         buffer.begin_user_action();
         buffer.delete(&mut start, &mut end);
         buffer.insert(&mut start, task.state.toggled(doing).mark());
         buffer.end_user_action();
         true
     }
-}
-
-/// 표식 위젯을 항목 첫 화면 줄에 맞춰 올린다. `nudge`는 줄 가운데에서 아래로 옮길 픽셀이다.
-fn place_marker(
-    view: &TextView,
-    widget: &impl IsA<gtk::Widget>,
-    item: &markdown::ListItem,
-    x: i32,
-    width: i32,
-    nudge: i32,
-) {
-    let (y, height) = first_line_band(view, &view.buffer().iter_at_offset(item.content.start));
-    widget.set_size_request(width, height);
-    view.move_overlay(widget, x, y + nudge);
-}
-
-/// 기호 모양이 줄 가운데에 오도록 옮길 픽셀. 라벨은 글자 상자를 가운데 두지만
-/// `•`처럼 상자 안에서 한쪽에 치우친 기호는 본문보다 위아래로 어긋나 보인다.
-fn ink_offset(label: &gtk::Label) -> i32 {
-    let (ink, logical) = label.layout().extents();
-    let ink_center = ink.y() + ink.height() / 2;
-    let box_center = logical.y() + logical.height() / 2;
-    ((box_center - ink_center) as f64 / f64::from(pango::SCALE)).round() as i32
-}
-
-/// 항목 첫 화면 줄의 위치와 높이. 위쪽 줄 간격은 뺀다.
-/// 글자 높이는 글꼴마다 달라 빈 줄과 한글 줄에서 표식이 흔들린다. 고정된 줄 높이를 쓴다.
-fn first_line_band(view: &TextView, iter: &gtk::TextIter) -> (i32, i32) {
-    let (top, height) = view.line_yrange(iter);
-    let y = top + view.pixels_above_lines();
-    let mut start = *iter;
-    start.set_line_offset(0);
-    let mut next = start;
-    let bottom = if view.forward_display_line(&mut next) && next.line() == start.line() {
-        view.iter_location(&next).y() - view.pixels_inside_wrap()
-    } else {
-        top + height - view.pixels_below_lines()
-    };
-    (y, bottom - y)
 }

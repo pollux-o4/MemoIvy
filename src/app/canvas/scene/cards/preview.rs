@@ -86,6 +86,36 @@ impl Row {
         // 한 줄이면 줄바꿈을 꺼야 Label의 높이 측정이 어긋나지 않는다.
         self.text.set_wrap(row.max_lines > 1);
         self.text.set_lines(row.max_lines);
+        if matches!(marker, Some(LineMarker::Task(_))) {
+            self.marker.set_valign(gtk::Align::Baseline);
+            let anchor = crate::presentation::typography::line_anchor(
+                &self.text.layout(),
+                &self.text.create_pango_layout(Some("x")),
+                None,
+            );
+            let (ink, _) = self.marker.layout().extents();
+            let scale = f64::from(pango::SCALE);
+            let marker_ink_center = f64::from(ink.y() + ink.height() / 2) / scale;
+            let marker_baseline = f64::from(self.marker.layout().baseline()) / scale;
+            let margin = (marker_baseline - marker_ink_center - anchor.x_center)
+                .round()
+                .max(0.) as i32;
+            self.marker.set_margin_top(margin);
+        } else if marker.is_some() && !continuation {
+            self.marker.set_valign(gtk::Align::Start);
+            let anchor = crate::presentation::typography::line_anchor(
+                &self.text.layout(),
+                &self.text.create_pango_layout(Some("x")),
+                None,
+            );
+            let ink = self.marker.layout().extents().0;
+            let marker_center = f64::from(ink.y() + ink.height() / 2) / f64::from(pango::SCALE);
+            let x_center = anchor.line_top + anchor.baseline - anchor.x_center;
+            self.marker
+                .set_margin_top((x_center - marker_center).round() as i32);
+        } else {
+            self.marker.set_margin_top(0);
+        }
         if matches!(marker, Some(LineMarker::Task(TaskState::Done))) {
             self.text.add_css_class("line-done");
         } else {
@@ -135,6 +165,15 @@ impl Preview {
             .iter()
             .filter(|row| row.root.get_visible())
             .map(|row| (row.marker.text().to_string(), row.text.text().to_string()))
+            .collect()
+    }
+
+    pub(in crate::app) fn ink_test_rows(&self) -> Vec<(Label, Label)> {
+        self.rows
+            .borrow()
+            .iter()
+            .filter(|row| row.root.get_visible())
+            .map(|row| (row.marker.clone(), row.text.clone()))
             .collect()
     }
 }

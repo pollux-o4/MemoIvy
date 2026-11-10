@@ -18,10 +18,10 @@ texts = [linked, '캔버스 A\n- [ ] 첫째\n- [x] 둘째', '캔버스 B\n1. 번
 
 LINKED_NOTE = (150, 190)
 BULLET_BODY = (49, 182)
-LINK_START = (50, 114)
-LINK_TEXT = (60, 114)
+LINK_START = (50, 102)
+LINK_TEXT = (60, 102)
 OUTSIDE_PREVIEW = (400, 340)
-PREVIEW_OPEN = (122, 193)
+PREVIEW_OPEN = (122, 181)
 LINE_GAP_SWEEP_X = 300
 LINE_GAP_SWEEP_Y = range(60, 300, 3)
 
@@ -87,11 +87,12 @@ with tempfile.TemporaryDirectory(prefix='memoivy-markers-') as tmp:
         assert typed == linked + '\n- one\n- two\n- [ ] task\n', 'typing flow: ' + repr(typed)
         for _ in range(40):
             key('ctrl+a', 'ctrl+c')
-            if sp.check_output([clip, '-selection', 'clipboard', '-o'], text=True, timeout=5) == linked:
+            restored = sp.check_output([clip, '-selection', 'clipboard', '-o'], text=True, timeout=5)
+            if restored == linked:
                 break
             key('ctrl+End', 'ctrl+z')
         else:
-            raise AssertionError('undo never restored the note')
+            raise AssertionError('undo never restored the note: ' + repr(restored))
         key('ctrl+End')
         # 표식이 있는 항목의 본문 맨 앞을 누르고 입력해도 목록 문법 앞에 들어가지 않는다.
         # 왼쪽 여백 20 + 표식 칸 24 + 창 그림자 4 → 본문 시작 x≈48. y≈182가 '- 기호' 줄이다.
