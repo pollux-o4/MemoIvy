@@ -1,12 +1,28 @@
-use super::{lifecycle, state::State};
+use super::{
+    lifecycle,
+    state::{AppState, State},
+};
 use gtk::{prelude::*, Application};
 use uuid::Uuid;
 
 /// parent 프로젝트 안에 새 메모를 만든다. None이면 최상위다.
 pub(in crate::app) fn new_note(state: &State, parent: Option<Uuid>) {
+    create(state, parent, false);
+}
+
+pub(in crate::app) fn new_project(state: &State, parent: Option<Uuid>) {
+    create(state, parent, true);
+}
+
+fn create(state: &State, parent: Option<Uuid>, project: bool) {
     let mut s = state.borrow_mut();
     let position = crate::app::canvas::vacant_position(&s.notebook, parent);
-    if s.notebook.request_create(Some(position), parent) {
+    let requested = if project {
+        s.notebook.request_create_project(Some(position), parent)
+    } else {
+        s.notebook.request_create(Some(position), parent)
+    };
+    if requested {
         s.views.library.add.set_sensitive(false);
     }
     drop(s);
@@ -28,7 +44,7 @@ pub(in crate::app) fn group_into_project(
     if ids.is_empty() || s.pending_group.is_some() {
         return;
     }
-    if s.notebook.request_create(Some(position), parent) {
+    if s.notebook.request_create_project(Some(position), parent) {
         s.pending_group = Some(ids);
         s.views.library.add.set_sensitive(false);
     }
@@ -103,4 +119,12 @@ pub(in crate::app) fn open_canvas_at(state: &State, app: &Application, project: 
 
 pub(in crate::app) fn initialize_positions(notebook: &mut crate::persistence::Notebook) {
     crate::app::canvas::initialize_positions(notebook);
+}
+
+pub(in crate::app) fn creation_allowed(state: &AppState, scope: Option<Uuid>) -> (bool, bool) {
+    let book = &state.notebook;
+    (
+        !book.busy() && book.can_create_note(scope),
+        !book.busy() && book.can_create_project(scope),
+    )
 }

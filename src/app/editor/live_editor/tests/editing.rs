@@ -1,12 +1,28 @@
 use super::*;
 
 pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_preedit() {
-    let view = TextView::new();
+    let view = new_view();
     let buffer = view.buffer();
     let original =
         "# 제목😀\n**굵게** *기울임* ~~취소~~\n- [ ] 할 일\n[링크](https://example.com)\n\n";
     buffer.set_text(original);
     let source = attach_editor(&view, None).0;
+    drain();
+    let mut iter = buffer.start_iter();
+    let mut has_anchor = false;
+    while !iter.is_end() {
+        has_anchor |= iter.child_anchor().is_some();
+        iter.forward_char();
+    }
+    assert!(
+        !has_anchor,
+        "list decoration must not insert characters into the undo buffer"
+    );
+    assert_eq!(
+        text(&buffer),
+        original,
+        "list decoration preserves source text"
+    );
     buffer.place_cursor(&buffer.end_iter());
     drain();
     assert!(
@@ -15,7 +31,7 @@ pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_pr
     );
     let bold = original[..original.find("**").unwrap()].chars().count() as i32;
     assert!(tagged(&buffer, bold, "md-hidden"));
-    buffer.place_cursor(&buffer.iter_at_offset(bold + 3));
+    buffer.place_cursor(&source_iter(&buffer, bold + 3));
     drain();
     assert!(
         !tagged(&buffer, bold, "md-hidden"),
@@ -52,6 +68,10 @@ pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_pr
         .unwrap()
         .unwrap();
     assert_eq!(copied.as_str(), original);
+    assert!(
+        !copied.contains('\u{fffc}'),
+        "anchors must not reach clipboard"
+    );
     view.emit_by_name::<()>("cut-clipboard", &[]);
     drain();
     assert_eq!(text(&buffer), "");
@@ -109,7 +129,7 @@ pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_pr
 
     // Run the same task mutation used by the keyboard/click handlers through a captured key signal.
     let task = original[..original.find("[ ]").unwrap()].chars().count() as i32;
-    buffer.place_cursor(&buffer.iter_at_offset(task));
+    buffer.place_cursor(&source_iter(&buffer, task));
     drain();
     let controllers = view.observe_controllers();
     let key = (0..controllers.n_items())
@@ -167,6 +187,21 @@ pub(in crate::app) fn fmt_001_live_editor_preserves_source_selection_undo_and_pr
     buffer.undo();
     drain();
     assert_eq!(text(&buffer), "**한글😀**");
+
+    // A line shortcut at the delimiter must not format the following paragraph.
+    buffer.set_text("첫 줄\n다음 줄");
+    buffer.place_cursor(&buffer.iter_at_offset(3));
+    drain();
+    assert!(crate::app::editor::formatting::handle(
+        &view,
+        gdk::Key::_1,
+        gdk::ModifierType::CONTROL_MASK
+    ));
+    drain();
+    assert_eq!(text(&buffer), "# 첫 줄\n다음 줄");
+    buffer.undo();
+    drain();
+    assert_eq!(text(&buffer), "첫 줄\n다음 줄");
 
     // PERF-001-sized real widget path; report the bounded synthetic input timings.
     buffer.set_text(&"**한글😀** [링크](https://example.com)\n".repeat(230));

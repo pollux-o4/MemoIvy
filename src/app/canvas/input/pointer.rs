@@ -51,10 +51,10 @@ fn attach_scroll(v: &Rc<CanvasView>) {
         let Some(v) = weak.upgrade() else {
             return glib::Propagation::Proceed;
         };
-        let zooming = controller
-            .current_event_state()
-            .contains(gdk::ModifierType::CONTROL_MASK);
-        scroll_input(&v, controller.unit(), (dx, dy), zooming);
+        let modifiers = controller.current_event_state();
+        let zooming = modifiers.contains(gdk::ModifierType::CONTROL_MASK);
+        let delta = pan_delta(controller.unit(), (dx, dy), modifiers);
+        scroll_input(&v, controller.unit(), delta, zooming);
         glib::Propagation::Stop
     });
     let weak = Rc::downgrade(v);
@@ -64,6 +64,22 @@ fn attach_scroll(v: &Rc<CanvasView>) {
         }
     });
     v.widgets.surface.add_controller(scroll);
+}
+
+fn pan_delta(
+    unit: gdk::ScrollUnit,
+    (dx, dy): (f64, f64),
+    modifiers: gdk::ModifierType,
+) -> (f64, f64) {
+    if unit == gdk::ScrollUnit::Wheel
+        && modifiers.contains(gdk::ModifierType::SHIFT_MASK)
+        && !modifiers.contains(gdk::ModifierType::CONTROL_MASK)
+    {
+        // 백엔드가 이미 dx로 전달한 Shift 휠도 같은 가로 축으로 유지한다.
+        (dx + dy, 0.)
+    } else {
+        (dx, dy)
+    }
 }
 
 fn scroll_input(v: &Rc<CanvasView>, unit: gdk::ScrollUnit, delta: (f64, f64), zooming: bool) {
@@ -433,6 +449,37 @@ pub(in super::super) fn test_pinch_interrupts_scroll(v: &Rc<CanvasView>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn canvas_002_shift_wheel_pans_horizontally_without_changing_zoom_or_touchpad() {
+        let shift = gdk::ModifierType::SHIFT_MASK;
+        let ctrl = gdk::ModifierType::CONTROL_MASK;
+        let camera = Camera {
+            x: 120.,
+            y: 80.,
+            zoom: 0.8,
+        };
+        for dy in [-1., 1.] {
+            let delta = pan_delta(gdk::ScrollUnit::Wheel, (0., dy), shift);
+            assert_eq!(
+                scrolled(camera, gdk::ScrollUnit::Wheel, delta, false, (0., 0.)),
+                camera.panned(dy * WHEEL_PAN, 0.)
+            );
+            assert_eq!(pan_delta(gdk::ScrollUnit::Wheel, (dy, 0.), shift), (dy, 0.));
+            assert_eq!(
+                pan_delta(gdk::ScrollUnit::Wheel, (0., dy), shift | ctrl),
+                (0., dy)
+            );
+            assert_eq!(
+                pan_delta(gdk::ScrollUnit::Wheel, (0., dy), gdk::ModifierType::empty()),
+                (0., dy)
+            );
+        }
+        assert_eq!(
+            pan_delta(gdk::ScrollUnit::Surface, (0.25, -0.5), shift),
+            (0.25, -0.5)
+        );
+    }
 
     #[test]
     fn canvas_002_scroll_units_and_moving_zoom_anchor() {

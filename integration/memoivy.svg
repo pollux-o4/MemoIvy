@@ -1,6 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect x="17" y="13" width="94" height="102" rx="12" fill="#e6a828"/>
-  <path d="M17 25a12 12 0 0 1 12-12h70a12 12 0 0 1 12 12v65l-25 25H29a12 12 0 0 1-12-12z" fill="#ffdf70"/>
-  <path d="M86 115V98a8 8 0 0 1 8-8h17z" fill="#f2bd43"/>
-  <path d="M36 42h56M36 57h56M36 72h42" stroke="#8b6721" stroke-width="6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+<title id="title">MemoIvy · 자라나는 기록</title>
+<desc id="desc">노란 메모 왼쪽을 따라 자라는 아이비. 세 갈래의 넓은 잎과 밝은 잎맥, 줄기에서 번갈아 뻗는 잎자루.</desc>
+<defs>
+  <g id="leaf">
+    <path d="M0 12C-4 17-11 17-13 12C-13 8-11 5-9 3C-13 3-16 2-18-1C-13-2-10-4-8-7C-5-5-3-8 0-17C3-8 5-5 8-7C10-4 13-2 18-1C16 2 13 3 9 3C11 5 13 8 13 12C11 17 4 17 0 12Z" fill="currentColor"/>
+    <path d="M0 12V-10M0 5L-10-1M0 5L10-1" fill="none" stroke="#a9c788" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</defs>
+<path d="M31 14h67a12 12 0 0 1 12 12v64l-24 24H31a12 12 0 0 1-12-12V26a12 12 0 0 1 12-12Z" fill="#ffdf70"/>
+<path d="M86 114V98a8 8 0 0 1 8-8h16Z" fill="#edb73c"/>
+<path d="M56 43h33M56 58h33M56 73h24" fill="none" stroke="#8b6721" stroke-width="5.5" stroke-linecap="round"/>
+<g fill="none" stroke="#356447" stroke-linecap="round">
+  <path d="M29 109C16 89 32 74 25 55S24 30 33 17" stroke-width="3.5"/>
+  <path d="M25 45Q28 39 35 35M26 67Q21 63 17 62M26 96Q31 91 36 88" stroke-width="2.5"/>
+</g>
+<use href="#leaf" transform="translate(35 27) rotate(22) scale(.83)" color="#33734c"/>
+<use href="#leaf" transform="translate(17 54) rotate(-35) scale(.73)" color="#42845b"/>
+<use href="#leaf" transform="translate(37 80) rotate(25) scale(.85)" color="#33734c"/>
 </svg>

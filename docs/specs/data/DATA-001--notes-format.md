@@ -2,7 +2,7 @@
 
 - 형식: Note 객체의 JSON 배열. 필드·타입 원본은 `Note`, 허용 색상은 `COLORS`다.
 - 의미: id=메모의 안정적 UUID, text=일반 텍스트, color=팔레트 키, modified=Unix 초 단위 수정 시각.
-- canvas: 위치·방향 연결 UUID·완료 상태·포함한 프로젝트(parent)·바로가기 고정(pinned). 필드 생략 시 기존 메모로 로드하고 배치를 정한다. parent·pinned는 기본값이면 쓰지 않는다. 메모 UUID가 카드 식별자다.
+- canvas: 위치·방향 연결 UUID·완료 상태·포함한 프로젝트(parent)·바로가기 고정(pinned)·프로젝트 정체성(project). 필드 생략 시 기존 메모로 로드하고 배치를 정한다. parent·pinned·project는 기본값이면 쓰지 않는다. project는 기본 false이며 포함 관계의 부모·기존 고정 기록은 로드 때 true로 승격한다(PROJECT-003). 메모 UUID가 카드 식별자다.
 - 검증
   - JSON·필수 필드·타입·UUID, 중복 ID, 허용 색상을 검사한다.
   - 캔버스 좌표는 유한한 범위 값, 연결은 실제 존재하는 다른 메모 UUID로 검증한다. 중복·자기 연결은 거부한다.

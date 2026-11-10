@@ -1,9 +1,11 @@
 //! 이미지 한 장의 위젯. 호버하면 도구와 모서리 핸들이 페이드로 나타난다.
-//! 끄는 동안은 위젯과 줄 간격만 바꾸고, 놓을 때 원문을 한 번 고친다.
+//! 끄는 동안은 위젯과 예약 공간만 바꾸고, 놓을 때 원문을 한 번 고친다.
 use super::*;
 
 pub(super) struct Block {
     pub root: gtk::Overlay,
+    /// The inline child reserves layout space; interactive content lives with the other overlays.
+    pub reservation: gtk::Box,
     pub(super) picture: gtk::Picture,
     pub(super) placeholder: gtk::Label,
     remove: gtk::Button,
@@ -16,6 +18,8 @@ pub(super) struct Block {
     shown: Cell<(i32, f64, i32)>,
     /// 끌기 시작 너비. 끄는 중이면 Some.
     drag: Cell<Option<i32>>,
+    /// 문서 줄 안에 GTK가 자동으로 배치하는 위치 앵커.
+    pub anchor: RefCell<Option<gtk::TextChildAnchor>>,
     /// 왼쪽 위치. 목록 항목 안이면 들여 그린다.
     pub x: Cell<i32>,
 }
@@ -57,8 +61,11 @@ impl Block {
         handle.set_tooltip_text(Some("끌어서 크기 조절 · 두 번 눌러 원래 크기"));
         root.add_overlay(&handle);
 
+        let reservation = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        reservation.set_can_target(false);
         let block = Rc::new(Self {
             root,
+            reservation,
             picture,
             placeholder,
             remove,
@@ -68,6 +75,7 @@ impl Block {
             texture: RefCell::new(None),
             shown: Cell::new((0, 1.0, 0)),
             drag: Cell::new(None),
+            anchor: RefCell::new(None),
             x: Cell::new(0),
         });
         block.connect(editor, &expand);
@@ -259,6 +267,7 @@ impl Block {
         self.handle.set_visible(editable);
         *self.image.borrow_mut() = Some(image.clone());
         self.root.set_visible(true);
+        self.reservation.set_visible(true);
         let ready = match texture {
             Texture::Ready(texture) => Some(texture),
             Texture::Loading => {
@@ -293,12 +302,14 @@ impl Block {
         self.resize(w, f64::from(h) / f64::from(w.max(1)), available);
     }
 
-    /// 위젯 크기와 줄 간격을 함께 바꾼다. 끌기 중에는 GTK가 포인터 이벤트를 프레임 단위로 모아 준다.
+    /// 위젯과 문서 앵커의 예약 크기를 함께 바꾼다. 끌기 중에는 GTK가 포인터 이벤트를 프레임 단위로 모아 준다.
     fn resize(&self, width: i32, ratio: f64, available: i32) {
         let height = (f64::from(width) * ratio).round() as i32;
         self.shown.set((width, ratio, available));
-        self.root.set_size_request(width, height);
-        let above = TOP + height + GAP;
+        self.root.set_margin_start(0);
+        self.root.set_size_request(width, height + GAP);
+        self.reservation.set_size_request(width, height + GAP);
+        let above = TOP;
         if self.spacing.pixels_above_lines() != above {
             self.spacing.set_pixels_above_lines(above);
         }
@@ -307,6 +318,7 @@ impl Block {
     pub fn hide(&self, buffer: &TextBuffer) {
         if self.root.is_visible() {
             self.root.set_visible(false);
+            self.reservation.set_visible(false);
             self.root.remove_css_class("hover");
         }
         *self.image.borrow_mut() = None;

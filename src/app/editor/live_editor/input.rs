@@ -53,7 +53,8 @@ pub(super) fn copy_source(view: &TextView, cut: bool) {
     }
     let buffer = view.buffer();
     if let Some((start, end)) = buffer.selection_bounds() {
-        view.clipboard().set_text(&buffer.text(&start, &end, true));
+        view.clipboard()
+            .set_text(&super::plain_text(&buffer, &start, &end));
         if cut {
             buffer.begin_user_action();
             buffer.delete_selection(true, true);
@@ -76,20 +77,14 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
                 editor.preview.hide();
                 editor.schedule();
             }
-            // Text layout validates after tag changes; settle overlays on the following frames.
-            if !editor.input.composing.get() && editor.layout.frames.get() > 0 {
-                editor.sync_tasks();
-                editor.place_images();
-                editor.layout.frames.set(editor.layout.frames.get() - 1);
-                if editor.layout.frames.get() == 0 {
-                    editor.correct_hang();
-                }
-            }
         }
         glib::ControlFlow::Continue
     });
     let state = editor.clone();
     buffer.connect_changed(move |_| {
+        if state.anchor_mutation.get() {
+            return;
+        }
         state.dirty.set(true);
         state.input.edited.set(true);
         // 입력이 시작되면 카드는 바로 물러나고, 포인터가 다시 움직일 때까지 뜨지 않는다.
@@ -127,13 +122,9 @@ pub(super) fn connect_updates(view: &TextView, buffer: &TextBuffer, editor: &Rc<
         adjustment.connect_value_changed(move |_| {
             if let Some(editor) = scrolled.upgrade() {
                 editor.preview.hide();
-            }
-        });
-        // 긴 문서는 뒤늦게 줄 높이가 확정되므로 표식 위치도 다시 맞춘다.
-        let measured = weak.clone();
-        adjustment.connect_changed(move |_| {
-            if let Some(editor) = measured.upgrade() {
-                editor.layout.frames.set(2);
+                if let Some(view) = editor.view.upgrade() {
+                    view.queue_allocate();
+                }
             }
         });
     };
