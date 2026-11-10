@@ -14,6 +14,28 @@
 
 ## 시작하기
 
+### Snap 설치·업데이트
+
+[Snap Store에서 설치](https://snapcraft.io/memoivy)하거나 터미널에서 실행하세요. 배포판에 **snapd**가 필요합니다.
+
+```bash
+# 처음 설치
+sudo snap install memoivy
+
+# 설치된 앱 업데이트
+sudo snap refresh memoivy
+
+# 실행
+snap run memoivy
+```
+
+Snap은 자동 업데이트도 지원합니다. 수동 업데이트 전에는 앱을 정상 종료하고, 완료 후 다시 열어 주세요.
+
+일반 설치에서 Snap으로 바꾸면 데이터 저장 영역이 달라 기존 메모가 자동으로 나타나지 않습니다. 전환 전 **백업·복원**(OPS-002) 절차를 확인하세요.
+
+<details>
+<summary>소스에서 실행·설치하기 (개발용)</summary>
+
 Linux 데스크톱에서 사용할 수 있습니다. 소스 빌드에는 **GTK 4.10 이상**과 **mise**가 필요합니다.
 
 ```bash
@@ -32,6 +54,8 @@ mise run install
 ```
 
 실행 중인 MemoIvy는 종료한 뒤 다시 열어 주세요.
+
+</details>
 
 ## 화면 살펴보기
 

@@ -32,9 +32,12 @@ pub(in crate::app) fn note_004_preview_disclosure() {
     let contents = gtk::Box::new(gtk::Orientation::Vertical, 0);
     contents.append(&preview);
     contents.append(&button);
+    // 실제 목록과 같은 스크롤 컨테이너로 펼침 중 창 크기 협상을 분리한다.
+    let scroll = gtk::ScrolledWindow::builder().child(&contents).build();
     let window = gtk::Window::builder()
         .default_width(360)
-        .child(&contents)
+        .default_height(600)
+        .child(&scroll)
         .build();
     window.present();
     until(|| preview.width() > 0 && button.is_visible());
@@ -67,10 +70,11 @@ pub(in crate::app) fn note_004_preview_disclosure() {
     button.emit_clicked();
     until(|| imp.tick.borrow().is_none() && preview.height() == full);
     assert_eq!(imp.progress.get(), 1.);
-    // shortcut: Snap GTK 병렬 통합 검사에서 재배치 횟수 검증 1회 실패·단독/순차 재검사 통과, 병렬 CI 도입 전에 재현·원인 확인.
     assert!(
         imp.layout_passes.get() <= passes + 16,
-        "animation must not reshape text every frame"
+        "animation must not reshape text every frame: {} -> {}",
+        passes,
+        imp.layout_passes.get()
     );
     settings.set_gtk_enable_animations(false);
     button.emit_clicked();
