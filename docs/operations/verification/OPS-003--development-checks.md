@@ -1,7 +1,10 @@
 # OPS-003 · 개발 검증
 
+- 비밀정보 차단: `mise install` 후 `mise run hooks:install`을 한 번 실행한다. 커밋은 staged 변경, 푸시는 전체 Git 이력을 Gitleaks로 검사하고 탐지·실행 실패 시 중단한다. `mise run check:secrets`로 수동 검사한다. 출력은 마스킹한다. 로컬 훅은 우회할 수 있으며 새 clone마다 설치해야 한다.
+- Snap 배포: `mise run deploy:snap`은 미커밋·미추적 파일을 차단하고 비밀정보 검사 → Snap GTK 검사 → 패키징 → stable 업로드 순서로 실행한다. `.gitignore`는 이미 추적된 비밀정보를 보호하지 않는다. 실제 Snap 격리·Wayland·GPU 검증은 별도다.
+- 배포 차단 회귀: `python3 tools/quality/test-deploy-guard.py`는 미커밋·미추적 파일, 각 검사·빌드 실패와 실행 순서를 가짜 업로드로 검증한다.
 - 개발 반복: 바뀐 영역의 테스트만 `mise run test:<영역>`으로 돌린다(`mise tasks`로 목록 확인). 영역은 unit(GTK 없음)·gtk·editor·canvas·files·storage·arch이고, `mise run test <이름>`으로 개별 테스트를 고른다. GTK 테스트는 모두 Xvfb에서 돌아 화면에 창을 띄우지 않는다. 통합 전 아래 기본 검사(`mise run check`)를 완료한다.
-- 기본 검사: Rust 변경 시 실행.
+- 기본 검사: 통합 검사 묶음이다. 개발 중에는 변경 관심사만 실행하고, 전체 실행은 요청 시 수행한다.
   - `cargo fmt --check`
   - `mise run test` — GTK 편집 위젯 검증 포함, Xvfb 필요.
   - `cargo clippy --locked -- -D warnings`
@@ -26,6 +29,13 @@
 - UI-002 앱 메뉴 아이콘
   - 전제: 설치 완료, python3-gi, GTK3 introspection.
   - `dbus-run-session -- python3 tools/quality/ui_002_app_icon.py`
+- NOTE-004 목록 본문 더 보기
+  - `mise run test note_004`: 줄바꿈 넘침·전체 본문·진행 중 반전·모션 줄이기.
+  - SAVE-001 환경과 Pillow로 `timeout 40s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.lifecycle.note_004_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다. 포인터·Space/Enter·검색·360px·편집기 열기 분리·원문 보존·GTK 경고를 확인한다. 캡처: `/tmp/memoivy-preview-e2e`, 변경은 MEMOIVY_ARTIFACT_DIR.
+- PROJECT-003 New 생성 선택
+  - 모핑 구조·성능: `mise run test project_003 -- -- --nocapture`는 8회 전환에서 콜백 간격·프레임 중 재배치 없음·유휴 종료를 확인한다. Xvfb 개발 빌드 기준 128개 간격, 59.8fps·p95 18.25ms(콜백 측정, 실제 GPU 표시는 별도). `mise run test note_004`는 반복 글자 배치 재사용과 글꼴/본문 변경 무효화를 검증한다.
+  - `mise run test project_003`: 원자 생성·기존 파일 승격·깊이·빈 프로젝트 정체성·생성 실패 복구.
+  - SAVE-001 환경과 Pillow로 `timeout 45s dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' python3 -m tools.behavior.lifecycle.project_003_ui_smoke`. `GTK_THEME=Adwaita:dark`로 반복한다. 실제 모션 프레임·메뉴 키보드·외부 닫기·메모/프로젝트 생성·Ctrl+N·재실행 보존을 확인한다. 투명 모서리 검토는 합성 X11에서 하며 `MEMOIVY_XCOMPMGR=<xcompmgr 경로>`로 합성기를 함께 실행할 수 있다. 캡처: `/tmp/memoivy-creation-e2e`, 변경은 MEMOIVY_ARTIFACT_DIR.
 - 환경 진단
   - GTK 개발 패키지가 별도 경로에 있으면 PKG_CONFIG_PATH·LIBRARY_PATH를 지정한다.
   - Glycin SVG 로더의 D-Bus 권한 오류는 소켓 사용이 허용된 격리 D-Bus 세션에서 재검증한다.
@@ -65,3 +75,10 @@
   - `mise run test:files`가 저장소(data_003)·편집기 이미지 줄(fmt_004)·파일 창(file_001)을 Xvfb에서 확인한다.
   - 화면 검토: `MEMOIVY_MEDIA_ARTIFACT_DIR=<폴더> mise run test file_001`이 앱 CSS로 그린 메모 이미지·파일 창(사용 중/사용 안 함)·크게 보기를 PNG로 남긴다. 판정이 아닌 검토용이다.
   - 실제 클립보드 붙여넣기·파일 관리자 끌어 놓기·파일 창에서 메모로 끌기는 실제 세션에서 확인한다. Xvfb 위젯 시험은 넣기 위치·undo·크기 기록을 직접 호출로 검증한다.
+
+## 실행 환경과 회귀 범위
+
+- 주력 자동화는 시스템 GTK의 X11/Xvfb다. `test`는 필터 없는 전체 실행, `check`는 그 실행을 포함하며 `architecture_tests::ops_003_primary_gtk_suite_stays_complete_and_isolated`가 임의 축소·가상 화면 제거를 막는다. 개발 중의 영역별 실행과 전체 통합 검사를 구분한다.
+- Snap gnome GTK에서는 같은 Rust 테스트를 재사용한다. GTK 버전·배포 자산·네이티브 위젯·렌더링 변경은 해당 관심사를 배포 런타임에서 다시 확인한다. 환경마다 테스트 본문을 복제하지 않는다.
+- 입력 소유권·스크롤·창/팝오버 위치·IME·파일 선택·클립보드 변경은 대상 Wayland 세션의 실제 앱에서 해당 흐름을 확인한다. Xvfb와 Broadway 결과로 대체 판정하지 않는다.
+- 모션 변경은 시스템 애니메이션 설정, 진행 중 반전·반복·유휴 종료·프레임 중 재배치를 검증한다. 프레임 처리량을 바꾸는 변경은 같은 렌더러·해상도·데이터에서 전후 프레임 간격과 누락을 비교한다. 콜백 주기 검증은 실제 GPU 표시 프레임 보장이 아니다.

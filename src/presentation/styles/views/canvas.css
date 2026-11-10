@@ -125,3 +125,5 @@ progressbar.card-progress > trough > progress { min-height: 4px; border-radius: 
 .shortcut-chip:hover { transform: translateY(-1px); background-color: shade(@memoivy_raised, 1.08); }
 .shortcut-chip:active { transform: scale(.97); }
 .chip-pin { color: @dot_yellow; min-width: 16px; min-height: 16px; }
+
+/* New와 선택 표면은 같은 오른쪽 위 모서리를 기준으로 이어진다. */

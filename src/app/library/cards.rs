@@ -1,16 +1,22 @@
-use crate::app::shared::lazy_menu_for;
-use crate::app::shell::{
-    commands::{open_canvas_at, open_note},
-    state::State,
-};
+use crate::app::shell::state::State;
 use crate::persistence::Note;
 use crate::presentation::icons;
-use gtk::{prelude::*, Application, Box as GtkBox, Button, Label, Orientation};
+use gtk::{prelude::*, Application, Box as GtkBox, Label, Orientation};
 use std::{
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap},
     hash::{Hash, Hasher},
 };
 use uuid::Uuid;
+
+mod card;
+mod disclosure;
+mod grouping;
+mod preview;
+
+#[cfg(test)]
+pub(in crate::app) use grouping::tests::project_002_sections_toggle_in_place_and_keep_preview;
+#[cfg(test)]
+pub(in crate::app) use preview::tests::note_004_preview_disclosure;
 
 fn list_key(notes: &[Note], query: &str, grouped: bool, expanded: &BTreeSet<Uuid>) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -23,14 +29,14 @@ fn list_key(notes: &[Note], query: &str, grouped: bool, expanded: &BTreeSet<Uuid
         note.color().hash(&mut hasher);
         note.modified().hash(&mut hasher);
         note.canvas().parent.hash(&mut hasher);
+        note.canvas().project.hash(&mut hasher);
     }
     hasher.finish()
 }
 
-/// 프로젝트별 보기의 한 줄. 깊이만큼 들여 쓰고, 자식이 있으면 접을 수 있는 머리글이 된다.
+/// 프로젝트별 보기의 관계·집계 행. 화면 배치와 펼침 조작은 그룹 뷰가 담당한다.
 struct Row<'a> {
     note: &'a Note,
-    depth: usize,
     children: usize,
     /// 자기와 하위 전체의 할 일 진행.
     tasks: (usize, usize),
@@ -63,7 +69,6 @@ fn tree<'a>(notes: &'a [Note], expanded: &BTreeSet<Uuid>) -> Vec<Row<'a>> {
     }
     fn walk<'a>(
         parent: Option<Uuid>,
-        depth: usize,
         children: &HashMap<Option<Uuid>, Vec<&'a Note>>,
         totals: &HashMap<Uuid, (usize, usize, u64)>,
         out: &mut Vec<Row<'a>>,
@@ -78,22 +83,21 @@ fn tree<'a>(notes: &'a [Note], expanded: &BTreeSet<Uuid>) -> Vec<Row<'a>> {
                 (*note, count, totals[&note.id()])
             })
             .collect();
-        siblings.sort_by_key(|(_, count, t)| (*count == 0, std::cmp::Reverse(t.2)));
+        siblings.sort_by_key(|(note, _, t)| (!note.canvas().project, std::cmp::Reverse(t.2)));
         for (note, count, (done, all, _)) in siblings {
             out.push(Row {
                 note,
-                depth,
                 children: count,
                 tasks: (done, all),
             });
             let open = expanded.contains(&note.id());
             if count > 0 && open {
-                walk(Some(note.id()), depth + 1, children, totals, out, expanded);
+                walk(Some(note.id()), children, totals, out, expanded);
             }
         }
     }
     let mut out = Vec::with_capacity(notes.len());
-    walk(None, 0, &children, &totals, &mut out, expanded);
+    walk(None, &children, &totals, &mut out, expanded);
     out
 }
 
@@ -106,11 +110,7 @@ fn location(notes: &HashMap<Uuid, &Note>, note: &Note) -> String {
             break;
         };
         let title = crate::presentation::markdown::summary(note_title(parent.text())).title;
-        names.push(if title.is_empty() {
-            "이름 없는 프로젝트".to_owned()
-        } else {
-            title
-        });
+        names.push(display_title(&title, true).to_owned());
         current = parent.canvas().parent;
     }
     names.reverse();
@@ -138,10 +138,7 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
     }
     let all = s.notebook.notes();
     let notes = search_notes(all, &query);
-    let projects = all
-        .iter()
-        .filter(|n| all.iter().any(|c| c.canvas().parent == Some(n.id())))
-        .count();
+    let projects = all.iter().filter(|n| n.canvas().project).count();
     library
         .count
         .set_visible(!(notes.is_empty() && query.is_empty()));
@@ -161,25 +158,26 @@ pub(in crate::app) fn refresh(state: &State, app: &Application) {
         library.list.append(&empty_state(query.is_empty()));
     }
     if grouped {
-        for row in tree(all, library.preferences.borrow().expanded()) {
-            library.list.append(&card(
-                state,
-                app,
-                row.note,
-                CardKind::Tree {
-                    depth: row.depth,
-                    children: row.children,
-                    tasks: row.tasks,
-                },
-            ));
-        }
+        grouping::append(&library.list, state, app);
     } else {
         let by_id: HashMap<_, _> = all.iter().map(|n| (n.id(), n)).collect();
+        let mut children: HashMap<Uuid, usize> = HashMap::new();
+        for note in all {
+            if let Some(parent) = note.canvas().parent {
+                *children.entry(parent).or_default() += 1;
+            }
+        }
         for note in notes {
             let place = location(&by_id, note);
-            library
-                .list
-                .append(&card(state, app, note, CardKind::Flat { location: place }));
+            library.list.append(&card::card(
+                state,
+                app,
+                note,
+                card::CardKind::Flat {
+                    location: place,
+                    children: children.get(&note.id()).copied().unwrap_or(0),
+                },
+            ));
         }
     }
     drop(s);
@@ -199,7 +197,7 @@ fn empty_state(first: bool) -> GtkBox {
     title.add_css_class("card-title");
     empty.append(&title);
     let sub = Label::new(Some(if first {
-        "새 메모를 눌러 생각을 적어 보세요."
+        "+ New에서 메모를 만들어 생각을 적어 보세요."
     } else {
         "다른 검색어를 입력해 보세요."
     }));
@@ -208,177 +206,12 @@ fn empty_state(first: bool) -> GtkBox {
     empty
 }
 
-enum CardKind {
-    Tree {
-        depth: usize,
-        children: usize,
-        tasks: (usize, usize),
-    },
-    Flat {
-        location: String,
-    },
-}
-
-fn card(state: &State, app: &Application, note: &Note, kind: CardKind) -> GtkBox {
-    let id = note.id();
-    let card = GtkBox::new(Orientation::Horizontal, 0);
-    card.add_css_class("card");
-    card.add_css_class(note.color());
-    let stripe = GtkBox::new(Orientation::Vertical, 0);
-    stripe.add_css_class("card-stripe");
-    card.append(&stripe);
-    let summary = crate::presentation::markdown::summary(note.text());
-    let (depth, children, tasks, place) = match kind {
-        CardKind::Tree {
-            depth,
-            children,
-            tasks,
-        } => (depth, children, tasks, String::new()),
-        CardKind::Flat { location } => (
-            0,
-            0,
-            crate::presentation::markdown::task_progress(note.text()),
-            location,
-        ),
-    };
-    if depth > 0 {
-        card.add_css_class("nested");
-        card.set_margin_start(18 * depth as i32);
+fn display_title(title: &str, project: bool) -> &str {
+    match (title.is_empty(), project) {
+        (true, true) => "이름 없는 프로젝트",
+        (true, false) => "빈 메모",
+        (false, _) => title,
     }
-    let project = children > 0;
-    if project {
-        card.add_css_class("project");
-        let collapsed = !state
-            .borrow()
-            .views
-            .library
-            .preferences
-            .borrow()
-            .expanded()
-            .contains(&id);
-        let toggle = Button::new();
-        toggle.set_child(Some(&icons::image(if collapsed {
-            icons::CHEVRON
-        } else {
-            icons::CHEVRON_DOWN
-        })));
-        toggle.add_css_class("card-toggle");
-        toggle.set_widget_name(&id.to_string());
-        toggle.update_state(&[gtk::accessible::State::Expanded(Some(!collapsed))]);
-        toggle.set_valign(gtk::Align::Center);
-        let label = if collapsed { "펼치기" } else { "접기" };
-        toggle.set_tooltip_text(Some(label));
-        let accessible_label = format!(
-            "{} {label}",
-            if summary.title.is_empty() {
-                "빈 메모"
-            } else {
-                &summary.title
-            }
-        );
-        toggle.update_property(&[gtk::accessible::Property::Label(&accessible_label)]);
-        let st = state.clone();
-        let a = app.clone();
-        toggle.connect_clicked(move |_| {
-            let s = st.borrow();
-            let result = s.views.library.preferences.borrow_mut().toggle(id, |other| {
-                s.notebook.notes().iter().any(|note| note.canvas().parent == Some(*other))
-            });
-            if let Err(error) = result {
-                crate::app::shared::message(&s.views.library.window, "목록 상태 저장 오류", &format!("이번 펼침 상태를 저장하지 못했어요. 다시 실행하면 이전 상태로 돌아갑니다.\n{error}"));
-            }
-            drop(s);
-            refresh(&st, &a);
-            // 목록 재생성 뒤에도 같은 펼침 버튼에서 키보드 조작을 이어 간다.
-            let mut row = st.borrow().views.library.list.first_child();
-            while let Some(widget) = row {
-                let mut child = widget.first_child();
-                while let Some(control) = child {
-                    if control.widget_name() == id.to_string() {
-                        control.grab_focus();
-                        return;
-                    }
-                    child = control.next_sibling();
-                }
-                row = widget.next_sibling();
-            }
-        });
-        card.append(&toggle);
-    }
-    let contents = GtkBox::new(Orientation::Vertical, 4);
-    let title = Label::new(Some(match summary.title.as_str() {
-        "" => "빈 메모",
-        title => title,
-    }));
-    title.set_xalign(0.);
-    title.set_ellipsize(gtk::pango::EllipsizeMode::End);
-    title.add_css_class("card-title");
-    if !place.is_empty() {
-        let location = Label::new(Some(&place));
-        location.set_xalign(0.);
-        location.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
-        location.add_css_class("card-location");
-        contents.append(&location);
-    }
-    let head = GtkBox::new(Orientation::Horizontal, 8);
-    title.set_hexpand(true);
-    head.append(&title);
-    if tasks.1 > 0 {
-        let chip = Label::new(Some(&format!("{}/{}", tasks.0, tasks.1)));
-        chip.add_css_class("task-chip");
-        if tasks.0 == tasks.1 {
-            chip.add_css_class("complete");
-        }
-        chip.set_tooltip_text(Some(&format!("할 일 {}개 중 {}개 완료", tasks.1, tasks.0)));
-        head.append(&chip);
-    }
-    contents.append(&head);
-    let preview = if project {
-        format!("메모 {children}개")
-    } else if summary.preview.is_empty() && note.text().trim().is_empty() {
-        "열어서 내용을 적어 보세요".to_owned()
-    } else {
-        summary.preview.clone()
-    };
-    if !preview.is_empty() {
-        let p = Label::new(Some(&preview));
-        p.set_xalign(0.);
-        p.set_wrap(true);
-        p.set_lines(if depth > 0 || project { 1 } else { 2 });
-        p.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        p.add_css_class("preview");
-        contents.append(&p);
-    }
-    if project && tasks.1 > 0 {
-        let bar = gtk::ProgressBar::new();
-        bar.add_css_class("card-progress");
-        bar.set_fraction(tasks.0 as f64 / tasks.1 as f64);
-        contents.append(&bar);
-    }
-    let open = Button::new();
-    open.add_css_class("card-open");
-    open.set_hexpand(true);
-    open.set_child(Some(&contents));
-    let st = state.clone();
-    let a = app.clone();
-    open.connect_clicked(move |_| open_note(&st, &a, id));
-    card.append(&open);
-    let actions = GtkBox::new(Orientation::Vertical, 0);
-    actions.set_valign(gtk::Align::Start);
-    if project {
-        let canvas = Button::new();
-        canvas.set_child(Some(&icons::image(icons::ENTER)));
-        canvas.add_css_class("icon-button");
-        canvas.set_tooltip_text(Some("캔버스에서 프로젝트 열기"));
-        canvas.update_property(&[gtk::accessible::Property::Label("캔버스에서 프로젝트 열기")]);
-        let st = state.clone();
-        let a = app.clone();
-        canvas.connect_clicked(move |_| open_canvas_at(&st, &a, id));
-        actions.append(&canvas);
-    }
-    actions.append(&lazy_menu_for(state, app, id));
-    card.append(&actions);
-    card
 }
 
 fn note_title(text: &str) -> &str {
@@ -407,12 +240,19 @@ fn search_notes<'a>(notes: &'a [Note], query: &str) -> Vec<&'a Note> {
 mod tests {
     use super::*;
 
-    fn note(text: &str, modified: u64, parent: Option<Uuid>) -> Note {
-        let mut canvas = serde_json::json!({});
+    fn note(text: &str, modified: u64, parent: Option<Uuid>, project: bool) -> Note {
+        let mut canvas = serde_json::json!({"project": project});
         if let Some(parent) = parent {
-            canvas = serde_json::json!({ "parent": parent });
+            canvas["parent"] = serde_json::json!(parent);
         }
         serde_json::from_value(serde_json::json!({"id": Uuid::new_v4(), "text": text, "color": "yellow", "modified": modified, "canvas": canvas})).unwrap()
+    }
+
+    #[test]
+    fn project_002_blank_card_titles_have_contextual_fallbacks() {
+        assert_eq!(display_title("", true), "이름 없는 프로젝트");
+        assert_eq!(display_title("", false), "빈 메모");
+        assert_eq!(display_title("작업", true), "작업");
     }
 
     #[test]
@@ -424,7 +264,7 @@ mod tests {
             ("일치하지 않음", 40),
         ]
         .into_iter()
-        .map(|(text, modified)| note(text, modified, None))
+        .map(|(text, modified)| note(text, modified, None, false))
         .collect();
         let revisions = |query| {
             search_notes(&notes, query)
@@ -435,32 +275,52 @@ mod tests {
         assert_eq!(revisions("스티커"), [20, 10, 30]);
         assert_eq!(revisions(""), [40, 30, 20, 10]);
         assert!(revisions("없음").is_empty());
-        let english = note("\n  Sticky Memo\nbody", 0, None);
+        let english = note("\n  Sticky Memo\nbody", 0, None, false);
         assert_eq!(search_notes(&[english], "sTICKY").len(), 1);
     }
 
     #[test]
     fn project_002_tree_lists_projects_first_with_subtree_progress() {
-        let project = note("취업하기", 1, None);
+        let project = note("취업하기", 1, None, true);
         let pid = project.id();
-        let child = note("포트폴리오\n- [x] a\n- [ ] b", 50, Some(pid));
-        let loose = note("낱장 메모", 40, None);
+        let child = note("포트폴리오\n- [x] a\n- [ ] b", 50, Some(pid), false);
+        let loose = note("낱장 메모", 40, None, false);
         let notes = vec![loose, child, project];
         let rows = tree(&notes, &BTreeSet::from([pid]));
         let shape: Vec<_> = rows
             .iter()
-            .map(|r| (note_title(r.note.text()), r.depth, r.children, r.tasks))
+            .map(|r| {
+                (
+                    note_title(r.note.text()),
+                    r.note.canvas().parent,
+                    r.children,
+                    r.tasks,
+                )
+            })
             .collect();
         assert_eq!(
             shape,
             [
-                ("취업하기", 0, 1, (1, 2)),
-                ("포트폴리오", 1, 0, (1, 2)),
-                ("낱장 메모", 0, 0, (0, 0)),
+                ("취업하기", None, 1, (1, 2)),
+                ("포트폴리오", Some(pid), 0, (1, 2)),
+                ("낱장 메모", None, 0, (0, 0)),
             ]
         );
         let by_id: HashMap<_, _> = notes.iter().map(|n| (n.id(), n)).collect();
         assert_eq!(location(&by_id, &notes[1]), "취업하기");
         assert_eq!(tree(&notes, &BTreeSet::new()).len(), 2);
+    }
+
+    #[test]
+    fn project_003_empty_projects_precede_newer_notes() {
+        let notes = vec![
+            note("최근 메모", 99, None, false),
+            note("빈 프로젝트", 1, None, true),
+        ];
+        let rows = tree(&notes, &BTreeSet::new());
+        assert_eq!(note_title(rows[0].note.text()), "빈 프로젝트");
+        assert_eq!(rows[0].children, 0);
+        assert_eq!(rows[0].tasks, (0, 0));
+        assert_eq!(rows.len(), 2);
     }
 }

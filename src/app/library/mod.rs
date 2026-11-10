@@ -7,11 +7,14 @@ use crate::app::{
     },
 };
 use crate::persistence::{data_path, Navigation, Notebook};
-use crate::presentation::icons;
+#[cfg(test)]
+pub(in crate::app) use cards::note_004_preview_disclosure;
+#[cfg(test)]
+pub(in crate::app) use cards::project_002_sections_toggle_in_place_and_keep_preview;
 pub(in crate::app) use cards::refresh;
 use gtk::{
-    prelude::*, Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation,
-    ScrolledWindow, SearchEntry,
+    prelude::*, Application, ApplicationWindow, Box as GtkBox, Label, Orientation, ScrolledWindow,
+    SearchEntry,
 };
 
 pub(in crate::app) fn build(app: &Application) {
@@ -23,13 +26,7 @@ pub(in crate::app) fn build(app: &Application) {
         .build();
     crate::app::shared::focus::watch(&window);
     let (_, actions) = header(&window, "MemoIvy");
-    let add = Button::new();
-    let add_contents = GtkBox::new(Orientation::Horizontal, 4);
-    add_contents.append(&icons::image(icons::ADD));
-    add_contents.append(&Label::new(Some("새 메모")));
-    add.set_child(Some(&add_contents));
-    add.add_css_class("new-note");
-    add.set_tooltip_text(Some("새 메모 · Ctrl+N"));
+    let add = gtk::MenuButton::new();
     actions.append(&add);
     let path = match data_path() {
         Ok(p) => p,
@@ -61,8 +58,7 @@ pub(in crate::app) fn build(app: &Application) {
         crate::persistence::Attachments::beside(&path),
         library,
     );
-    let canvas = Button::with_label("캔버스");
-    canvas.add_css_class("memoivy-action");
+    let canvas = crate::app::shared::canvas_button("캔버스 열기");
     let st = state.clone();
     let a = app.clone();
     canvas.connect_clicked(move |_| commands::open_canvas(&st, &a, None));
@@ -75,8 +71,27 @@ pub(in crate::app) fn build(app: &Application) {
     let st = state.clone();
     let a = app.clone();
     grouped.connect_toggled(move |_| refresh(&st, &a));
-    let st = state.clone();
-    add.connect_clicked(move |_| commands::new_note(&st, None));
+    let weak = std::rc::Rc::downgrade(&state);
+    let permissions = weak.clone();
+    crate::app::shared::creation::configure(
+        &add,
+        "library-create",
+        move |project| {
+            if let Some(state) = weak.upgrade() {
+                if project {
+                    commands::new_project(&state, None);
+                } else {
+                    commands::new_note(&state, None);
+                }
+            }
+        },
+        move || {
+            permissions
+                .upgrade()
+                .map(|state| commands::creation_allowed(&state.borrow(), None))
+                .unwrap_or((false, false))
+        },
+    );
     let st = state.clone();
     window.connect_close_request(move |_| lifecycle::close_library(&st));
     lifecycle::wake(&state);
@@ -89,7 +104,11 @@ fn show_load_error(window: &ApplicationWindow, message: &str) {
     crate::app::shared::message(window, "저장 오류", message);
 }
 
-fn build_contents(window: &ApplicationWindow, add: Button, path: &std::path::Path) -> LibraryView {
+fn build_contents(
+    window: &ApplicationWindow,
+    add: gtk::MenuButton,
+    path: &std::path::Path,
+) -> LibraryView {
     let outer = GtkBox::new(Orientation::Vertical, 16);
     outer.add_css_class("library");
     outer.set_margin_start(20);

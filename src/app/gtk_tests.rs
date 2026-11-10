@@ -135,3 +135,15 @@ scenario!(
     fmt_003_wrapped_list_columns,
     super::editor::live_editor::tests::fmt_003_wrapped_list_columns
 );
+scenario!(
+    note_004_preview_disclosure,
+    super::library::note_004_preview_disclosure
+);
+scenario!(
+    project_002_sections_toggle_in_place_and_keep_preview,
+    super::library::project_002_sections_toggle_in_place_and_keep_preview
+);
+scenario!(
+    project_003_new_menu_and_empty_project,
+    super::canvas::tests::project_003_new_menu_and_empty_project
+);

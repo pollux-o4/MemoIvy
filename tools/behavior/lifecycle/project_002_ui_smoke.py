@@ -14,7 +14,7 @@ artifacts.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
     env = environment(tmp)
     parent, nested, leaf, loose = [str(uuid.uuid4()) for _ in range(4)]
-    notes = [dict(id=id, text=text, color='yellow', modified=modified,
+    notes = [dict(id=id, text=text, color={parent:'yellow', nested:'blue', leaf:'pink', loose:'green'}[id], modified=modified,
                   canvas=dict(parent=pid, position=[64, 64], next=[], done=False))
              for id, text, pid, modified in [
                  (parent, 'Project Alpha', None, 1),
@@ -45,11 +45,11 @@ with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
         shot = ImageGrab.grab().crop((x, y, x+width, y+height))
         shot.save(artifacts / (name + '.png'))
         if rows is not None:
-            # Count the fixture's yellow card stripes, independently of saved state.
+            # Count the fixture's distinct-color card stripes, independently of saved state.
             bands = 0
             previous = False
             for py in range(145, shot.height):
-                stripe = any(r > 150 and g > 110 and r > b + 50 and g > b + 30
+                stripe = any(max(r, g, b) > 100 and max(r, g, b) - min(r, g, b) > 45
                              for r, g, b in [shot.getpixel((px, py))[:3] for px in range(20, 100)])
                 if stripe and not previous:
                     bands += 1
@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
         library = start()
         assert not prefs.exists(), 'first render must not write preferences'
         initial = image(library, '01-default-collapsed', 2)
-        click(library, 48, 195)
+        click(library, 220, 232)
         saved([parent])
         expanded = image(library, '02-parent-expanded', 3)
         assert ImageChops.difference(initial.crop((20, 245, 415, 380)), expanded.crop((20, 245, 415, 380))).getbbox(), 'click must reveal nested project'
@@ -77,11 +77,12 @@ with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
         saved([])
         key('Return')
         saved([parent])
-        click(library, 66, 277)
+        click(library, 220, 295)
         saved([parent, nested])
         image(library, '03-nested-expanded', 4)
-        # Collapse ancestor without erasing the child's remembered choice.
-        click(library, 48, 195)
+        # Nested footer -> parent footer. No left-side disclosure controls.
+        key('Tab')
+        key('space')
         saved([nested])
         click(library, 100, 75)
         call('type', '--clearmodifiers', 'Needle')
@@ -100,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
         library = start()
         saved([nested])
         image(library, '07-restarted-collapsed', 2)
-        click(library, 48, 195)
+        click(library, 220, 232)
         saved([parent, nested])
         image(library, '08-restored-nested', 4)
         stop(library)
@@ -114,23 +115,23 @@ with tempfile.TemporaryDirectory(prefix='memoivy-library-') as tmp:
         prefs.write_text('{broken')
         library = start()
         image(library, '11-corrupt-state-recovered', 2)
-        click(library, 48, 195)
+        click(library, 220, 232)
         saved([parent])
         stop(library)
         # Force an atomic-save failure, then restore the destination and retry.
         prefs.unlink()
         prefs.mkdir()
         library = start()
-        click(library, 48, 195)
+        click(library, 220, 232)
         dialog = wait_window('^목록 상태 저장 오류$')
         image(dialog, '12-save-failure')
         call('windowfocus', dialog)
         key('Escape')
         image(library, '13-failed-save-keeps-session', 3)
         prefs.rmdir()
-        click(library, 48, 195)
+        key('space')
         saved([])
-        click(library, 48, 195)
+        key('space')
         saved([parent])
         image(library, '14-save-recovered', 3)
         stop(library)

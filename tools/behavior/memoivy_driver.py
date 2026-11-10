@@ -12,9 +12,9 @@ binary = os.environ.get('MEMOIVY_BINARY', 'target/debug/memoivy')
 # Window-relative controls shared by the smoke scenarios.
 CLOSE = (34, 26)
 LIBRARY_NOTE = (150, 175)
-OPEN_CANVAS = (300, 24)
+OPEN_CANVAS = (334, 24)
 SEARCH = (100, 75)
-NEW_NOTE = (385, 26)
+NEW = (400, 26)
 
 
 def call(*args):

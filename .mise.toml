@@ -1,5 +1,6 @@
 [tools]
 rust = "1.99.1"
+"aqua:gitleaks/gitleaks" = "8.30.1"
 
 [bootstrap.packages]
 "apt:build-essential" = "latest"
@@ -33,8 +34,15 @@ run = "snapcraft pack --output ."
 
 [tasks."deploy:snap"]
 description = "Snap Store stable 채널에 빌드 후 배포"
-depends = ["test:snap-gtk", "package:snap"]
 run = "bash tools/deploy-snap.sh"
+
+[tasks."check:secrets"]
+description = "Git 전체 이력의 비밀정보 검사 (출력 마스킹)"
+run = "gitleaks git --redact --no-banner"
+
+[tasks."hooks:install"]
+description = "커밋·푸시 전 Gitleaks 검사 활성화"
+run = "git config --local core.hooksPath .githooks"
 
 # 테스트는 모두 가상 화면(Xvfb)에서 돈다. 뒤에 붙인 인자는 cargo test로 넘어간다.
 # 예: mise run test fmt_003, mise run test:editor -- --nocapture

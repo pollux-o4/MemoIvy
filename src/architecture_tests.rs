@@ -129,3 +129,42 @@ fn adr_0010_source_folders_keep_a_small_file_surface() {
     }
     inspect(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
 }
+
+#[test]
+fn adr_0010_shared_creation_keeps_policy_in_its_callers() {
+    for (path, code) in sources("src/app/shared/creation") {
+        for forbidden in ["shell::", "persistence::", "Notebook", "AppState"] {
+            assert!(
+                !code.contains(forbidden),
+                "{path} owns application policy: {forbidden}"
+            );
+        }
+    }
+}
+
+#[test]
+fn ops_003_primary_gtk_suite_stays_complete_and_isolated() {
+    let config =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(".mise.toml")).unwrap();
+    let task = |name: &str| {
+        config
+            .split(&format!("[tasks.{name}]"))
+            .nth(1)
+            .unwrap_or_else(|| panic!("missing task {name}"))
+            .split("\n[")
+            .next()
+            .unwrap()
+    };
+    assert!(
+        task("test")
+            .lines()
+            .any(|line| line == "run = \"dbus-run-session -- xvfb-run -a cargo test --locked\""),
+        "primary suite must run all tests on a virtual display"
+    );
+    assert!(
+        task("check")
+            .lines()
+            .any(|line| line.trim() == "\"mise run test\","),
+        "integration check must include the primary suite"
+    );
+}

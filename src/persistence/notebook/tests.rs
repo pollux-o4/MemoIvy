@@ -216,3 +216,129 @@ fn project_001_nesting_saves_and_deleting_a_project_keeps_children() {
         Some(project)
     );
 }
+
+#[test]
+fn project_003_empty_identity_is_atomic_persistent_and_survives_last_child() {
+    let (dir, mut book) = notebook();
+    let path = dir.path().join("notes.json");
+    assert!(book.request_create_project(Some([64., 64.]), None));
+    assert!(
+        book.notes().is_empty(),
+        "creation is not published before commit"
+    );
+    assert!(
+        !book.request_create(None, None),
+        "one creation transaction at a time"
+    );
+    let id = settle(&mut book)
+        .into_iter()
+        .find_map(|e| match e {
+            NotebookEvent::Created(id) => Some(id),
+            _ => None,
+        })
+        .unwrap();
+    assert!(book.note(id).unwrap().canvas().project);
+    let stored: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(stored[0]["canvas"]["project"], true);
+    let mut book = Notebook::open(path.clone()).unwrap();
+    assert!(book.note(id).unwrap().canvas().project);
+    assert!(book.request_create(None, Some(id)));
+    let child = settle(&mut book)
+        .into_iter()
+        .find_map(|e| match e {
+            NotebookEvent::Created(id) => Some(id),
+            _ => None,
+        })
+        .unwrap();
+    book.edit_canvas(|edit| assert!(edit.set_parent(child, None)));
+    book.flush();
+    settle(&mut book);
+    assert!(
+        Notebook::open(path.clone())
+            .unwrap()
+            .note(id)
+            .unwrap()
+            .canvas()
+            .project
+    );
+    book.edit_canvas(|edit| assert!(edit.set_parent(child, Some(id))));
+    book.flush();
+    settle(&mut book);
+    assert!(book.request_delete(child));
+    settle(&mut book);
+    assert!(
+        Notebook::open(path)
+            .unwrap()
+            .note(id)
+            .unwrap()
+            .canvas()
+            .project
+    );
+}
+
+#[test]
+fn project_003_legacy_promotion_and_depth_share_creation_rules() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.json");
+    let parent = Note::new();
+    let mut child = Note::new();
+    child.canvas.parent = Some(parent.id);
+    let mut pinned = Note::new();
+    pinned.canvas.pinned = true;
+    let original = serde_json::to_vec(&[parent.clone(), child.clone(), pinned.clone()]).unwrap();
+    std::fs::write(&path, &original).unwrap();
+    let mut book = Notebook::open(path.clone()).unwrap();
+    assert!(book.note(parent.id).unwrap().canvas().project);
+    assert!(!book.note(child.id).unwrap().canvas().project);
+    assert!(book.note(pinned.id).unwrap().canvas().project);
+    assert_eq!(
+        std::fs::read(&path).unwrap(),
+        original,
+        "load must not rewrite legacy data"
+    );
+    book.edit_canvas(|edit| assert!(edit.set_parent(child.id, None)));
+    book.flush();
+    settle(&mut book);
+    assert!(
+        Notebook::open(path.clone())
+            .unwrap()
+            .note(parent.id)
+            .unwrap()
+            .canvas()
+            .project
+    );
+    let mut container = Some(parent.id);
+    for _ in 1..super::super::MAX_DEPTH {
+        assert!(book.can_create_project(container));
+        assert!(book.request_create_project(None, container));
+        container = settle(&mut book).into_iter().find_map(|e| match e {
+            NotebookEvent::Created(id) => Some(id),
+            _ => None,
+        });
+        assert!(container.is_some());
+    }
+    assert!(!book.can_create_project(container));
+    assert!(!book.request_create_project(None, container));
+    assert!(book.can_create_note(container));
+    assert!(book.request_create(None, container));
+    settle(&mut book);
+    assert!(!book.can_create_project(Some(Uuid::new_v4())));
+}
+
+#[test]
+fn project_003_failed_creation_publishes_no_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.json");
+    let mut book = Notebook::open(path.clone()).unwrap();
+    std::fs::create_dir(&path).unwrap();
+    assert!(book.request_create_project(None, None));
+    assert!(settle(&mut book)
+        .iter()
+        .any(|e| matches!(e, NotebookEvent::OperationFailed(_))));
+    assert!(book.notes().is_empty());
+    assert!(path.is_dir());
+    std::fs::remove_dir(&path).unwrap();
+    assert!(book.request_create_project(None, None));
+    settle(&mut book);
+    assert!(Notebook::open(path).unwrap().notes()[0].canvas().project);
+}

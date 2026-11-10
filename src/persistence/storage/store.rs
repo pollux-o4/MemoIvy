@@ -13,7 +13,7 @@ pub struct Store {
 }
 impl Store {
     pub fn load(path: PathBuf) -> io::Result<Self> {
-        let notes: Vec<Note> = match fs::read(&path) {
+        let mut notes: Vec<Note> = match fs::read(&path) {
             Ok(data) => serde_json::from_slice(&data)
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
             Err(e) if e.kind() == io::ErrorKind::NotFound => Vec::new(),
@@ -30,6 +30,7 @@ impl Store {
                 "중복된 메모 ID, 알 수 없는 색상 또는 올바르지 않은 캔버스 연결",
             ));
         }
+        super::nesting::promote_projects(&mut notes);
         Ok(Self { notes })
     }
 }

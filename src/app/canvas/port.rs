@@ -28,7 +28,7 @@ pub(super) struct NodeView {
     pub through: Vec<Uuid>,
     pub done: bool,
     pub pinned: bool,
-    /// 자식이 있으면 프로젝트다. 하위 전체의 메모 수와 할 일 진행.
+    /// 명시적 프로젝트. 하위 전체의 메모 수와 할 일 진행.
     pub project: Option<ProjectSummary>,
     pub tasks: (usize, usize),
     pub title_marker: Option<markdown::LineMarker>,
@@ -57,7 +57,11 @@ impl NodeView {
     }
     pub fn display_title(&self) -> &str {
         if self.title.is_empty() {
-            "빈 메모"
+            if self.project.is_some() {
+                "이름 없는 프로젝트"
+            } else {
+                "빈 메모"
+            }
         } else {
             &self.title
         }
@@ -115,7 +119,19 @@ pub(super) fn nodes(
         }
         None
     };
-    let mut projects: HashMap<Uuid, ProjectSummary> = HashMap::new();
+    let mut projects: HashMap<Uuid, ProjectSummary> = notes
+        .iter()
+        .filter(|n| n.canvas().project)
+        .map(|n| {
+            (
+                n.id(),
+                ProjectSummary {
+                    notes: 0,
+                    tasks: (0, 0),
+                },
+            )
+        })
+        .collect();
     let mut through: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
     for note in notes {
         let Some(card) = shown_as(note.id()) else {
@@ -123,10 +139,9 @@ pub(super) fn nodes(
         };
         if card != note.id() {
             let tasks = cache.0[&note.id()].tasks;
-            let project = projects.entry(card).or_insert(ProjectSummary {
-                notes: 0,
-                tasks: (0, 0),
-            });
+            let project = projects
+                .get_mut(&card)
+                .expect("included notes have a project owner");
             project.notes += 1;
             project.tasks.0 += tasks.0;
             project.tasks.1 += tasks.1;
@@ -181,8 +196,14 @@ fn parents(state: &AppState) -> HashMap<Uuid, Option<Uuid>> {
         .collect()
 }
 
-fn projects(parents: &HashMap<Uuid, Option<Uuid>>) -> std::collections::HashSet<Uuid> {
-    parents.values().filter_map(|p| *p).collect()
+fn projects(state: &AppState) -> std::collections::HashSet<Uuid> {
+    state
+        .notebook
+        .notes()
+        .iter()
+        .filter(|n| n.canvas().project)
+        .map(|n| n.id())
+        .collect()
 }
 
 fn place(state: &AppState, id: Uuid) -> Option<Place> {
@@ -232,10 +253,14 @@ pub(super) fn exists(state: &AppState, id: Uuid) -> bool {
     state.notebook.note(id).is_some()
 }
 
+pub(super) fn creation_allowed(state: &AppState, scope: Option<Uuid>) -> (bool, bool) {
+    crate::app::shell::commands::creation_allowed(state, scope)
+}
+
 /// 고정한 프로젝트가 먼저, 그다음 자주·최근 들어간 프로젝트. 현재 경로에 있는 곳은 뺀다.
 pub(super) fn shortcuts(state: &AppState, scope: Option<Uuid>, limit: usize) -> Vec<(Place, bool)> {
     let parents = parents(state);
-    let projects = projects(&parents);
+    let projects = projects(state);
     let here: Vec<_> = scope.map_or_else(Vec::new, |s| ancestors(&parents, s).collect());
     let mut out: Vec<(Place, bool)> = state
         .notebook
@@ -264,7 +289,7 @@ pub(super) fn shortcuts(state: &AppState, scope: Option<Uuid>, limit: usize) -> 
 /// 선택 메모를 옮길 수 있는 프로젝트 후보. 자기 자신·하위·깊이 초과는 빠진다.
 pub(super) fn move_targets(state: &AppState, ids: &[Uuid]) -> Vec<Place> {
     let parents = parents(state);
-    let projects = projects(&parents);
+    let projects = projects(state);
     state
         .notebook
         .notes()

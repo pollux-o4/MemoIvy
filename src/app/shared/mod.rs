@@ -1,8 +1,9 @@
 mod chrome;
+pub(in crate::app) mod creation;
 pub(in crate::app) mod focus;
 mod menus;
 pub(in crate::app) mod shortcuts;
-pub(in crate::app) use chrome::header;
+pub(in crate::app) use chrome::{canvas_button, header};
 pub(in crate::app) use menus::{
     confirm, confirm_delete, lazy_menu_for, menu_for, menu_popover, menu_row, message, source_row,
 };

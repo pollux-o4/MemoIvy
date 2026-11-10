@@ -21,3 +21,5 @@ flowchart LR
 
 - 첨부 파일은 Notebook과 나란한 `Attachments`가 맡는다. 이미지 바이트는 GTK 스레드 밖에서 `AssetStore`로 원자 저장하고, 사용처 색인은 저장·삭제 이벤트 뒤 shell이 맞춘다. writer 큐를 거치지 않으며 메모 저장을 막지 않는다(DATA-003, ADR-0011).
 - 내부 탐색은 `domain`(note·canvas·links), `notebook`(명령·저장 정책), `storage`(paths·save_queue·store), `attachments`(files·usage)로 내려간다. `valid_position`이 편집과 파일 로드의 공통 좌표 규칙이다. C4 저장 탐색에서 구현 심볼을 찾는다.
+
+- Notebook 내부에서 `CanvasEdit`은 캔버스 변경·불변식 적용을, `Operation::apply`는 저장 후보와 성공 후 원본의 동일한 생성·삭제 적용을 맡는다. writer 완료 전 생성·삭제를 게시하지 않는 순서는 유지한다.

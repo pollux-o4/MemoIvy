@@ -4,7 +4,7 @@ import subprocess as sp, tempfile, os, time, json
 from pathlib import Path
 markdown=os.environ.get('MEMOIVY_SMOKE_MARKDOWN') == '1'
 text='# Heading\n## Subheading\n**bold** *italic* ~~strike~~\n- bullet\n1. number\n- [ ] todo\n- [x] done\n[link](https://example.com)' if markdown else 'Refactor smoke test'
-from tools.behavior.memoivy_driver import (call, wait_window as window, x, binary, environment, move, CLOSE, LIBRARY_NOTE, NEW_NOTE)
+from tools.behavior.memoivy_driver import (call, wait_window as window, x, binary, environment, move, CLOSE, LIBRARY_NOTE, NEW, key, click)
 with tempfile.TemporaryDirectory(prefix='memoivy-refactor-') as tmp:
  env=environment(tmp)
  log=open(tmp+'/test.log','w')
@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory(prefix='memoivy-refactor-') as tmp:
   if wm.poll() is not None: raise RuntimeError('Openbox failed; check its library and theme paths')
   app=sp.Popen([binary],env=env,stdout=log,stderr=log)
   print('wait library',flush=True);lib=window('^MemoIvy$');print('library',lib,flush=True);call('windowraise',lib);call('windowfocus',lib)
-  move(lib,*NEW_NOTE);call('click','1')
+  click(lib,*NEW);key('Return')
   print('wait editor',flush=True);note=window('^메모$');print('editor',note,flush=True);call('windowraise',note);call('windowfocus',note)
   for index, line in enumerate(text.split('\n')):
    if index: call('key','Return')

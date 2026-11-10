@@ -26,22 +26,26 @@ pub(in crate::app) fn open_note(state: &State, app: &Application, id: Uuid) {
     let Some(note) = state.borrow().notebook.note(id).cloned() else {
         return;
     };
+    let kind = if note.canvas().project {
+        "프로젝트"
+    } else {
+        "메모"
+    };
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("메모")
+        .title(kind)
         .default_width(380)
         .default_height(420)
         .build();
     crate::app::shared::focus::watch(&window);
     crate::app::shared::shortcuts::attach(&window, state);
-    let (header_bar, actions) = header(&window, "메모");
+    let (header_bar, actions) = header(&window, kind);
     header_bar.add_css_class(note.color());
     let outer = GtkBox::new(Orientation::Vertical, 0);
     outer.add_css_class("memo");
     outer.add_css_class(note.color());
     let palette = palette(state, app, id, note.color(), &outer, &header_bar);
-    let canvas = Button::with_label("캔버스");
-    canvas.add_css_class("memoivy-action");
+    let canvas = crate::app::shared::canvas_button("캔버스에서 메모 보기");
     let st = state.clone();
     let a = app.clone();
     canvas.connect_clicked(move |_| commands::open_canvas(&st, &a, Some(id)));

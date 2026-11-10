@@ -14,10 +14,10 @@
 .window-action:active, .icon-button > button:active, .icon-button > button:checked { background-color: @memoivy_press; }
 .window-action.close:hover { background-color: @memoivy_danger_hover; color: @memoivy_danger; }
 
-.new-note { background: @memoivy_accent; background-image: none; color: @memoivy_on_accent; border: 0; border-radius: 9px; padding: 5px 12px 5px 8px; box-shadow: 0 1px 2px @memoivy_shadow; transition: background-color 120ms ease-out, box-shadow 160ms ease-out, transform 120ms ease-out; }
-.new-note:hover { background-color: shade(@memoivy_accent, 1.08); box-shadow: 0 3px 10px @memoivy_shadow; }
-.new-note:active { background-color: shade(@memoivy_accent, .93); transform: scale(.975); }
-.new-note:disabled { opacity: .55; color: @memoivy_on_accent; }
+.new-note, .creation-trigger > button { background: @memoivy_accent; background-image: none; color: @memoivy_on_accent; border: 0; border-radius: 9px; padding: 5px 12px 5px 8px; box-shadow: 0 1px 2px @memoivy_shadow; transition: background-color 120ms ease-out, box-shadow 160ms ease-out, transform 120ms ease-out; }
+.new-note:hover, .creation-trigger > button:hover { background-color: shade(@memoivy_accent, 1.08); box-shadow: 0 3px 10px @memoivy_shadow; }
+.new-note:active, .creation-trigger > button:active { background-color: shade(@memoivy_accent, .93); transform: scale(.975); }
+.new-note:disabled, .creation-trigger > button:disabled { opacity: .55; color: @memoivy_on_accent; }
 .memoivy-action { background: transparent; background-image: none; border: 0; box-shadow: none; border-radius: 8px; padding: 6px 10px; color: inherit; transition: background-color 120ms ease-out; }
 .memoivy-action:hover { background-color: @memoivy_hover; }
 .memoivy-action:active { background-color: @memoivy_press; }
@@ -35,3 +35,15 @@ scrollbar { background: transparent; border: 0; }
 switch { min-width: 34px; min-height: 20px; border-radius: 999px; border: 0; background: alpha(@memoivy_muted, .35); background-image: none; box-shadow: none; transition: background-color 160ms ease-out; }
 switch:checked { background: @memoivy_success; }
 switch slider { min-width: 16px; min-height: 16px; margin: 2px; border-radius: 999px; border: 0; background: white; background-image: none; box-shadow: 0 1px 3px alpha(black, .3); transition: margin 180ms cubic-bezier(.2, .9, .3, 1); }
+
+popover.creation-popover { background: transparent; margin: 0; padding: 0; }
+popover.creation-popover > contents { background: transparent; border: 0; padding: 0; margin: 0; box-shadow: none; }
+.creation-trigger > button { margin: 0; }
+.creation-trigger > button:checked { opacity: 0; }
+.creation-surface { color: @memoivy_on_accent; transition: color 280ms ease-out; }
+.creation-surface.expanded { color: @memoivy_text; }
+.creation-heading { min-width: 0; min-height: 0; padding: 5px 12px 5px 8px; background: transparent; background-image: none; border: 0; box-shadow: none; border-radius: 9px; color: inherit; font-weight: 600; }
+.creation-heading .creation-plus { transition: transform 280ms cubic-bezier(.22, 1, .36, 1); }
+.creation-surface.expanded .creation-plus { transform: rotate(45deg); }
+.creation-choices { padding: 4px 6px 6px; }
+.creation-choices .menu-row { min-height: 36px; }

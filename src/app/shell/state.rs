@@ -29,7 +29,7 @@ pub(in crate::app) struct LibraryView {
     pub preferences: RefCell<LibraryPreferences>,
     pub shown: std::cell::Cell<Option<u64>>,
     pub error: Label,
-    pub add: Button,
+    pub add: gtk::MenuButton,
 }
 pub(in crate::app) struct Views {
     pub library: LibraryView,
@@ -122,7 +122,7 @@ impl AppState {
                 search: SearchEntry::new(),
                 grouped: gtk::ToggleButton::new(),
                 error: Label::new(None),
-                add: Button::new(),
+                add: gtk::MenuButton::new(),
             },
         )
     }

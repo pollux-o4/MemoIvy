@@ -9,9 +9,9 @@
 .segmented > button { min-height: 24px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_muted; transition: background-color 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out; }
 .segmented > button:hover { color: @memoivy_text; }
 .segmented > button:checked { background: @memoivy_raised; color: @memoivy_text; box-shadow: 0 0 0 1px @memoivy_hairline, 0 1px 3px @memoivy_shadow; }
-.card { border-radius: 12px; margin-bottom: 8px; border: 0; background: @memoivy_surface; color: @memoivy_text; box-shadow: inset 0 0 0 1px @memoivy_hairline; transition: box-shadow 160ms ease-out, transform 160ms cubic-bezier(.2, .9, .3, 1.1), background-color 160ms ease-out; }
-.card:hover { background: shade(@memoivy_surface, 1.06); box-shadow: inset 0 0 0 1px @memoivy_hairline, 0 4px 14px @memoivy_shadow; transform: translateY(-1px); }
-.card-stripe { min-width: 4px; margin: 10px 0 10px 8px; border-radius: 999px; }
+.card { border-radius: 12px; margin-bottom: 8px; border: 0; background: @memoivy_surface; color: @memoivy_text; box-shadow: inset 0 0 0 1px @memoivy_hairline; transition: box-shadow 140ms ease-out, background-color 140ms ease-out; }
+.card:hover { background: shade(@memoivy_surface, 1.04); box-shadow: inset 0 0 0 1px alpha(@memoivy_text, .16); }
+.card-stripe { min-width: 2px; margin: 10px 0 10px 10px; border-radius: 999px; }
 .card.yellow .card-stripe { background: @dot_yellow; }
 .card.pink .card-stripe { background: @dot_pink; }
 .card.blue .card-stripe { background: @dot_blue; }
@@ -23,11 +23,26 @@
 .card .preview { color: @memoivy_muted; }
 .card-location { color: @memoivy_accent; }
 .card-open { background: transparent; background-image: none; border: 0; box-shadow: none; padding: 10px 12px; color: @memoivy_text; border-radius: 12px; }
-.card-toggle { min-width: 24px; min-height: 24px; padding: 0; margin-left: 4px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_muted; }
-.card-toggle:hover { background: @memoivy_hover; color: @memoivy_text; }
+.card-reveal { min-width: 28px; min-height: 24px; margin: 0 8px 6px; padding: 4px; border: 0; border-radius: 7px; background: transparent; background-image: none; box-shadow: none; color: @memoivy_muted; transition: background-color 140ms ease-out, color 140ms ease-out; }
+.card-reveal:hover { background: @memoivy_hover; color: @memoivy_text; }
+.card-reveal .reveal-mark { transform: rotate(90deg); transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
+.card-reveal.expanded .reveal-mark { transform: rotate(270deg); }
+
 .task-chip { padding: 1px 7px; border-radius: 999px; background: alpha(@memoivy_text, .07); color: @memoivy_muted; font-feature-settings: "tnum"; }
 .task-chip.complete { background: alpha(@memoivy_success, .16); color: @memoivy_success; }
 .card progressbar.card-progress > trough { min-height: 3px; border-radius: 999px; background: alpha(@memoivy_text, .08); border: 0; margin-top: 4px; }
 .card progressbar.card-progress > trough > progress { min-height: 3px; border-radius: 999px; background: @memoivy_success; border: 0; }
-.card .icon-button { margin: 6px 6px 0 0; opacity: .5; color: @memoivy_text; }
-.card:hover .icon-button, .card .icon-button:focus-within, .card .icon-button:checked { opacity: 1; }
+.card .icon-button { margin: 6px 6px 0 0; color: @memoivy_muted; }
+.card:hover .icon-button, .card .icon-button:focus-within, .card .icon-button:checked { color: @memoivy_text; }
+
+/* 프로젝트는 표면으로 묶고, 조작은 내용 끝에 둔다. 색은 식별 띠에만 쓴다. */
+.project-section { margin-bottom: 12px; border-radius: 12px; background: alpha(@memoivy_text, .025); box-shadow: inset 0 0 0 1px @memoivy_hairline; }
+.project-section > .card { margin-bottom: 0; background: transparent; box-shadow: none; }
+.project-section > .card:hover { transform: none; background: alpha(@memoivy_text, .025); box-shadow: none; }
+.project-section > .card-reveal { margin: 0 12px 6px; }
+.project-children { margin: 0 8px; padding: 0; }
+.project-children > .card { margin: 0 0 6px; border-radius: 7px; background: @memoivy_surface; box-shadow: none; }
+.project-children > .card:hover { transform: none; background: @memoivy_hover; box-shadow: none; }
+.project-children .card-stripe { min-width: 2px; margin-top: 12px; margin-bottom: 12px; opacity: .65; }
+.project-children > .project-section { margin-bottom: 6px; border-radius: 7px; background: @memoivy_surface; box-shadow: none; }
+ .project-children > .card.inherited-color .card-stripe, .project-children > .project-section.inherited-color > .card .card-stripe { opacity: 0; }
