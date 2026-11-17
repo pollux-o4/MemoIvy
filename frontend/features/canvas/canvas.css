@@ -1,0 +1,187 @@
+.canvas-screen {
+  --canvas-bg: var(--memoivy-bg);
+  --canvas-surface: var(--memoivy-surface);
+  --canvas-text: var(--memoivy-text);
+  --canvas-muted: var(--memoivy-muted);
+  --canvas-hairline: var(--memoivy-hairline);
+  --canvas-hover: var(--memoivy-hover);
+  --canvas-accent: var(--memoivy-accent);
+  --canvas-danger: var(--memoivy-danger);
+  --canvas-success: var(--memoivy-success);
+  --canvas-shadow: var(--memoivy-shadow);
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--canvas-text);
+  background: var(--canvas-bg);
+  outline: none;
+  font-family: inherit;
+}
+
+.canvas-screen .canvas-header {
+  z-index: 3;
+  flex: 0 0 54px;
+  height: 54px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: center;
+  padding: 0 19px;
+  border: 0;
+  color: var(--canvas-text);
+  background: var(--canvas-bg);
+  -webkit-app-region: drag;
+}
+
+.canvas-screen .canvas-header button { -webkit-app-region: no-drag; }
+.canvas-screen .canvas-window-controls { display: flex; align-items: center; gap: 5px; justify-self: start; }
+.canvas-screen .canvas-window-controls button {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--canvas-muted);
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.canvas-screen .canvas-window-controls button:hover { background: var(--canvas-hover); color: var(--canvas-text); }
+.canvas-screen .canvas-window-controls button:first-child:hover { color: var(--canvas-danger); }
+.canvas-screen .canvas-title-area { justify-self: center; display: flex; align-items: center; min-width: 0; }
+.canvas-screen .canvas-title-area b { overflow: hidden; color: var(--canvas-text); font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .canvas-header-actions { justify-self: end; display: flex; align-items: center; }
+.canvas-screen .canvas-header-actions .primary-button {
+  min-width: 74px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--canvas-accent);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 650;
+}
+.canvas-screen .canvas-header-actions .primary-button:hover { background: #0861e3; box-shadow: none; transform: none; }
+
+.canvas-screen .canvas-board {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(rgba(110, 110, 115, .19) .75px, transparent .85px);
+  background-size: 22px 22px;
+  cursor: grab;
+  touch-action: none;
+}
+.canvas-screen .canvas-board.panning { cursor: grabbing; }
+.canvas-screen .canvas-world { position: absolute; top: 0; left: 0; width: 1px; height: 1px; transform-origin: 0 0; }
+.canvas-screen .canvas-links { position: absolute; top: 0; left: 0; width: 6000px; height: 4000px; overflow: visible; color: var(--canvas-muted); pointer-events: none; }
+.canvas-screen .canvas-links path { fill: none; stroke: rgba(110, 110, 115, .62); stroke-width: 1.5; }
+
+.canvas-screen .canvas-note {
+  position: absolute;
+  z-index: 1;
+  width: 240px;
+  height: 156px;
+  overflow: hidden;
+  padding: 13px 14px 11px;
+  border: 1px solid rgba(0, 0, 0, .035);
+  border-radius: 14px;
+  color: var(--note-text);
+  background: var(--card-tone, var(--note-yellow));
+  box-shadow: 0 6px 14px var(--canvas-shadow), 0 1px 2px rgba(27, 34, 48, .05);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow .15s ease, outline-color .15s ease;
+}
+.canvas-screen .canvas-note:hover { box-shadow: 0 9px 18px var(--canvas-shadow), 0 2px 4px rgba(27, 34, 48, .07); }
+.canvas-screen .canvas-note.selected { z-index: 2; outline: 2px solid var(--canvas-accent); outline-offset: 2px; }
+.canvas-screen .canvas-note > header { min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 7px; }
+.canvas-screen .canvas-note h3 { min-width: 0; overflow: hidden; margin: 0; color: var(--note-text); font-size: 14px; font-weight: 650; letter-spacing: -.025em; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .canvas-note.done h3 { text-decoration: line-through; text-decoration-color: var(--note-muted); }
+.canvas-screen .canvas-note > p { display: -webkit-box; overflow: hidden; margin: 12px 0 0; color: var(--note-muted); font-size: 12px; font-weight: 400; line-height: 1.42; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.canvas-screen .canvas-note .done-badge { flex: 0 0 23px; width: 23px; height: 23px; display: grid; place-items: center; margin-left: auto; border-radius: 50%; color: #fff; background: var(--canvas-success); }
+.canvas-screen .canvas-note .canvas-checklist-preview { display: grid; gap: 3px; margin: 11px 0 0; padding: 0; list-style: none; }
+.canvas-screen .canvas-note .canvas-checklist-preview li { min-width: 0; display: flex; align-items: center; gap: 7px; height: 19px; color: var(--note-muted); }
+.canvas-screen .canvas-note .canvas-checklist-preview li > span { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; border: 1px solid rgba(42, 42, 44, .38); border-radius: 5px; color: #fff; }
+.canvas-screen .canvas-note .canvas-checklist-preview li > span.checked { border-color: var(--canvas-accent); background: var(--canvas-accent); }
+.canvas-screen .canvas-note .canvas-checklist-preview small { overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .canvas-note .canvas-checklist-preview small.checked { opacity: .62; }
+.canvas-screen .canvas-card-tasks { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; align-items: center; justify-content: space-between; }
+.canvas-screen .canvas-card-tasks small { color: var(--note-muted); font-size: 10px; line-height: 1.2; }
+.canvas-screen .canvas-note > footer { position: absolute; right: 13px; bottom: 8px; left: 13px; display: flex; align-items: center; gap: 4px; color: var(--note-muted); font-size: 10px; }
+.canvas-screen .canvas-note > footer button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--note-muted); background: transparent; cursor: crosshair; }
+.canvas-screen .canvas-note > footer button:hover { background: rgba(255, 255, 255, .45); }
+.canvas-screen .card-enter { width: 24px; height: 24px; display: grid; place-items: center; margin-left: auto; border: 0; border-radius: 7px; color: var(--note-muted); background: rgba(255, 255, 255, .45); cursor: pointer; }
+.canvas-screen .card-enter:hover { background: rgba(255, 255, 255, .72); }
+.canvas-screen .selection-box { position: absolute; z-index: 5; border: 1px solid var(--canvas-accent); background: rgba(10, 108, 255, .1); pointer-events: none; }
+.canvas-screen .canvas-empty { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
+.canvas-screen .canvas-empty > * { pointer-events: auto; }
+.canvas-screen .canvas-empty h2 { margin: 16px 0 7px; color: var(--canvas-muted); font-size: 15px; }
+.canvas-screen .canvas-empty p { margin: 0 0 18px; color: var(--canvas-muted); font-size: 11px; }
+
+.canvas-screen .canvas-dock {
+  position: absolute;
+  z-index: 8;
+  bottom: 18px;
+  left: 19px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--canvas-hairline);
+  border-radius: 12px;
+  color: var(--canvas-muted);
+  background: var(--canvas-surface, #fff);
+  box-shadow: 0 4px 12px var(--canvas-shadow);
+}
+.canvas-screen .canvas-dock button { width: 25px; height: 27px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--canvas-muted); background: transparent; cursor: pointer; }
+.canvas-screen .canvas-dock button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .canvas-dock span { min-width: 37px; color: var(--canvas-text); text-align: center; font-size: 9px; white-space: nowrap; }
+.canvas-screen .canvas-dock > i { flex: 0 0 1px; height: 18px; margin: 0 2px; border: 0; background: var(--canvas-hairline); }
+.canvas-screen .canvas-dock .canvas-fit-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.canvas-screen .canvas-dock .canvas-help-button { width: 22px; height: 22px; border: 1px solid var(--canvas-muted); border-radius: 50%; font-size: 12px; font-weight: 600; }
+.canvas-screen .canvas-dock .dock-save { display: inline-flex; align-items: center; gap: 6px; min-width: 0; width: auto; color: var(--canvas-muted); font-size: 9px; }
+.canvas-screen .canvas-dock .dock-save b { width: 6px; height: 6px; border-radius: 50%; background: var(--canvas-success); }
+.canvas-screen .canvas-dock .dock-save.failed { color: var(--canvas-danger); }
+.canvas-screen .canvas-dock .dock-save.failed b { background: var(--canvas-danger); }
+.canvas-screen .alignment-bar {
+  position: absolute;
+  z-index: 8;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 5px;
+  border: 1px solid var(--canvas-hairline);
+  border-radius: 10px;
+  background: var(--canvas-surface);
+  box-shadow: 0 4px 12px var(--canvas-shadow);
+}
+.canvas-screen .alignment-bar > span { padding: 0 5px; color: var(--canvas-muted); font-size: 11px; }
+.canvas-screen .alignment-bar button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--canvas-text); cursor: pointer; }
+.canvas-screen .alignment-bar button:hover { background: var(--canvas-hover); }
+.canvas-screen .alignment-bar > i { width: 1px; height: 18px; background: var(--canvas-hairline); }
+
+@container (max-width: 620px) {
+  .canvas-screen .canvas-header { padding: 0 10px; }
+  .canvas-screen .canvas-window-controls { gap: 2px; }
+  .canvas-screen .canvas-dock { bottom: 8px; left: 8px; gap: 3px; padding: 0 5px; }
+  .canvas-screen .canvas-dock .dock-save { display: none; }
+}

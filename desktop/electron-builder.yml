@@ -1,0 +1,42 @@
+appId: io.github.pollux_o4.MemoIvy
+productName: MemoIvy
+asar: true
+directories:
+  output: artifacts/installers
+files:
+  - desktop/**/*.cjs
+  - desktop/icon.png
+  - desktop/icon.ico
+  - desktop/icon.icns
+  - frontend/dist/**
+  - package.json
+  - '!desktop/**/*.test.cjs'
+extraResources:
+  - from: engine/target/release
+    to: engine
+    filter:
+      - memoivy-engine
+      - memoivy-engine.exe
+mac:
+  icon: desktop/icon.icns
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  icon: desktop/icon.ico
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+linux:
+  icon: desktop/icon.png
+  category: Utility
+  desktop:
+    entry:
+      StartupWMClass: io.github.pollux_o4.MemoIvy
+  target:
+    - AppImage
+    - deb

@@ -18,16 +18,6 @@ use gtk::{
 };
 
 pub(in crate::app) fn build(app: &Application) {
-    let window = ApplicationWindow::builder()
-        .application(app)
-        .title("MemoIvy")
-        .default_width(440)
-        .default_height(600)
-        .build();
-    crate::app::shared::focus::watch(&window);
-    let (_, actions) = header(&window, "MemoIvy");
-    let add = gtk::MenuButton::new();
-    actions.append(&add);
     let path = match data_path() {
         Ok(p) => p,
         Err(e) => {
@@ -35,8 +25,9 @@ pub(in crate::app) fn build(app: &Application) {
             return;
         }
     };
-    let store = match Notebook::open(path.clone()) {
-        Ok(s) => s,
+    let (window, actions, add) = build_shell(app);
+    let state = match build_state(&window, add.clone(), &path) {
+        Ok(state) => state,
         Err(e) => {
             show_load_error(
                 &window,
@@ -48,16 +39,17 @@ pub(in crate::app) fn build(app: &Application) {
             return;
         }
     };
-    let library = build_contents(&window, add.clone(), &path);
-    let search = library.search.clone();
-    let mut notebook = store;
-    commands::initialize_positions(&mut notebook);
-    let state = AppState::new(
-        notebook,
-        Navigation::beside(&path),
-        crate::persistence::Attachments::beside(&path),
-        library,
-    );
+    wire_state(app, &window, actions, add, &state);
+}
+
+fn wire_state(
+    app: &Application,
+    window: &ApplicationWindow,
+    actions: GtkBox,
+    add: gtk::MenuButton,
+    state: &crate::app::shell::state::State,
+) {
+    let search = state.borrow().views.library.search.clone();
     let canvas = crate::app::shared::canvas_button("캔버스 열기");
     let st = state.clone();
     let a = app.clone();
@@ -94,9 +86,51 @@ pub(in crate::app) fn build(app: &Application) {
     );
     let st = state.clone();
     window.connect_close_request(move |_| lifecycle::close_library(&st));
-    lifecycle::wake(&state);
-    refresh(&state, app);
+    lifecycle::wake(state);
+    refresh(state, app);
     window.present();
+}
+
+fn build_shell(app: &Application) -> (ApplicationWindow, GtkBox, gtk::MenuButton) {
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title("MemoIvy")
+        .default_width(440)
+        .default_height(600)
+        .build();
+    crate::app::shared::focus::watch(&window);
+    let (_, actions) = header(&window, "MemoIvy");
+    let add = gtk::MenuButton::new();
+    actions.append(&add);
+    (window, actions, add)
+}
+
+fn build_state(
+    window: &ApplicationWindow,
+    add: gtk::MenuButton,
+    path: &std::path::Path,
+) -> Result<crate::app::shell::state::State, String> {
+    let store = Notebook::open(path.to_path_buf()).map_err(|e| e.to_string())?;
+    let library = build_contents(window, add, path);
+    let mut notebook = store;
+    commands::initialize_positions(&mut notebook);
+    Ok(AppState::new(
+        notebook,
+        Navigation::beside(path),
+        crate::persistence::Attachments::beside(path),
+        library,
+    ))
+}
+
+#[cfg(test)]
+pub(in crate::app) fn capture_build(
+    app: &Application,
+    path: &std::path::Path,
+) -> (ApplicationWindow, crate::app::shell::state::State) {
+    let (window, actions, add) = build_shell(app);
+    let state = build_state(&window, add.clone(), path).expect("capture fixture must load");
+    wire_state(app, &window, actions, add, &state);
+    (window, state)
 }
 
 fn show_load_error(window: &ApplicationWindow, message: &str) {

@@ -1,4 +1,9 @@
 /target/
+/node_modules/
+/frontend/dist/
+/storybook-static/
+/release/
+/artifacts/installers/
 **/target/
 *.snap
 /artifacts/ui-review/*.png

@@ -1,4 +1,5 @@
 [tools]
+node = "24.21.0"
 rust = "1.99.1"
 "aqua:gitleaks/gitleaks" = "8.30.1"
 
@@ -13,15 +14,31 @@ rust = "1.99.1"
 
 [tasks.dev]
 description = "개발 모드로 실행"
+run = "npm run dev"
+
+[tasks."dev:legacy"]
+description = "이관 비교용 GTK 앱"
 run = "cargo run --locked"
+
+[tasks.storybook]
+description = "화면별 상태 검수"
+run = "npm run storybook"
 
 [tasks.build]
 description = "릴리스 실행파일 빌드"
+run = "npm run build"
+
+[tasks."build:legacy"]
+description = "이관 비교용 GTK 릴리스 빌드"
 run = "cargo build --release --locked"
+
+[tasks."package:dir"]
+description = "현재 운영체제 배포 폴더 생성"
+run = "npm run desktop:dir"
 
 [tasks.install]
 description = "빌드 후 앱 메뉴·바탕화면 설치본 갱신"
-depends = ["build"]
+depends = ["package:dir"]
 run = "./integration/install.sh"
 
 [tasks.package]
@@ -90,3 +107,15 @@ run = [
     "mise run test",
     "cargo clippy --locked -- -D warnings",
 ]
+
+[tasks."test:engine"]
+description = "데스크톱 SQLite 엔진"
+run = "cargo test --manifest-path engine/Cargo.toml --locked"
+
+[tasks."test:desktop"]
+description = "Electron 통신과 종료"
+run = "node --test desktop/*.test.cjs"
+
+[tasks."test:gtk-reference"]
+description = "명시적으로 GTK 원본 비교 자산 캡처"
+run = 'GDK_BACKEND=x11 GTK_THEME=Adwaita GSK_RENDERER=cairo MEMOIVY_GTK_REFERENCE_DIR="$PWD/docs/assets/gtk-reference" dbus-run-session -- xvfb-run -a -s "-screen 0 2400x1800x24" cargo test --locked capture_gtk_reference_assets'
