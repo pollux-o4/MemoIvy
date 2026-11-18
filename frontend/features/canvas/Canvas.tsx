@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
@@ -108,18 +108,19 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     openMenu: () => cardMenu.openForSelection(selected),
   });
 
+  const fitScope = useEffectEvent(() => fit());
   const previousScope = useRef(activeScope);
   useEffect(() => {
     if (previousScope.current === activeScope) return;
     previousScope.current = activeScope;
-    const frame = requestAnimationFrame(() => fit());
+    const frame = requestAnimationFrame(fitScope);
     return () => cancelAnimationFrame(frame);
   }, [activeScope]);
   const seededLinks = useRef(false);
   useEffect(() => {
     if (seededLinks.current || !notes.length) return;
     seededLinks.current = true;
-    notes.forEach((note) => note.canvas.next.forEach((target) => { if (noteById.has(target)) triggerLink(`${note.id}:${target}`, false); }));
+    for (const note of notes) for (const target of note.canvas.next) if (noteById.has(target)) triggerLink(`${note.id}:${target}`, false);
   }, [notes, noteById, triggerLink]);
   useEffect(() => {
     if (!focusConnectList || !selectedNote) return;
@@ -143,7 +144,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   );
   const deleteSubject = deleteTarget.length === 1 ? store.notes.find((note) => note.id === deleteTarget[0]) : undefined;
   const hasProjects = store.notes.some((note) => note.canvas.project);
-  return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
+  // biome-ignore lint/a11y/noNoninteractiveTabindex: 캔버스 단축키를 받으려면 화면 자체가 포커스를 받아야 한다.
+  return <ProgressProvider notes={store.notes}><div className="canvas-screen" role="application" aria-label="캔버스" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
@@ -174,7 +176,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       onClose={() => setSelected([])} onOpen={(note) => openCard(note)} onOpenAsNote={(note) => openCard(note, true)}
       onLift={scopedProject ? liftSelected : undefined} onMoveInto={(parent) => commands.moveInto(selected, parent)}
       onToggleDone={() => commands.toggleDone([selectedNote.id])}
-      onSignal={() => selectedNote.canvas.next.forEach((id) => triggerLink(`${selectedNote.id}:${id}`, false))}
+      onSignal={() => { for (const id of selectedNote.canvas.next) triggerLink(`${selectedNote.id}:${id}`, false); }}
       onDelete={() => setDeleteTarget([selectedNote.id])} onSelect={(id) => selectAndReveal([id])}
       onToggleLink={commands.link}/>}
     {deleteTarget.length > 0 && <ConfirmDialog
