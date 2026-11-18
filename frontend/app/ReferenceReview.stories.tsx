@@ -70,11 +70,13 @@ function referenceBridge(snapshot: Snapshot): DesktopBridge {
   };
 }
 
-function ReferenceReview({ initialCase = 'library' }: { initialCase?: CaseId }) {
+function ReferenceReview({ initialCase = 'library', initialTheme = 'light' }: { initialCase?: CaseId; initialTheme?: Theme }) {
   const [caseId, setCaseId] = useState<CaseId>(initialCase);
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [manifest, setManifest] = useState<ReferenceManifest | null>(null);
   const [manifestError, setManifestError] = useState(false);
+  useEffect(() => setCaseId(initialCase), [initialCase]);
+  useEffect(() => setTheme(initialTheme), [initialTheme]);
   useEffect(() => {
     let live = true;
     fetch('/gtk-reference/manifest.json').then((response) => { if (!response.ok) throw new Error('manifest missing'); return response.json() as Promise<ReferenceManifest>; })
@@ -106,10 +108,15 @@ function ReferenceReview({ initialCase = 'library' }: { initialCase?: CaseId }) 
   </main>;
 }
 
-const meta: Meta<typeof ReferenceReview> = { title: 'UI review/GTK fidelity', component: ReferenceReview, parameters: { layout: 'fullscreen', controls: { disable: true } } };
+const meta: Meta<typeof ReferenceReview> = { title: 'UI review/GTK fidelity', component: ReferenceReview, parameters: { layout: 'fullscreen' }, argTypes: { initialCase: { control: 'select', options: Object.keys(specs) }, initialTheme: { control: 'inline-radio', options: ['light', 'dark'] } } };
 export default meta;
 type Story = StoryObj<typeof ReferenceReview>;
-export const LibraryComparison: Story = { args: { initialCase: 'library' } };
-export const EditorComparison: Story = { args: { initialCase: 'editor' } };
-export const CanvasComparison: Story = { args: { initialCase: 'canvas' } };
-export const FilesComparison: Story = { args: { initialCase: 'files-used' } };
+export const LibraryComparison: Story = { args: { initialCase: 'library', initialTheme: 'light' } };
+export const LibraryExpandedComparison: Story = { args: { initialCase: 'library-expanded', initialTheme: 'light' } };
+export const EditorComparison: Story = { args: { initialCase: 'editor', initialTheme: 'light' } };
+export const EditorImageComparison: Story = { args: { initialCase: 'editor-image', initialTheme: 'light' } };
+export const CanvasComparison: Story = { args: { initialCase: 'canvas', initialTheme: 'light' } };
+export const FilesEmptyUsedComparison: Story = { args: { initialCase: 'files-empty-used', initialTheme: 'light' } };
+export const FilesEmptyUnusedComparison: Story = { args: { initialCase: 'files-empty-unused', initialTheme: 'light' } };
+export const FilesUsedComparison: Story = { args: { initialCase: 'files-used', initialTheme: 'light' } };
+export const FilesUnusedComparison: Story = { args: { initialCase: 'files-unused', initialTheme: 'light' } };

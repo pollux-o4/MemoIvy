@@ -14,12 +14,16 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 | 화면 타입·프로덕션 번들 확인 | `npm run typecheck`, `npm run build:web` |
 | 엔진 관련 검증 | `mise run test:engine` |
 | 데스크톱 통신 관련 검증 | `mise run test:desktop` |
+| 화면 순수 로직 단위 테스트 | `mise run test:web` |
+| 스토리 상호작용·접근성(axe) | `mise run test:stories` (Storybook 실행 중) |
+| 실제 창 작성·동기화·재시작 복원 | `mise run test:e2e` (합성 데이터 폴더, xvfb) |
+| 린트·미사용 코드·모듈 경계·중복·미사용 crate | `mise run check:web` |
 | 화면 상태 번들 | `npm run build:storybook` |
 | 현재 운영체제 설치 패키지 빌드 | `npm run desktop:build` |
 | 설치 없이 배포 디렉터리 생성 | `npm run desktop:dir` |
 | 기존 GTK 화면 비교 | `mise run dev:legacy` |
 
-검증은 변경 영역만 실행한다. 브라우저 미리보기의 가짜 데이터는 실제 메모 저장소와 다르며 화면에 표시한다. 실제 저장은 Electron에서 확인한다. Storybook은 6006, Vite는 5173을 사용한다.
+검증은 변경 영역만 실행한다. 모듈 경계 규칙(shared는 features를 모르고 기능끼리는 shared로만 공유)은 `.dependency-cruiser.cjs`가 정한다. 브라우저 미리보기의 가짜 데이터는 실제 메모 저장소와 다르며 화면에 표시한다. 실제 저장은 Electron에서 확인한다. Storybook은 6006, Vite는 5173을 사용한다.
 
 ## 데이터
 

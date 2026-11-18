@@ -119,3 +119,19 @@ run = "node --test desktop/*.test.cjs"
 [tasks."test:gtk-reference"]
 description = "명시적으로 GTK 원본 비교 자산 캡처"
 run = 'GDK_BACKEND=x11 GTK_THEME=Adwaita GSK_RENDERER=cairo MEMOIVY_GTK_REFERENCE_DIR="$PWD/docs/assets/gtk-reference" dbus-run-session -- xvfb-run -a -s "-screen 0 2400x1800x24" cargo test --locked capture_gtk_reference_assets'
+
+[tasks."test:web"]
+description = "화면 순수 로직 단위 테스트 (Vitest)"
+run = "npm run test:unit"
+
+[tasks."test:stories"]
+description = "Storybook 상호작용·접근성 (Storybook 실행 중이어야 함)"
+run = "npm run test:stories"
+
+[tasks."test:e2e"]
+description = "Electron 정합 작동: 합성 데이터로 작성·동기화·재시작 복원 (가상 X 화면, 사용자 화면에 창을 띄우지 않음)"
+run = "env -u WAYLAND_DISPLAY MEMOIVY_HEADLESS=1 xvfb-run -a npm run test:e2e"
+
+[tasks."check:web"]
+description = "웹·데스크톱 정적 점검: 린트, 미사용 코드, 모듈 경계, 중복"
+run = ["npm run lint", "npm run check:unused", "npm run check:deps", "npm run check:dupes", "cargo machete engine"]

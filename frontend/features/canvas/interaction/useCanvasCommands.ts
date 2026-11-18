@@ -1,0 +1,75 @@
+import { useMemo } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
+import type { Note } from '../../../shared/engine_contract';
+import type { MemoStore } from '../../../shared/useMemoivy';
+import { alignPositions, canvasSlot, CARD_HEIGHT, CARD_WIDTH, clampCanvasDelta, type Alignment, type CanvasPoint, vacantGroup } from '../model/align';
+import { bounds } from '../model/motion';
+import { useCanvasHistory, type CanvasChange } from './useCanvasHistory';
+
+type Positions = Record<string, CanvasPoint>;
+const NUDGE: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+const rounded = (point: CanvasPoint): [number, number] => [Math.round(point.x), Math.round(point.y)];
+
+/** 캔버스 변경 명령: 저장·실행취소 기록과 정렬·이동·묶기·완료·연결. 화면 상태(포인터·카메라)는 모른다. */
+export function useCanvasCommands({ store, notes, positions, selected, activeScope, setDraftPositions, triggerLink }: {
+  store: MemoStore; notes: Note[]; positions: Positions; selected: string[]; activeScope: string | null;
+  setDraftPositions: Dispatch<SetStateAction<Positions>>; triggerLink: (key: string, fresh: boolean) => void;
+}) {
+  const persist = (changes: CanvasChange[]) => {
+    const moved = Object.fromEntries(changes.flatMap(({ id, canvas }) => canvas.position ? [[id, { x: canvas.position[0], y: canvas.position[1] }]] : []));
+    if (Object.keys(moved).length) setDraftPositions((current) => ({ ...current, ...moved }));
+    void store.mutateCanvas(changes).catch(() => undefined);
+  };
+  const states = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, { ...note.canvas, position: note.canvas.position ?? [positions[note.id].x, positions[note.id].y] }])), [notes, positions]);
+  const history = useCanvasHistory(states, persist);
+  const commit = (changes: CanvasChange[]) => { if (!changes.length) return; history.record(changes); persist(changes); };
+
+  const commitPositions = (next: Positions) => commit(Object.entries(next)
+    .filter(([id, point]) => positions[id] && (positions[id].x !== point.x || positions[id].y !== point.y))
+    .map(([id, point]) => ({ id, canvas: { position: rounded(point) } })));
+  /** 다른 범위로 옮길 때 그곳의 빈자리에 묶음 그대로 놓는다. */
+  const moveInto = (ids: string[], parent: string | null, from: Positions = positions) => {
+    const occupied = store.notes.filter((note) => (note.canvas.parent ?? null) === parent && !ids.includes(note.id))
+      .map((note, index) => note.canvas.position ? { x: note.canvas.position[0], y: note.canvas.position[1] } : canvasSlot(index));
+    const destination = vacantGroup(ids, from, occupied);
+    commit(ids.flatMap((id) => destination[id] ? [{ id, canvas: { parent, position: rounded(destination[id]) } }] : []));
+  };
+  const link = (source: Note, target: string) => {
+    const next = source.canvas.next.includes(target) ? source.canvas.next.filter((id) => id !== target) : [...source.canvas.next, target];
+    if (next.length > source.canvas.next.length) triggerLink(`${source.id}:${target}`, true);
+    commit([{ id: source.id, canvas: { next } }]);
+  };
+
+  return {
+    history,
+    commit,
+    commitPositions,
+    moveInto,
+    link,
+    align: (kind: Alignment) => {
+      const ids = kind === 'flow' && !selected.length ? notes.map((note) => note.id) : selected;
+      const edges = notes.flatMap((note) => note.canvas.next.map((target): [string, string] => [note.id, target]));
+      commitPositions(alignPositions(ids, positions, kind, edges));
+    },
+    nudge: (key: string, step: number) => {
+      const [dx, dy] = NUDGE[key] ?? [0, 0];
+      const group = selected.flatMap((id) => positions[id] ? [positions[id]] : []);
+      const delta = clampCanvasDelta(group, dx * step, dy * step);
+      commitPositions(Object.fromEntries(selected.flatMap((id) => positions[id] ? [[id, { x: positions[id].x + delta.x, y: positions[id].y + delta.y }]] : [])));
+    },
+    toggleDone: (ids: string[]) => {
+      const targets = notes.filter((note) => ids.includes(note.id));
+      const done = targets.some((note) => !note.canvas.done);
+      commit(targets.map((note) => ({ id: note.id, canvas: { done } })));
+    },
+    /** 선택을 새 프로젝트로 묶는다. 만든 프로젝트를 돌려준다. */
+    group: async (): Promise<Note | undefined> => {
+      const area = bounds(selected.flatMap((id) => positions[id] ? [{ x: positions[id].x, y: positions[id].y, w: CARD_WIDTH, h: CARD_HEIGHT }] : []));
+      if (!area) return undefined;
+      const project = await store.createNote({ project: true, parent: activeScope });
+      if (!project) return undefined;
+      commit([{ id: project.id, canvas: { position: rounded(area) } }, ...selected.map((id) => ({ id, canvas: { parent: project.id } }))]);
+      return project;
+    },
+  };
+}

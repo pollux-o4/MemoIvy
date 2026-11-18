@@ -39,7 +39,7 @@ const bridge = Object.freeze({
     return ipcRenderer.invoke('memoivy:open-note', id);
   },
   openWindow: (kind, id) => {
-    if (!['library', 'canvas', 'files'].includes(kind) || (id !== undefined && !isId(id))) {
+    if (!['library', 'canvas', 'files', 'settings'].includes(kind) || (id !== undefined && !isId(id))) {
       return Promise.reject(new TypeError('Invalid window target'));
     }
     return ipcRenderer.invoke('memoivy:open-window', kind, id);

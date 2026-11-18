@@ -1,0 +1,174 @@
+import { onMotionPreferenceChange, prefersReducedMotion } from '../../../shared/appearance';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
+import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, linkProgress, panned, pulseSample, zoomAt } from '../model/motion';
+import type { Camera, Rect } from '../model/motion';
+
+type LinkSample = { progress: number; travel: number; alpha: number; creating: boolean; pulsing: boolean };
+const restingLink: LinkSample = { progress: 1, travel: 1, alpha: 1, creating: false, pulsing: false };
+
+export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: Rect[], selectedCards: Rect[]) {
+  const [camera, setCameraState] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
+  const [linkSamples, setLinkSamples] = useState<Record<string, LinkSample>>({});
+  const [animated, setAnimated] = useState(() => typeof window === 'undefined' || !prefersReducedMotion());
+  const cameraRef = useRef(camera);
+  const motionRef = useRef<CameraMotion | null>(null);
+  const coastRef = useRef<Coast | null>(null);
+  const autopanRef = useRef<[number, number] | null>(null);
+  const linkStarts = useRef(new Map<string, { at: number; creating: boolean }>());
+  const raf = useRef<number | null>(null);
+  const frameRef = useRef<(now: number) => void>(() => undefined);
+  const lastFrame = useRef<number | null>(null);
+  const viewport = useRef<[number, number]>([0, 0]);
+  const didFirstLayout = useRef(false);
+  const latestLayout = useRef({ cards, selectedCards });
+  latestLayout.current = { cards, selectedCards };
+
+  const publish = useCallback((next: Camera) => {
+    cameraRef.current = next;
+    if (motionRef.current) motionRef.current.current = next;
+    setCameraState(next);
+  }, []);
+
+  const schedule = useCallback(() => {
+    if (raf.current === null) raf.current = requestAnimationFrame((now) => frameRef.current(now));
+  }, []);
+
+  const frame = useCallback((now: number) => {
+    raf.current = null;
+    const elapsed = lastFrame.current === null ? 0 : Math.min((now - lastFrame.current) / 1000, 0.05);
+    lastFrame.current = now;
+    const currentMotion = motionRef.current;
+    if (currentMotion && !currentMotion.settled) publish(currentMotion.tick(elapsed));
+    if (coastRef.current) {
+      const result = coastRef.current.advance(elapsed);
+      coastRef.current = result.next;
+      if (result.delta[0] || result.delta[1]) {
+        const current = cameraRef.current;
+        publish({ ...current, x: current.x - result.delta[0] / current.zoom, y: current.y - result.delta[1] / current.zoom });
+      }
+    }
+    if (autopanRef.current) {
+      const [dx, dy] = autopan(autopanRef.current, viewport.current, elapsed);
+      if (dx || dy) {
+        const current = cameraRef.current;
+        publish({ ...current, x: current.x + dx / current.zoom, y: current.y + dy / current.zoom });
+      }
+    }
+    const samples: Record<string, LinkSample> = {};
+    let linksActive = false;
+    linkStarts.current.forEach(({ at, creating }, key) => {
+      const seconds = (now - at) / 1000;
+      const pulse = pulseSample(seconds, animated);
+      samples[key] = { progress: animated && creating ? linkProgress(seconds) : 1, travel: pulse.travel, alpha: pulse.alpha, creating: animated && creating && seconds < 0.28, pulsing: animated && seconds < 0.95 };
+      if (seconds < 0.95 && animated) linksActive = true;
+    });
+    if (Object.keys(samples).length) setLinkSamples(samples);
+    if ((currentMotion && !currentMotion.settled) || coastRef.current || autopanRef.current || linksActive) schedule();
+    else lastFrame.current = null;
+  }, [animated, publish, schedule]);
+  frameRef.current = frame;
+
+  useEffect(() => {
+    return onMotionPreferenceChange(() => setAnimated(!prefersReducedMotion()));
+  }, []);
+
+  useEffect(() => {
+    if (animated) return;
+    coastRef.current = null;
+    linkStarts.current.clear();
+    setLinkSamples({});
+    const current = cameraRef.current;
+    motionRef.current?.to(current, false);
+    if (raf.current !== null) cancelAnimationFrame(raf.current);
+    raf.current = null;
+  }, [animated]);
+
+  useLayoutEffect(() => {
+    const board = host.current;
+    if (!board) return;
+    const layout = () => {
+      const rect = board.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const resized = rect.width !== viewport.current[0] || rect.height !== viewport.current[1];
+      viewport.current = [rect.width, rect.height];
+      if (!motionRef.current || resized) {
+        motionRef.current = new CameraMotion(viewport.current);
+        motionRef.current.current = cameraRef.current;
+      }
+      if (didFirstLayout.current || !latestLayout.current.cards.length) return;
+      if (!latestLayout.current.selectedCards.length) { didFirstLayout.current = true; return; }
+      const initial = firstLayout(latestLayout.current.cards, latestLayout.current.selectedCards, viewport.current);
+      if (initial) {
+        didFirstLayout.current = true;
+        motionRef.current.to(initial, false);
+        publish(initial);
+      }
+    };
+    const observer = new ResizeObserver(layout);
+    observer.observe(board);
+    layout();
+    return () => observer.disconnect();
+  }, [host, publish]);
+
+  useLayoutEffect(() => {
+    if (didFirstLayout.current || viewport.current[0] <= 0 || viewport.current[1] <= 0 || !cards.length) return;
+    didFirstLayout.current = true;
+    if (!selectedCards.length) return;
+    const initial = firstLayout(cards, selectedCards, viewport.current);
+    if (!initial) return;
+    motionRef.current?.to(initial, false);
+    publish(initial);
+  }, [cards, selectedCards, publish]);
+
+  useEffect(() => () => { if (raf.current !== null) cancelAnimationFrame(raf.current); }, []);
+
+  const setCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
+    const value = typeof next === 'function' ? next(cameraRef.current) : next;
+    motionRef.current?.to(value, false);
+    publish(value);
+  }, [publish]);
+  const animateTo = useCallback((target: Camera) => {
+    const board = host.current;
+    if (!board) return;
+    const rect = board.getBoundingClientRect();
+    viewport.current = [rect.width, rect.height];
+    if (!motionRef.current) motionRef.current = new CameraMotion(viewport.current);
+    motionRef.current.current = cameraRef.current;
+    motionRef.current.to(target, animated);
+    if (!animated) publish(motionRef.current.current);
+    else schedule();
+  }, [animated, host, publish, schedule]);
+  const motionTarget = useCallback(() => motionRef.current?.target ?? cameraRef.current, []);
+  const zoomByStep = useCallback((direction: 1 | -1) => {
+    const [width, height] = viewport.current;
+    animateTo(zoomAt(cameraRef.current, [width / 2, height / 2], motionTarget().zoom * (direction > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)));
+  }, [animateTo, motionTarget]);
+  const zoomAtScreen = useCallback((point: [number, number], factor: number) => {
+    coastRef.current = null;
+    const current = cameraRef.current;
+    setCamera(zoomAt(current, point, current.zoom * factor));
+  }, [setCamera]);
+  /** 화면 거리만큼 이동. animated면 진행 중인 이동 목표에 이어 붙인다(GTK wheel_pan). */
+  const panBy = useCallback((delta: [number, number], smooth: boolean) => {
+    coastRef.current = null;
+    if (smooth) animateTo(panned(motionTarget(), delta));
+    else setCamera(panned(cameraRef.current, delta));
+  }, [animateTo, motionTarget, setCamera]);
+  const startCoast = useCallback((velocity: [number, number]) => {
+    coastRef.current = animated ? Coast.start(velocity) : null;
+    if (coastRef.current) schedule();
+  }, [animated, schedule]);
+  const setAutopan = useCallback((screen: [number, number] | null) => {
+    autopanRef.current = screen;
+    if (screen) schedule();
+  }, [schedule]);
+  const triggerLink = useCallback((key: string, creating: boolean) => {
+    if (!animated) { setLinkSamples((current) => ({ ...current, [key]: restingLink })); return; }
+    linkStarts.current.set(key, { at: performance.now(), creating });
+    schedule();
+  }, [animated, schedule]);
+  const sampleForLink = useCallback((key: string) => linkSamples[key] ?? restingLink, [linkSamples]);
+
+  return { camera, cameraRef, setCamera, animateTo, zoomByStep, zoomAtScreen, panBy, startCoast, setAutopan, triggerLink, sampleForLink, animated };
+}

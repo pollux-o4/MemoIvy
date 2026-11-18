@@ -1,0 +1,15 @@
+.settings-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--memoivy-bg); }
+.settings-main { flex: 1; min-height: 0; overflow: auto; padding: 8px 20px 24px; }
+.settings-section { margin-top: 18px; }
+.settings-section h2 { margin: 0 0 7px 12px; color: var(--memoivy-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.settings-group { overflow: hidden; border-radius: 12px; background: var(--memoivy-surface); box-shadow: inset 0 0 0 1px var(--memoivy-hairline), 0 1px 2px var(--memoivy-shadow); }
+.settings-row { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px; }
+.settings-row + .settings-row { box-shadow: inset 0 1px 0 var(--memoivy-hairline); }
+.settings-row > div:first-child { min-width: 0; display: grid; gap: 3px; }
+.settings-row b { font-size: 13px; font-weight: 500; }
+.settings-row small { color: var(--memoivy-muted); font-size: 11px; line-height: 1.45; }
+.settings-row .segmented { flex: none; }
+.settings-row .secondary-button { flex: none; min-height: 28px; font-size: 12px; }
+.settings-row .secondary-button:disabled { opacity: .55; cursor: default; }
+.settings-value { color: var(--memoivy-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+@container (max-width: 420px) { .settings-row { flex-wrap: wrap; } }

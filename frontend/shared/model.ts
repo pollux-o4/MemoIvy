@@ -1,14 +1,22 @@
-import type { Asset, CanvasNode, Note, Snapshot } from './engine_contract';
+import type { CanvasNode, Note } from './engine_contract';
 
-export type { Asset, CanvasNode, Note, Snapshot };
 
-export const NOTE_PALETTE = {
-  yellow: { label: '노랑', accent: '#e6bb55' },
-  pink: { label: '분홍', accent: '#e2799e' },
-  blue: { label: '파랑', accent: '#5396e8' },
-  green: { label: '초록', accent: '#67b974' },
-  purple: { label: '보라', accent: '#967ad4' },
+/** 메모 색 이름의 단일 출처. 실제 색값은 tokens.css의 --note-* / --dot-* 가 가진다. */
+const NOTE_PALETTE = {
+  yellow: { label: '노랑', tone: 'var(--note-yellow)', accent: 'var(--dot-yellow)' },
+  pink: { label: '분홍', tone: 'var(--note-pink)', accent: 'var(--dot-pink)' },
+  blue: { label: '파랑', tone: 'var(--note-blue)', accent: 'var(--dot-blue)' },
+  green: { label: '초록', tone: 'var(--note-green)', accent: 'var(--dot-green)' },
+  purple: { label: '보라', tone: 'var(--note-purple)', accent: 'var(--dot-purple)' },
 } as const;
+export type NoteColor = keyof typeof NOTE_PALETTE;
+export const noteColor = (color: string) => NOTE_PALETTE[color as NoteColor] ?? NOTE_PALETTE.yellow;
+
+const checklistRow = /^\s*[-*+]\s+\[([ xX/])\]\s*(.*)$/;
+/** 체크리스트 줄 파싱의 단일 출처(목록 개수·캔버스 미리보기 공용). */
+function checklistRows(markdown: string): Array<{ done: boolean; text: string }> {
+  return markdown.split('\n').flatMap((line) => { const match = checklistRow.exec(line); return match ? [{ done: match[1].toLowerCase() === 'x', text: match[2] }] : []; });
+}
 
 export const emptyCanvas = (): CanvasNode => ({ position: null, next: [], done: false });
 
@@ -29,11 +37,11 @@ export function plainText(markdown: string): string {
 }
 
 export function checklist(markdown: string): { total: number; done: number } {
-  const rows = markdown.match(/^\s*[-*+]\s+\[[ x/]]/gim) ?? [];
-  return { total: rows.length, done: rows.filter((row) => /\[[xX]]/.test(row)).length };
+  const rows = checklistRows(markdown);
+  return { total: rows.length, done: rows.filter((row) => row.done).length };
 }
 
-export function projectPath(note: Note, notes: Note[]): string[] {
+export function projectPath(note: Note, notes: Note[], title: (note: Note) => string = titleOf): string[] {
   const byId = new Map(notes.map((item) => [item.id, item]));
   const path: string[] = [];
   const seen = new Set<string>();
@@ -41,25 +49,24 @@ export function projectPath(note: Note, notes: Note[]): string[] {
   while (parent && byId.has(parent) && !seen.has(parent)) {
     seen.add(parent);
     const ancestor = byId.get(parent)!;
-    path.unshift(titleOf(ancestor));
+    path.unshift(title(ancestor));
     parent = ancestor.canvas.parent;
   }
   return path;
 }
 
-export function visibleNoteOrder(notes: Note[], query: string, recent = false): Note[] {
-  const normalized = query.trim().toLocaleLowerCase();
-  const matches = notes.filter((note) => !normalized || note.text.toLocaleLowerCase().includes(normalized));
-  if (normalized) {
-    return matches.sort((a, b) => {
-      const aTitle = titleOf(a).toLocaleLowerCase().includes(normalized);
-      const bTitle = titleOf(b).toLocaleLowerCase().includes(normalized);
-      return Number(bTitle) - Number(aTitle) || b.modified - a.modified;
-    });
-  }
-  return matches.sort((a, b) => b.modified - a.modified);
-}
 
-export function makeSnapshot(notes: Note[], assets: Asset[] = []): Snapshot {
-  return { notes, assets, revision: 0, savedRevision: 0 };
+/** 프로젝트 하위(중첩 포함) 메모. 부모 순환은 끊는다. */
+export function descendantsOf(projectId: string, notes: Note[]): Note[] {
+  const byId = new Map(notes.map((item) => [item.id, item]));
+  return notes.filter((item) => {
+    let parent = item.canvas.parent;
+    const seen = new Set<string>();
+    while (parent && !seen.has(parent)) {
+      if (parent === projectId) return true;
+      seen.add(parent);
+      parent = byId.get(parent)?.canvas.parent ?? null;
+    }
+    return false;
+  });
 }

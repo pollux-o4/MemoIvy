@@ -1,11 +1,12 @@
 'use strict';
 
 const { app, BrowserWindow, dialog, ipcMain, shell, session } = require('electron');
+const windowKinds = require('./window_kinds.json');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const { EngineTransport } = require('./engine_transport.cjs');
-const { validateRequest, isId } = require('./ipc_validation.cjs');
+const { validateRequest, validateWindowTarget, isId } = require('./ipc_validation.cjs');
 
 function overrideDataPath() {
   const override = process.env.MEMOIVY_DATA_DIR;
@@ -201,8 +202,8 @@ function installIpc() {
   });
   ipcMain.handle('memoivy:open-window', (event, kind, id) => {
     assertSender(event);
-    if (!['library', 'canvas', 'files'].includes(kind) || (id !== undefined && !isId(id))) throw new TypeError('Invalid window target');
-    createWindow(kind, id);
+    const target = validateWindowTarget(kind, id);
+    createWindow(target.kind, target.id);
   });
   ipcMain.handle('memoivy:open-external', async (event, url) => {
     assertSender(event);
@@ -244,11 +245,10 @@ function createWindow(kind = 'library', id) {
     return existing;
   }
   const win = new BrowserWindow({
-    width: kind === 'note' ? 380 : kind === 'library' ? 440 : kind === 'canvas' ? 1000 : 720,
-    height: kind === 'note' ? 420 : kind === 'library' ? 600 : kind === 'canvas' ? 720 : 520,
+    ...windowKinds[kind],
     frame: false,
-    minWidth: 360,
-    minHeight: 320,
+    transparent: true, // 둥근 창 모서리(GTK CSD와 동일)를 위해 창 바탕을 투명하게 둔다
+    backgroundColor: '#00000000',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -259,8 +259,10 @@ function createWindow(kind = 'library', id) {
       allowRunningInsecureContent: false,
     },
   });
+  // closed 시점에는 win.webContents 접근이 'Object has been destroyed'로 실패한다.
+  const contents = win.webContents;
   windows.add(win);
-  approvedContents.add(win.webContents);
+  approvedContents.add(contents);
   windowByKey.set(key, win);
   win.once('ready-to-show', () => win.show());
   win.webContents.on('will-navigate', (event, target) => {
@@ -283,9 +285,9 @@ function createWindow(kind = 'library', id) {
   });
   win.on('closed', () => {
     windows.delete(win);
-    approvedContents.delete(win.webContents);
+    approvedContents.delete(contents);
     if (windowByKey.get(key) === win) windowByKey.delete(key);
-    if (kind === 'note' && ![...windowByKey.keys()].some((windowKey) => windowKey.startsWith('note:'))) {
+    if (kind === 'note' && !isQuitting && !quitApproved && ![...windowByKey.keys()].some((windowKey) => windowKey.startsWith('note:'))) {
       const library = windowByKey.get('library');
       if (library && !library.isDestroyed()) library.show();
     }

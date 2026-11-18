@@ -1,0 +1,13 @@
+/* GTK menus.css .memoivy-help · .help-* */
+.help-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--memoivy-raised); }
+.help-screen .help-bar { background: var(--memoivy-raised); padding: 6px 10px 0; }
+.help-sheet { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 12px 28px 26px; }
+.help-column { display: grid; align-content: start; gap: 18px; }
+.help-group { display: grid; gap: 6px; }
+.help-section { margin: 0 0 3px; color: var(--memoivy-muted); font-size: 1em; font-weight: 400; }
+.help-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+.help-row.has-syntax { grid-template-columns: 1fr 13ch 9ch; }
+.help-syntax { color: var(--memoivy-muted); font-family: monospace; }
+.help-keys { display: flex; justify-content: flex-end; gap: 3px; }
+.help-key { padding: 1px 7px; border-radius: 5px; color: var(--memoivy-text); background: var(--memoivy-keycap); font: inherit; white-space: nowrap; }
+@container (max-width: 640px) { .help-sheet { grid-template-columns: 1fr; } }

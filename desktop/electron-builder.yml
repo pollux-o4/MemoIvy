@@ -5,6 +5,7 @@ directories:
   output: artifacts/installers
 files:
   - desktop/**/*.cjs
+  - desktop/window_kinds.json
   - desktop/icon.png
   - desktop/icon.ico
   - desktop/icon.icns

@@ -1,0 +1,72 @@
+.bridge-mark,.empty-mark { display: grid; place-items: center; border-radius: 50%; height: 44px; width: 44px; color: var(--memoivy-muted); background: var(--memoivy-hover); }
+@keyframes menu-pop { from { opacity: .2; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
+.primary-button,.secondary-button,.danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; padding: 5px 12px 5px 8px; border: 0; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background-color 120ms ease-out, box-shadow 160ms ease-out, transform 120ms ease-out; }
+.primary-button { color: #fff; background: var(--memoivy-accent); box-shadow: 0 1px 2px var(--memoivy-shadow); }
+.primary-button:hover { background: color-mix(in srgb, var(--memoivy-accent), white 8%); box-shadow: 0 3px 10px var(--memoivy-shadow); }
+.primary-button:active { background: color-mix(in srgb, var(--memoivy-accent), black 7%); transform: scale(.975); }
+.primary-button:disabled { opacity: .55; cursor: default; }
+.secondary-button { padding: 5px 11px; border: 1px solid var(--memoivy-hairline); color: var(--memoivy-text); background: var(--memoivy-raised); }
+.danger-button { padding: 5px 11px; color: #fff; background: var(--memoivy-danger-fill); }
+.danger-quiet { border: 0; background: transparent; color: var(--memoivy-danger); font-size: 11px; font-weight: 600; cursor: pointer; }
+.icon-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; cursor: pointer; transition: background-color 120ms ease-out, opacity 120ms ease-out; }
+.icon-button:hover { background: var(--memoivy-hover); }
+.window-controls { display: flex; align-items: center; gap: 2px; }
+.window-controls button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; color: var(--memoivy-muted); background: transparent; cursor: pointer; font-size: 17px; }
+.window-controls svg { width: 20px; height: 20px; }
+.window-controls button:hover { background: var(--memoivy-hover); color: var(--memoivy-text); }
+.window-controls button:first-child:hover { color: var(--memoivy-danger); background: var(--memoivy-danger-hover); }
+.window-controls button:active { background: var(--memoivy-press); }
+.window-header { position: relative; z-index: 10; container: window-header / inline-size; display: grid; grid-template-columns: minmax(max-content,1fr) minmax(0,auto) minmax(max-content,1fr); column-gap: 8px; align-items: center; flex: 0 0 46px; height: 46px; padding: 4px 12px; border: 0; color: var(--memoivy-text); background: var(--memoivy-bg); -webkit-app-region: drag; }
+.header-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.palette-wrap { position: relative; }
+.palette-trigger { position: relative; }
+.palette-popover { min-width: 0; display: flex; gap: 5px; padding: 7px; }
+.palette-popover button { width: 28px; height: 28px; display: grid; place-items: center; padding: 3px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; }
+.palette-popover button:hover,.palette-popover button.selected { background: var(--memoivy-hover); }
+.palette-popover button span { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--memoivy-text); box-shadow: 0 0 0 1px var(--memoivy-hairline); font-size: 10px; }
+.segmented { display: flex; gap: 0; padding: 2px; border-radius: 9px; background: color-mix(in srgb,var(--memoivy-text) 5.5%,transparent); }
+.segmented button { min-height: 24px; padding: 0 10px; border: 0; border-radius: 7px; color: var(--memoivy-muted); background: transparent; cursor: pointer; font-size: 11px; font-weight: 500; transition: background-color 140ms ease-out,color 140ms ease-out,box-shadow 140ms ease-out; }
+.segmented button:hover { color: var(--memoivy-text); }
+.segmented button.selected { color: var(--memoivy-text); background: var(--memoivy-raised); box-shadow: 0 0 0 1px var(--memoivy-hairline),0 1px 3px var(--memoivy-shadow); }
+.disclosure { flex: 0 0 36px; width: 36px; height: 32px; padding: 4px; border: 0; border-radius: 7px; color: var(--memoivy-muted); background: transparent; cursor: pointer; }
+.disclosure:hover { color: var(--memoivy-text); background: var(--memoivy-hover); }
+.disclosure svg { transform: rotate(0deg); transition: transform 240ms cubic-bezier(.22,1,.36,1); }
+.disclosure.is-open svg { transform: rotate(180deg); }
+.window-header button { -webkit-app-region: no-drag; }
+.window-header .window-title,.editor-title { justify-self: center; max-width: 180px; overflow: hidden; color: var(--memoivy-text); font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+
+/* GTK menus.css .memoivy-confirm */
+.confirm-dialog { width: min(340px, calc(100% - 32px)); padding: 20px; border-radius: 14px; color: var(--memoivy-text); background: var(--memoivy-raised); box-shadow: 0 0 0 1px var(--memoivy-hairline), 0 18px 48px var(--memoivy-shadow-deep); display: grid; gap: 6px; text-align: left; }
+.confirm-title { margin: 0; font-size: 1em; font-weight: 700; }
+.confirm-subject { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 36ch; }
+.confirm-detail { margin: 0; color: var(--memoivy-muted); }
+.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.confirm-cancel, .confirm-accept { min-height: 32px; border: 0; border-radius: 9px; font: inherit; cursor: pointer; transition: background-color 110ms ease-out; }
+.confirm-cancel { background: var(--memoivy-keycap); color: var(--memoivy-text); }
+.confirm-cancel:hover { background: var(--memoivy-press); }
+.confirm-accept { background: var(--memoivy-danger-fill); color: #fff; }
+.confirm-accept:hover { background: color-mix(in srgb, var(--memoivy-danger-fill), white 10%); }
+.confirm-accept:active { background: color-mix(in srgb, var(--memoivy-danger-fill), black 10%); }
+
+/* GTK menus.css popover.memoivy-menu · .menu-row: 모든 팝오버 메뉴의 단일 기준 */
+.menu-surface { padding: 5px; border-radius: 12px; color: var(--memoivy-text); background: var(--memoivy-raised); box-shadow: 0 0 0 1px var(--memoivy-hairline), 0 4px 12px var(--memoivy-shadow), 0 16px 40px var(--memoivy-shadow); -webkit-app-region: no-drag; }
+.menu-row { width: 100%; min-height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--memoivy-text); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
+.menu-row:hover, .menu-row:focus-visible { outline: 0; color: var(--memoivy-on-accent); background: var(--memoivy-accent); }
+.menu-row:active { background: color-mix(in srgb, var(--memoivy-accent), black 8%); }
+.menu-row > :not(svg):first-of-type, .menu-row > span { flex: 1; }
+.menu-row svg { flex: none; }
+.menu-row.destructive { color: var(--memoivy-danger); }
+.menu-row.destructive:hover, .menu-row.destructive:focus-visible { color: #fff; background: var(--memoivy-danger-fill); }
+.menu-row[aria-checked="true"] { color: var(--memoivy-accent); background: color-mix(in srgb, var(--memoivy-accent) 13%, transparent); }
+.menu-row[aria-checked="true"]:hover { color: var(--memoivy-on-accent); background: var(--memoivy-accent); }
+.menu-hint { color: var(--memoivy-muted); font: inherit; font-size: .9em; }
+.menu-row:hover .menu-hint, .menu-row:focus-visible .menu-hint { color: color-mix(in srgb, var(--memoivy-on-accent) 78%, transparent); }
+.menu-divider { height: 1px; margin: 4px 8px; border: 0; background: var(--memoivy-hairline); }
+/* GTK .swatch */
+.swatch { width: 26px; height: 26px; padding: 0; border: 1px solid rgba(0, 0, 0, .1); border-radius: 999px; cursor: pointer; transition: box-shadow 120ms ease-out, transform 120ms ease-out; }
+.swatch:hover { transform: scale(1.1); }
+.swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--memoivy-raised), 0 0 0 4px var(--memoivy-accent); }
+
+/* GTK tooltip */
+.app-tooltip { position: fixed; z-index: 1000; max-width: 260px; padding: 4px 8px; border-radius: 8px; color: var(--memoivy-text); background: var(--memoivy-raised); box-shadow: 0 0 0 1px var(--memoivy-hairline), 0 6px 18px var(--memoivy-shadow); font-size: .92em; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 120ms ease-out, visibility 0s 120ms; }
+.app-tooltip.is-visible { opacity: 1; visibility: visible; transition: opacity 120ms ease-out; }

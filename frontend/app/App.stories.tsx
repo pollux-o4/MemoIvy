@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { App } from './App';
+import windowKinds from '../../desktop/window_kinds.json';
 import { createMockBridge, fixtureNoteIds } from '../shared/mock_bridge';
 import type { DesktopBridge, Note, Snapshot } from '../shared/engine_contract';
 
@@ -23,8 +24,9 @@ const makeSnapshot = (): Snapshot => {
 };
 
 function storyBridge(snapshot?: Snapshot): DesktopBridge { return createMockBridge(snapshot); }
-function previewApp(screen: 'library' | 'note' | 'canvas' | 'files', id?: string, snapshot?: Snapshot, customSize?: number[]) {
-  const size = customSize ?? (screen === 'library' ? [440, 600] : screen === 'note' ? [380, 420] : screen === 'canvas' ? [1000, 720] : [720, 520]);
+function previewApp(screen: 'library' | 'note' | 'canvas' | 'files' | 'settings', id?: string, snapshot?: Snapshot, customSize?: number[]) {
+  const kind = windowKinds[screen];
+  const size = customSize ?? [kind.width, kind.height];
   return <div className="theme-light" style={{ width: size[0], height: size[1], margin: '0 auto', background: 'var(--memoivy-bg)' }}><App bridge={storyBridge(snapshot)} preview={false} initialScreen={screen} initialId={id}/></div>;
 }
 
@@ -36,6 +38,14 @@ export const Library: Story = { render: () => previewApp('library') };
 export const Editor: Story = { render: () => previewApp('note', fixtureNoteIds.project) };
 export const Canvas: Story = { render: () => previewApp('canvas') };
 export const Files: Story = { render: () => previewApp('files', undefined, makeSnapshot()) };
+export const Settings: Story = { render: () => previewApp('settings') };
+const markdownNoteId = '00000000-0000-4000-8000-000000000007';
+const markdownSnapshot = (): Snapshot => ({
+  notes: [{ id: markdownNoteId, color: 'blue', modified: Math.floor(Date.now() / 1000), canvas: { position: null, next: [], done: false, parent: null },
+    text: '# 큰 제목\n## 리팩토링\n본문에 **굵게**, *기울임*, ~~취소선~~, [링크](https://example.com).\n### 셋째 단계는 본문 크기\n- 글머리 항목\n  Shift+Enter로 이어 쓴 줄\n  - 안쪽 항목\n- [ ] 할 일\n- [x] 끝난 일' }],
+  assets: [], revision: 1, savedRevision: 1, preferences: {},
+});
+export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {
   render: () => previewApp('library', undefined, undefined, [360, 600]),

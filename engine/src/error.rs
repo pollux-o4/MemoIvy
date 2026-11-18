@@ -4,7 +4,7 @@ use crate::domain::Snapshot;
 pub(crate) struct ApiError {
     pub(crate) code: String,
     pub(crate) message: String,
-    pub(crate) snapshot: Option<Snapshot>,
+    pub(crate) snapshot: Option<Box<Snapshot>>,
 }
 pub(crate) type ApiResult = Result<serde_json::Value, ApiError>;
 

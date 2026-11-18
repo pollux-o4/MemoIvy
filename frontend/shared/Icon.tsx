@@ -45,6 +45,7 @@ const fallbackPaths = {
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   chevron: <path d="m7 10 5 5 5-5"/>,
+  settings: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></>,
 } satisfies Record<string, ReactNode>;
 
 const svgFiles = {
@@ -59,7 +60,7 @@ const svgFiles = {
 
 type SvgName = keyof typeof svgFiles;
 type FallbackName = keyof typeof fallbackPaths;
-export type IconName = SvgName | FallbackName;
+type IconName = SvgName | FallbackName;
 type IconProps = Omit<SVGProps<SVGSVGElement>, 'children' | 'dangerouslySetInnerHTML'> & {
   name: IconName;
   size?: number;

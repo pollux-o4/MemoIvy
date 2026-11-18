@@ -4,6 +4,7 @@
 - 프로젝트 문서: `docs`에서 관심사로 검색.
 - 개발 검증: 운영 문서에서 `verification`으로 검색.
 - 데스크톱 이관 개발·검증: OPS-004로 검색.
+- Electron 자동 조작·캡처: `mise run test:e2e` 또는 같은 격리(`env -u WAYLAND_DISPLAY`, `--ozone-platform=x11`, `xvfb-run`)로만. Wayland에서 `xvfb-run`만으로는 실제 화면에 창이 떠 입력을 가져간다.
 - 테스트 실행: 맨 `cargo test` 금지(사용자 화면에 GTK 창이 뜬다). 빌드 확인·목록·시간 측정 포함 항상 `mise run test:<영역>` 또는 `mise run test <이름>`. 바뀐 영역만, 전체 실행은 요청 시에만. 빌드만은 `cargo test --no-run`.
 - UI 변경: 실행 화면부터 확인하고 관련 코드만 읽기.
 - 모듈 공개 인터페이스 변경: 구현 전 사용자 확인.

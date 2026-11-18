@@ -78,6 +78,5 @@ export function useMemoivy(injectedBridge?: DesktopBridge) {
 }
 
 export type MemoStore = ReturnType<typeof useMemoivy>;
-export function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : String(reason); }
+function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : String(reason); }
 
-export function bridgeForStory(snapshot: Snapshot): DesktopBridge { return createMockBridge(snapshot); }

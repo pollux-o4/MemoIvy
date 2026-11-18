@@ -7,6 +7,8 @@ const OPERATIONS = new Set([
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ASSET_ID = /^[0-9a-f]{64}$/;
 const COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'purple']);
+// 메모 창은 openNote 경로로만 연다.
+const WINDOW_KINDS = new Set(Object.keys(require('./window_kinds.json')).filter((kind) => kind !== 'note'));
 const MAX_TEXT = 28 * 1024 * 1024;
 const MAX_ASSET_BYTES = 20 * 1024 * 1024;
 
@@ -57,6 +59,11 @@ function validateRequest(op, params) {
   return params;
 }
 
+function validateWindowTarget(kind, id) {
+  if (!WINDOW_KINDS.has(kind) || (id !== undefined && !isId(id))) throw new TypeError('Invalid window target');
+  return { kind, id };
+}
+
 function validatePreference(key, value) {
   if (key === 'autoPrune') {
     if (typeof value !== 'boolean') throw bad('Invalid autoPrune preference');
@@ -73,6 +80,12 @@ function validatePreference(key, value) {
       exactKeys(stats, ['count', 'lastVisited']);
       if (!Number.isSafeInteger(stats.count) || stats.count < 0 || !Number.isFinite(stats.lastVisited) || stats.lastVisited < 0) throw bad('Invalid navigation statistics');
     }
+    return;
+  }
+  if (key === 'appearance') {
+    if (!plainObject(value)) throw bad('Invalid appearance preference');
+    exactKeys(value, ['theme', 'motion']);
+    if (!['system', 'light', 'dark'].includes(value.theme) || !['system', 'reduce', 'full'].includes(value.motion)) throw bad('Invalid appearance preference');
     return;
   }
   throw bad('Unsupported preference key');
@@ -98,4 +111,4 @@ function plainObject(value) { return value !== null && typeof value === 'object'
 function exactKeys(value, allowed) { if (Object.keys(value).some((key) => !allowed.includes(key))) throw bad('Unexpected parameter'); }
 function bad(message) { const error = new TypeError(message); error.code = 'INVALID_REQUEST'; return error; }
 
-module.exports = { validateRequest, isId, ASSET_ID, MAX_ASSET_BYTES };
+module.exports = { validateRequest, validateWindowTarget, isId };

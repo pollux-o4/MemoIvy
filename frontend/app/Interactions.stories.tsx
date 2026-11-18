@@ -1,0 +1,70 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, within } from 'storybook/test';
+import { App } from './App';
+import { createMockBridge, fixtureNoteIds } from '../shared/mock_bridge';
+import type { DesktopBridge, Note, Snapshot } from '../shared/engine_contract';
+
+const projectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1';
+const childId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2';
+const now = 1_794_576_000;
+const projectSnapshot = (): Snapshot => {
+  const project: Note = { id: projectId, text: '# 테스트 프로젝트\n하위 메모를 펼칩니다.', color: 'yellow', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: null, project: true } };
+  const child: Note = { id: childId, text: '# 하위 메모\n프로젝트 안의 메모입니다.', color: 'blue', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: projectId } };
+  return { notes: [project, child], assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
+};
+const librarySnapshot = (): Snapshot => {
+  const note: Note = { id: childId, text: '# 키보드 포커스 카드\nTab으로 검색에서 이동합니다.', color: 'blue', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: null } };
+  return { notes: [note], assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
+};
+const frame = (bridge: DesktopBridge, screen: 'library' | 'note', id?: string) => <div className="theme-light" style={{ width: 440, height: 600, margin: '0 auto' }}><App bridge={bridge} preview={false} initialScreen={screen} initialId={id}/></div>;
+
+const meta: Meta<typeof App> = { title: 'MemoIvy/Interactions', component: App, parameters: { layout: 'fullscreen' } };
+export default meta;
+type Story = StoryObj<typeof App>;
+
+export const ProjectDisclosure: Story = {
+  render: () => frame(createMockBridge(projectSnapshot()), 'library'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const disclosure = await canvas.findByRole('button', { name: '테스트 프로젝트 펼치기' });
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(disclosure);
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    await expect(await canvas.findByRole('button', { name: /^하위 메모(?! (펼치기|접기|메뉴))/ })).toBeVisible();
+    await userEvent.click(disclosure);
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+  },
+};
+
+export const KeyboardFocus: Story = {
+  render: () => frame(createMockBridge(librarySnapshot()), 'library'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const search = await canvas.findByRole('textbox', { name: '메모 검색' });
+    const card = await canvas.findByRole('button', { name: /^키보드 포커스 카드(?! (펼치기|접기|메뉴))/ });
+    await expect(search).toHaveFocus();
+    await userEvent.tab();
+    await expect(card).toHaveFocus();
+  },
+};
+
+export const SaveFailure: Story = {
+  render: () => {
+    const mock = createMockBridge();
+    const bridge: DesktopBridge = { ...mock, async request(op, params) {
+      if (op === 'update') { const error = new Error('저장 공간에 접근할 수 없습니다.') as Error & { code: string }; error.code = 'IO'; throw error; }
+      return mock.request(op, params);
+    } };
+    return frame(bridge, 'note', fixtureNoteIds.ideas);
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText('저장됨');
+    const editor = canvasElement.querySelector<HTMLElement>('.cm-content[contenteditable="true"]');
+    if (!editor) throw new Error('Editor content surface was not mounted.');
+    await userEvent.click(editor);
+    await userEvent.keyboard('\n상태 확인용 초안');
+    await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
+    await expect(editor).toHaveTextContent('상태 확인용 초안');
+  },
+};

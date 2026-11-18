@@ -11,7 +11,7 @@ const MAX_POSITION: f64 = 20_000.0;
 pub(crate) const MAX_ASSET_BYTES: usize = 20 * 1024 * 1024;
 pub(crate) const MAX_DEPTH: usize = 3;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub(crate) struct Canvas {
     pub(crate) position: Option<[f64; 2]>,
@@ -23,18 +23,6 @@ pub(crate) struct Canvas {
     pub(crate) parent: Option<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub(crate) pinned: bool,
-}
-impl Default for Canvas {
-    fn default() -> Self {
-        Self {
-            position: None,
-            next: vec![],
-            done: false,
-            project: false,
-            parent: None,
-            pinned: false,
-        }
-    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub(crate) struct Note {

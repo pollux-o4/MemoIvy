@@ -4,10 +4,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { PassThrough, Writable } = require('node:stream');
-const { validateRequest } = require('./ipc_validation.cjs');
+const { validateRequest, validateWindowTarget } = require('./ipc_validation.cjs');
 const { EngineTransport } = require('./engine_transport.cjs');
 
 const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
+
+test('IPC window targets allow settings and reject invalid kinds or ids', () => {
+  assert.deepEqual(validateWindowTarget('settings'), { kind: 'settings', id: undefined });
+  assert.deepEqual(validateWindowTarget('canvas', noteId), { kind: 'canvas', id: noteId });
+  assert.throws(() => validateWindowTarget('unknown'), /Invalid window target/);
+  assert.throws(() => validateWindowTarget('settings', 'invalid'), /Invalid window target/);
+});
 
 test('IPC boundary rejects unsafe, stale-shape and invalid preference payloads', () => {
   assert.throws(() => validateRequest('exec', {}), { code: 'INVALID_REQUEST' });
@@ -53,4 +60,10 @@ test('engine transport correlates a protocol response and terminates on process 
   await assert.rejects(pending, /Engine exited/);
   await assert.rejects(terminal.request('create', { baseRevision: 7, text: 'draft' }), /Engine exited/);
   assert.equal(stopped.killed, true);
+});
+
+test('IPC boundary accepts the appearance preference and rejects unknown choices', () => {
+  validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'light', motion: 'full' } });
+  assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'sepia', motion: 'full' } }), /appearance/);
+  assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'light' } }));
 });

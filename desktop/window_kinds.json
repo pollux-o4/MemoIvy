@@ -1,0 +1,38 @@
+{
+  "library": {
+    "width": 440,
+    "height": 600,
+    "minWidth": 360,
+    "minHeight": 320
+  },
+  "note": {
+    "width": 380,
+    "height": 420,
+    "minWidth": 360,
+    "minHeight": 320
+  },
+  "canvas": {
+    "width": 1000,
+    "height": 720,
+    "minWidth": 360,
+    "minHeight": 320
+  },
+  "files": {
+    "width": 720,
+    "height": 520,
+    "minWidth": 360,
+    "minHeight": 320
+  },
+  "settings": {
+    "width": 520,
+    "height": 560,
+    "minWidth": 440,
+    "minHeight": 420
+  },
+  "help": {
+    "width": 860,
+    "height": 720,
+    "minWidth": 480,
+    "minHeight": 360
+  }
+}
