@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Note } from '../../../shared/engine_contract';
 import type { MemoStore } from '../../../shared/useMemoivy';
-import { alignPositions, canvasSlot, cardRect, clampCanvasDelta, savedPoint, type Alignment, type CanvasPoint, vacantGroup } from '../model/align';
+import { alignPositions, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, type Alignment, type CanvasPoint, vacantGroup } from '../model/align';
 import { bounds } from '../model/motion';
 import { useCanvasHistory, type CanvasChange } from './useCanvasHistory';
 
@@ -23,9 +23,8 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
   const history = useCanvasHistory(states, persist);
   const commit = (changes: CanvasChange[]) => { if (!changes.length) return; history.record(changes); persist(changes); };
 
-  const commitPositions = (next: Positions) => commit(Object.entries(next)
-    .filter(([id, point]) => positions[id] && (positions[id].x !== point.x || positions[id].y !== point.y))
-    .map(([id, point]) => ({ id, canvas: { position: savedPoint(point) } })));
+  const commitPositions = (next: Positions) => commit(changedPositions(next, Object.fromEntries(notes.map((note) => [note.id, note.canvas.position])))
+    .map(({ id, position }) => ({ id, canvas: { position } })));
   /** 다른 범위로 옮길 때 그곳의 빈자리에 묶음 그대로 놓는다. */
   const moveInto = (ids: string[], parent: string | null, from: Positions = positions) => {
     const occupied = store.notes.filter((note) => (note.canvas.parent ?? null) === parent && !ids.includes(note.id))

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { alignPositions, canvasSlot, clampCanvasDelta, vacantGroup } from './align';
+import { alignPositions, canvasSlot, changedPositions, clampCanvasDelta, vacantGroup } from './align';
 
 test('aligns selected positions and preserves the other axis', () => {
   const positions = { a: { x: 10, y: 20 }, b: { x: 80, y: 60 }, c: { x: 40, y: 5 } };
@@ -40,4 +40,12 @@ test('clamps a selected group as one unit to GTK canvas limits', () => {
   const group = [{ x: 10, y: 20 }, { x: 500, y: 600 }];
   assert.deepEqual(clampCanvasDelta(group, -50, -50), { x: -10, y: -20 });
   assert.deepEqual(clampCanvasDelta(group, 20_000, 20_000), { x: 19_500, y: 19_400 });
+});
+
+test('changedPositions compares against saved positions, not the drag preview', () => {
+  const saved = { a: [10, 10] as [number, number], b: null, c: [0, 0] as [number, number] };
+  assert.deepEqual(changedPositions({ a: { x: 40.4, y: 10 }, b: { x: 5, y: 5 }, c: { x: 0.2, y: 0 }, gone: { x: 1, y: 1 } }, saved), [
+    { id: 'a', position: [40, 10] },
+    { id: 'b', position: [5, 5] },
+  ]);
 });
