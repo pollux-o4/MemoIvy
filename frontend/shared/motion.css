@@ -25,6 +25,17 @@
 @starting-style { .canvas-note { opacity: 0; scale: .92; } }
 .canvas-note p, .canvas-card-tasks { transition: opacity 180ms ease-out; }
 
+/* 할 일 완료 · 칠하기 → 체크 긋기 → 글자 흐려짐 순서로 이어진다. 처음 그릴 때는 전이가 없어 열 때 움직이지 않는다. */
+.md-checkbox { transition: background-color 140ms ease-out, border-color 140ms ease-out, transform 140ms cubic-bezier(.2,.9,.3,1.3); }
+.md-checkbox::after { transition: clip-path 180ms var(--ease-settle) 60ms; }
+.md-checkbox:not(.is-checked)::after { transition-delay: 0ms; transition-duration: 100ms; }
+.markdown-surface .md-list { transition: color 200ms ease-out 80ms; }
+.canvas-checklist-preview .preview-check, .inspector-preview .preview-check { transition: background-color 140ms ease-out, border-color 140ms ease-out; }
+.canvas-checklist-preview small, .inspector-preview small { transition: color 200ms ease-out; }
+
+/* 할 일 진행 막대 · 완료 수가 바뀌면 왼쪽부터 차오르거나 줄어든다(TaskProgress). */
+.task-progress > i { transform-origin: left center; transition: transform 360ms var(--ease-out-expo); }
+
 /* 확인 대화상자 */
 .modal-backdrop { opacity: 1; transition: opacity 160ms ease-out; }
 @starting-style { .modal-backdrop { opacity: 0; } }

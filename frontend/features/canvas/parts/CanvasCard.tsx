@@ -32,7 +32,7 @@ export function CanvasCard({ note, allNotes, position, selected, dropTarget, fan
       data-note-id={note.id} onPointerDown={(event) => onPointerDown(event, note.id)} onPointerLeave={onPointerLeave && (() => onPointerLeave(note.id))} onDoubleClick={() => onOpen(note)} onContextMenu={onContextMenu && ((event) => onContextMenu(event, note.id))} tabIndex={0} aria-label={`${title} 카드`}>
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => onOpen(note)} onToggleDone={onToggleDone}/>
       <CardPreview rows={preview.rows} empty={!note.text.trim()}/>
-      {project ? <ProjectSummary count={descendants.length} tasks={tasks}/>
+      {project ? <ProjectSummary label={title} count={descendants.length} tasks={tasks}/>
         : <div className="canvas-card-meta">{tasks.total > 0 && <small>할 일 {tasks.done}/{tasks.total}</small>}{preview.remaining > 0 && <small>외 {preview.remaining}줄</small>}</div>}
       {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => onConnectStart(note.id)}/>}
     </article>

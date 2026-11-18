@@ -6,7 +6,7 @@ import { checklist } from '../../shared/model';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { libraryBody, libraryTitle } from './library_model';
 import { NoteMenu } from './NoteMenu';
-import { TaskProgress } from './TaskProgress';
+import { TaskProgress } from '../../shared/TaskProgress';
 
 export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOpen }: { note: Note; path: string[]; store: MemoStore; onOpenCanvas?: (id?: string) => void; nested?: boolean; onOpen: () => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -38,7 +38,7 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
       {path.length > 0 && <div className="card-location">{path.join(' / ')}</div>}
       <div className="card-title-row">{note.canvas.project && <span className="project-folder" aria-hidden="true"><Icon name="project" size={16}/></span>}<strong className="card-title">{label}</strong>{task.total > 0 && <span className={`task-chip${task.done === task.total ? ' complete' : ''}`} title={`할 일 ${task.total}개 중 ${task.done}개 완료`}>{task.done}/{task.total}</span>}</div>
       {summary && <div ref={previewRef} className={`preview${nested ? ' nested-preview' : ''}${needsReveal && !expanded ? ' has-more' : ''}${expanded ? ' is-expanded' : ''}`} id={id} aria-hidden={false}>{summary}</div>}
-      {note.canvas.project && task.total > 0 && <TaskProgress label={label} tasks={task}/>}
+      {note.canvas.project && task.total > 0 && <TaskProgress className="project-progress" label={label} tasks={task}/>}
     </div></button>{note.canvas.project && onOpenCanvas && <button className="icon-button enter-project" title="캔버스에서 프로젝트 열기" aria-label={`${label} 캔버스 열기`} onClick={() => onOpenCanvas(note.id)}><Icon name="enter" size={17}/></button>}<NoteMenu id={note.id} title={label} store={store}/></div>
     {needsReveal && <Disclosure expanded={expanded} onToggle={() => setExpanded((value) => !value)} targetId={id} label={`${label} 본문`}/>}
   </article>;

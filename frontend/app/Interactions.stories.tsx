@@ -87,3 +87,24 @@ export const AlignmentBarMorph: Story = {
     await expect(within(back).getByRole('button', { name: /맞춤/ })).toHaveFocus();
   },
 };
+
+const taskId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3';
+const taskSnapshot = (): Snapshot => {
+  const note: Note = { id: taskId, text: '# 오늘 할 일\n- [ ] 장보기\n- [x] 메일 답장', color: 'green', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: null } };
+  return { notes: [note], assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
+};
+
+/** 할 일 완료 모션: 체크박스는 같은 요소가 상태만 바꿔야 칠하기·체크 긋기·글자 흐려짐 전이가 이어진다. */
+export const TaskCompletion: Story = {
+  render: () => frame(createMockBridge(taskSnapshot()), 'note', taskId),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [box] = await canvas.findAllByRole('checkbox', { name: '할 일' });
+    await userEvent.click(box);
+    await expect(box).toHaveAttribute('aria-checked', 'true');
+    await expect(box.isConnected).toBe(true);
+    await expect(box.closest('.cm-line')).toHaveClass('md-task-done');
+    await userEvent.click(box);
+    await expect(box).toHaveAttribute('aria-checked', 'false');
+  },
+};

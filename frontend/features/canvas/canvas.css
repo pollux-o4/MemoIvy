@@ -146,8 +146,8 @@
 .canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
 .canvas-screen .canvas-note .canvas-checklist-preview { display: grid; gap: 3px; margin: 11px 0 0; padding: 0; list-style: none; }
 .canvas-screen .canvas-note .canvas-checklist-preview li { min-width: 0; display: flex; align-items: flex-start; gap: 6px; min-height: 19px; color: var(--note-muted); }
-.canvas-screen .canvas-note .canvas-checklist-preview li > span { flex: 0 0 12px; width: 12px; height: 12px; display: grid; place-items: center; margin-top: 1px; border: 1.5px solid color-mix(in srgb, var(--note-text) 46%, transparent); border-radius: 3px; color: #fff; }
-.canvas-screen .canvas-note .canvas-checklist-preview li > span.checked { border-color: var(--canvas-accent); background: var(--canvas-accent); }
+.canvas-screen .canvas-note .canvas-checklist-preview li > .preview-check { flex: 0 0 12px; width: 12px; height: 12px; display: grid; place-items: center; margin-top: 1px; border: 1.5px solid color-mix(in srgb, var(--note-text) 46%, transparent); border-radius: 3px; color: #fff; }
+.canvas-screen .canvas-note .canvas-checklist-preview li > .preview-check.checked { border-color: var(--canvas-accent); background: var(--canvas-accent); }
 .canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker, .canvas-screen .canvas-note .canvas-checklist-preview li .preview-spacer { flex: 0 0 14px; width: 14px; color: var(--note-muted); text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .canvas-screen .canvas-note .canvas-checklist-preview small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
@@ -159,7 +159,7 @@
 .canvas-screen .canvas-project-meta small { display: inline-flex; align-items: center; gap: 5px; }
 .canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
 .canvas-screen .canvas-project-progress { position: absolute; right: 14px; bottom: 5px; left: 14px; height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--note-text) 12%, transparent); }
-.canvas-screen .canvas-project-progress span { display: block; height: 100%; border-radius: inherit; background: var(--canvas-success); }
+.canvas-screen .canvas-project-progress i { display: block; height: 100%; border-radius: inherit; background: var(--canvas-success); }
 .canvas-screen .canvas-note > footer { position: absolute; right: 13px; bottom: 8px; left: 13px; display: flex; align-items: center; gap: 4px; color: var(--note-muted); font-size: 10px; }
 .canvas-screen .canvas-note > footer button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--note-muted); background: transparent; cursor: crosshair; }
 .canvas-screen .canvas-note > footer button:hover { background: rgba(255, 255, 255, .45); }
