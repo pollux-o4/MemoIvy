@@ -1,9 +1,10 @@
 use super::shared::*;
 use crate::{
     domain::*,
-    error::{err, ApiResult},
+    error::{err, ApiError, ApiResult},
     sqlite_store::{ensure_note_fresh, notes_tx, persist_all, Engine},
 };
+use rusqlite::Transaction;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
@@ -43,20 +44,13 @@ impl Engine {
                 }
             }
             ns.push(n.clone());
-            promote_projects(&mut ns);
-            validate_notes(&ns).map_err(|m| err("INVALID_DATA", m))?;
-            persist_all(tx, &ns)?;
-            Ok(())
+            save_notes(tx, &mut ns)
         })?;
         Ok(json!({"note":n,"snapshot":s}))
     }
 
     pub(super) fn update(&mut self, p: &Value) -> ApiResult {
-        let base = base(p)?;
-        let id = required_id(p, "id")?;
-        let (_, s) = self.write_tx(Some(base), |tx| {
-            ensure_note_fresh(tx, &id, base)?;
-            let mut ns = notes_tx(tx)?;
+        let (id, s) = self.edit_note(p, |ns, id| {
             let n = ns
                 .iter_mut()
                 .find(|n| n.id == id)
@@ -82,9 +76,6 @@ impl Engine {
                 apply_canvas(&mut n.canvas, v)?;
                 n.modified = now()
             }
-            promote_projects(&mut ns);
-            validate_notes(&ns).map_err(|m| err("INVALID_DATA", m))?;
-            persist_all(tx, &ns)?;
             Ok(())
         })?;
         let note = s
@@ -97,11 +88,7 @@ impl Engine {
     }
 
     pub(super) fn delete(&mut self, p: &Value) -> ApiResult {
-        let base = base(p)?;
-        let id = required_id(p, "id")?;
-        let (_, s) = self.write_tx(Some(base), |tx| {
-            ensure_note_fresh(tx, &id, base)?;
-            let mut ns = notes_tx(tx)?;
+        let (_, s) = self.edit_note(p, |ns, id| {
             if !ns.iter().any(|n| n.id == id) {
                 return Err(err("NOT_FOUND", "Note not found"));
             }
@@ -109,15 +96,13 @@ impl Engine {
                 .iter()
                 .find(|n| n.id == id)
                 .and_then(|n| n.canvas.parent.clone());
-            for n in &mut ns {
-                if n.canvas.parent.as_deref() == Some(&id) {
+            for n in ns.iter_mut() {
+                if n.canvas.parent.as_deref() == Some(id) {
                     n.canvas.parent = parent.clone()
                 }
-                n.canvas.next.retain(|x| x != &id)
+                n.canvas.next.retain(|x| x != id)
             }
             ns.retain(|n| n.id != id);
-            promote_projects(&mut ns);
-            persist_all(tx, &ns)?;
             Ok(())
         })?;
         Ok(json!({"snapshot":s}))
@@ -148,11 +133,32 @@ impl Engine {
                 apply_canvas(&mut n.canvas, cv)?;
                 n.modified = now()
             }
-            promote_projects(&mut ns);
-            validate_notes(&ns).map_err(|m| err("INVALID_DATA", m))?;
-            persist_all(tx, &ns)?;
-            Ok(())
+            save_notes(tx, &mut ns)
         })?;
         Ok(json!({"snapshot":s}))
     }
+
+    /// Loads notes for the note named by `p.id`, applies `edit`, then saves them.
+    fn edit_note(
+        &mut self,
+        p: &Value,
+        edit: impl FnOnce(&mut Vec<Note>, &str) -> Result<(), ApiError>,
+    ) -> Result<(String, Snapshot), ApiError> {
+        let base = base(p)?;
+        let id = required_id(p, "id")?;
+        let (_, s) = self.write_tx(Some(base), |tx| {
+            ensure_note_fresh(tx, &id, base)?;
+            let mut ns = notes_tx(tx)?;
+            edit(&mut ns, &id)?;
+            save_notes(tx, &mut ns)
+        })?;
+        Ok((id, s))
+    }
+}
+
+/// Derives project flags, validates the hierarchy and persists every note.
+fn save_notes(tx: &Transaction<'_>, ns: &mut [Note]) -> Result<(), ApiError> {
+    promote_projects(ns);
+    validate_notes(ns).map_err(|m| err("INVALID_DATA", m))?;
+    persist_all(tx, ns)
 }
