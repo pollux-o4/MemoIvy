@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Note } from './engine_contract';
-import { descendantsOf, projectTasks } from './model';
+import { descendantsOf, joinTitle, projectTasks, splitTitle } from './model';
 
 const note = (id: string, text: string, parent: string | null = null, project = false): Note => ({ id, text, color: 'yellow', modified: 0, canvas: { position: null, next: [], done: false, parent, project } });
 
@@ -19,4 +19,12 @@ describe('project aggregates', () => {
     const cyclic = [note('c1', '', 'c2', true), note('c2', '', 'c1', true)];
     expect(descendantsOf('c1', cyclic).map((item) => item.id)).toEqual(['c2']);
   });
+});
+
+test('splitTitle keeps heading marker and separates body; joinTitle round-trips', () => {
+  const parts = splitTitle('\n# 프로젝트\n\n소개 첫 줄\n- [ ] 할 일\n');
+  expect(parts).toEqual({ marker: '# ', title: '프로젝트', body: '소개 첫 줄\n- [ ] 할 일\n' });
+  expect(joinTitle({ ...parts, title: '새 이름' })).toBe('# 새 이름\n\n소개 첫 줄\n- [ ] 할 일');
+  expect(joinTitle({ title: '이름만', body: '' })).toBe('이름만');
+  expect(splitTitle('')).toEqual({ marker: '', title: '', body: '' });
 });

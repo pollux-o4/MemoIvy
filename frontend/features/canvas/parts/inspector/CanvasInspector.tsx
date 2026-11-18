@@ -1,45 +1,36 @@
-import type { Note } from '../../../shared/engine_contract';
-import { Icon } from '../../../shared/Icon';
-import { checklist, descendantsOf } from '../../../shared/model';
-import { canvasTitle } from '../model/labels';
-import { canvasPreview } from '../model/preview';
-import { CanvasProjectMenu } from './CanvasProjectMenu';
+import { useEffect, useMemo, useRef } from 'react';
+import './inspector.css';
+import type { Note } from '../../../../shared/engine_contract';
+import { descendantsOf, noteTasks } from '../../../../shared/model';
+import { InspectorIdentity } from './InspectorIdentity';
+import { InspectorLinks } from './InspectorLinks';
+import { InspectorOrganize } from './InspectorOrganize';
+import { InspectorPrimary } from './InspectorPrimary';
 
-export function CanvasInspector({ note, notes, allNotes, projects, onClose, onOpen, onLift, onMoveInto, onToggleDone, onSignal, onDelete, onSelect, onDisconnect }: {
-  note: Note; notes: Note[]; allNotes: Note[]; onClose: () => void; onOpen: (note: Note) => void;
-  projects: Note[]; onLift?: () => void; onMoveInto: (projectId: string) => void;
+/**
+ * 선택한 카드 하나의 드로어. 위에서 아래로 "무엇인가(이름·소개) → 지금 어떤가·바로 할 일 → 어디와 이어지나 → 어디에 두나 → 삭제".
+ * 자주 쓰는 것일수록 위·크게, 위험한 것은 맨 아래·조용하게 둔다. 각 층은 inspector/ 부품이 그린다.
+ */
+export function CanvasInspector({ note, notes, allNotes, projects, renameRequest, onClose, onOpen, onSaveText, onColor, onLift, onMoveInto, onToggleDone, onSignal, onDelete, onSelect, onToggleLink }: {
+  note: Note; notes: Note[]; allNotes: Note[]; projects: Note[];
+  /** 바뀔 때마다 이름 칸에 포커스(F2·메뉴의 이름 바꾸기). */
+  renameRequest: number;
+  onClose: () => void; onOpen: (note: Note) => void;
+  onSaveText: (note: Note, text: string) => void; onColor: (note: Note, color: string) => void;
+  onLift?: () => void; onMoveInto: (projectId: string) => void;
   onToggleDone: () => void; onSignal: () => void; onDelete: () => void;
-  onSelect: (id: string) => void; onDisconnect: (note: Note, id: string) => void;
+  onSelect: (id: string) => void; onToggleLink: (note: Note, id: string) => void;
 }) {
-  const rows = canvasPreview(note.text, 5).rows;
-  const tasks = checklist(note.text);
-  const incoming = notes.filter((item) => item.canvas.next.includes(note.id));
-  const descendants = descendantsOf(note.id, allNotes);
-  const actions = [
-    ['메모 열기', () => onOpen(note)],
-    [note.canvas.done ? '완료 취소' : '완료로 표시', onToggleDone],
-    ['신호 보내기', onSignal],
-  ] as const;
-  return <aside className="canvas-inspector floating" aria-label="선택한 메모">
-    <header><span className={`inspector-dot ${note.color}`}/><h2>{canvasTitle(note)}</h2>
-      <button className="inspector-close" aria-label="선택 해제" title="선택 해제 · Esc" onClick={onClose}>×</button></header>
-    {rows.length > 0 && <div className="inspector-preview">{rows.map((row, index) => <div className={`inspector-preview-row preview-${row.kind}`} key={index}>
-      <span className={row.done ? 'checked' : ''}>{row.kind === 'task' && row.done ? <Icon name="check" size={12}/> : row.kind === 'number' ? row.mark : row.kind === 'bullet' ? '•' : null}</span><small className={row.done ? 'checked' : ''}>{row.text}</small>
-    </div>)}</div>}
-    {tasks.total > 0 && <small className="inspector-task-count">할 일 {tasks.done}/{tasks.total}</small>}
-    <div className="inspector-actions">{actions.map(([label, action]) => <button className="inspector-action" key={label} title={label.includes('완료') ? '완료 상태 변경 · Ctrl+Enter' : label === '신호 보내기' ? '연결된 다음 메모로 신호를 보냅니다. 완료 상태는 바꾸지 않습니다.' : undefined} onClick={action}>{label}</button>)}</div>
-    {(note.canvas.project || projects.length > 0 || onLift) && <div className="inspector-section"><b>프로젝트</b>
-      {note.canvas.project && <button className="inspector-action" title={`안의 메모 ${descendants.length}개 보기 · Enter`} onClick={() => onOpen(note)}>프로젝트 들어가기</button>}
-      {onLift && <button className="inspector-action" title="한 단계 위 보드로 옮기기 · Alt+Shift+G" onClick={onLift}>밖으로 꺼내기</button>}
-      <CanvasProjectMenu projects={projects} onMove={onMoveInto}/>
-    </div>}
-    <div className="inspector-section"><b>다음 메모</b>
-      {note.canvas.next.map((id) => { const target = notes.find((item) => item.id === id); return target && <div className="inspector-link" key={id}>
-        <button className="inspector-link-title" title={canvasTitle(target)} onClick={() => onSelect(target.id)}>{canvasTitle(target)}</button><button className="inspector-disconnect" aria-label={`${canvasTitle(target)} 연결 해제`} title="이 연결 해제 · 메모는 유지" onClick={() => onDisconnect(note, id)}>×</button>
-      </div>; })}
-      <label className="inspector-add-link">연결 추가<select aria-label="다음 메모 연결 추가" value="" onChange={(event) => event.target.value && onDisconnect(note, event.target.value)}><option value="" disabled>메모 선택</option>{notes.filter((item) => item.id !== note.id && !note.canvas.next.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{canvasTitle(item)}</option>)}</select></label>
-    </div>
-    {incoming.length > 0 && <div className="inspector-section"><b>이전 메모</b>{incoming.map((item) => <button className="inspector-action" key={item.id} onClick={() => onSelect(item.id)}>{canvasTitle(item)}</button>)}</div>}
-    <button className="inspector-delete" title="이 메모 삭제 · Delete" onClick={onDelete}>삭제…</button>
+  const titleRef = useRef<HTMLInputElement>(null);
+  const project = Boolean(note.canvas.project);
+  const descendants = useMemo(() => project ? descendantsOf(note.id, allNotes) : [], [project, note.id, allNotes]);
+  const tasks = noteTasks(note, descendants);
+  useEffect(() => { if (renameRequest) { titleRef.current?.focus(); titleRef.current?.select(); } }, [renameRequest]);
+  return <aside className="canvas-inspector floating" aria-label={project ? '선택한 프로젝트' : '선택한 메모'}>
+    <InspectorIdentity key={note.id} note={note} titleRef={titleRef} onSaveText={(text) => onSaveText(note, text)} onColor={(color) => onColor(note, color)} onClose={onClose}/>
+    <InspectorPrimary note={note} childCount={descendants.length} tasks={tasks} onOpen={() => onOpen(note)} onToggleDone={onToggleDone}/>
+    <InspectorLinks note={note} notes={notes} onSelect={onSelect} onToggleLink={onToggleLink} onSignal={onSignal}/>
+    <InspectorOrganize projects={projects} onLift={onLift} onMoveInto={onMoveInto}/>
+    <footer><button className="inspector-delete" title="삭제 · Delete" onClick={onDelete}>{project ? '프로젝트 삭제…' : '메모 삭제…'}</button></footer>
   </aside>;
 }

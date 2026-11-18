@@ -1,0 +1,76 @@
+/*
+ * 선택 드로어. 층마다 간격으로 구분하고(선·배경 반복 최소화), 무게는 위에서 아래로 줄어든다:
+ * 이름(14px 굵게) > 주 동작(강조 버튼) > 연결·정리(작은 머리글 묶음) > 삭제(조용한 위험 글자).
+ */
+.canvas-screen .canvas-inspector { position: absolute; z-index: 7; top: 54px; right: 16px; width: 272px; max-height: calc(100% - 140px); overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 12px; border-radius: 14px; }
+@media (max-width: 720px) { .canvas-screen .canvas-inspector { right: 8px; width: min(272px, calc(100% - 16px)); } }
+
+/* 1층 · 정체성 */
+.canvas-screen .inspector-identity { display: flex; flex-direction: column; gap: 8px; }
+.canvas-screen .inspector-title-row { display: flex; align-items: center; gap: 6px; }
+.canvas-screen .inspector-color { flex: none; width: 18px; height: 18px; margin: 0 2px 0 4px; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--canvas-text) 14%, transparent); cursor: pointer; transition: transform 120ms; }
+.canvas-screen .inspector-color:hover, .canvas-screen .inspector-color[aria-expanded="true"] { transform: scale(1.12); }
+.canvas-screen .inspector-title, .canvas-screen .inspector-intro { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 8px; color: var(--canvas-text); background: transparent; font: inherit; transition: background-color 120ms, border-color 120ms; }
+.canvas-screen .inspector-title { flex: 1; height: 34px; padding: 0 8px; font-size: 15px; font-weight: 700; text-overflow: ellipsis; }
+.canvas-screen .inspector-intro { min-height: 64px; padding: 7px 8px; resize: vertical; font-size: 13px; line-height: 1.5; }
+.canvas-screen .inspector-title:hover, .canvas-screen .inspector-intro:hover { background: var(--canvas-hover); }
+.canvas-screen .inspector-title:focus, .canvas-screen .inspector-intro:focus { outline: 0; border-color: var(--canvas-accent); background: var(--canvas-bg); }
+.canvas-screen .inspector-intro::placeholder, .canvas-screen .inspector-title::placeholder { color: color-mix(in srgb, var(--canvas-muted) 80%, transparent); }
+.canvas-screen .inspector-close { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; color: var(--canvas-muted); background: transparent; cursor: pointer; }
+.canvas-screen .inspector-close:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-palette { display: flex; gap: 8px; padding: 2px 6px; }
+.canvas-screen .inspector-palette button { width: 22px; height: 22px; border: 0; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--canvas-text) 14%, transparent); }
+.canvas-screen .inspector-palette button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px var(--canvas-accent); }
+.canvas-screen .inspector-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot-yellow); }
+.canvas-screen .inspector-dot.pink { background: var(--dot-pink); }.canvas-screen .inspector-dot.blue { background: var(--dot-blue); }.canvas-screen .inspector-dot.green { background: var(--dot-green); }.canvas-screen .inspector-dot.purple { background: var(--dot-purple); }
+.canvas-screen .inspector-preview { display: grid; gap: 3px; padding: 0 8px; }
+.canvas-screen .inspector-preview-row { display: flex; align-items: center; gap: 7px; min-width: 0; height: 20px; color: var(--canvas-muted); }
+.canvas-screen .inspector-preview-row > span { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; border: 1px solid var(--canvas-hairline); border-radius: 4px; }
+.canvas-screen .inspector-preview-row > span.checked { color: white; background: var(--canvas-accent); }
+.canvas-screen .inspector-preview-row.preview-text > span { border-color: transparent; }
+.canvas-screen .inspector-preview-row.preview-number > span, .canvas-screen .inspector-preview-row.preview-bullet > span { border-color: transparent; color: var(--canvas-muted); font-size: 11px; text-align: right; }
+.canvas-screen .inspector-preview-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .inspector-preview-row small.checked { text-decoration: line-through; }
+
+/* 2층 · 상태와 주 동작 */
+.canvas-screen .inspector-primary { display: flex; flex-direction: column; gap: 8px; }
+.canvas-screen .inspector-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 0 8px; color: var(--canvas-muted); font-size: 12px; }
+.canvas-screen .inspector-done { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--canvas-hairline); border-radius: 999px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-done:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-done[aria-pressed="true"] { border-color: transparent; color: var(--canvas-success); background: color-mix(in srgb, var(--canvas-success) 14%, transparent); }
+.canvas-screen .inspector-main { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 0; border-radius: 10px; color: #fff; background: var(--canvas-accent); font-weight: 600; cursor: pointer; transition: background-color 120ms; }
+.canvas-screen .inspector-main:hover { background: color-mix(in srgb, var(--canvas-accent), black 10%); }
+.canvas-screen .inspector-main span { flex: 1; text-align: left; }
+.canvas-screen .inspector-main kbd { font: 11px ui-monospace, monospace; opacity: .75; }
+
+/* 3·4층 · 묶음(연결·정리) */
+.canvas-screen .inspector-group { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--canvas-hairline); }
+.canvas-screen .inspector-group > header { display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0 2px 0 8px; }
+.canvas-screen .inspector-group > header b { color: var(--canvas-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.canvas-screen .inspector-mini { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-mini:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 4px 0 8px; }
+.canvas-screen .inspector-chips > small { width: 30px; color: var(--canvas-muted); font-size: 11px; }
+.canvas-screen .inspector-chip, .canvas-screen .inspector-chip > button { max-width: 180px; height: 26px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; color: var(--canvas-text); font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-chip { padding: 0 9px; border-radius: 999px; background: var(--canvas-hover); }
+.canvas-screen .inspector-chip.removable { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; }
+.canvas-screen .inspector-chip > button { padding: 0; background: transparent; }
+.canvas-screen button.inspector-chip:hover, .canvas-screen .inspector-chip.removable:hover { background: color-mix(in srgb, var(--canvas-text) 12%, transparent); }
+.canvas-screen .inspector-disconnect { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--canvas-muted); }
+.canvas-screen .inspector-chip > .inspector-disconnect { padding: 0; }
+.canvas-screen .inspector-disconnect:hover { color: var(--canvas-danger); background: var(--canvas-hover); }
+.canvas-screen .inspector-add-link { position: relative; display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; border-radius: 8px; color: var(--canvas-muted); cursor: pointer; }
+.canvas-screen .inspector-add-link:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-add-link select { flex: 1; min-width: 0; height: 100%; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; appearance: none; }
+.canvas-screen .inspector-action { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; overflow: hidden; padding: 0 8px; border: 0; border-radius: 8px; color: var(--canvas-text); background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.canvas-screen .inspector-action:hover { background: var(--canvas-hover); }
+
+/* 5층 · 위험 */
+.canvas-screen .canvas-inspector > footer { padding-top: 10px; border-top: 1px solid var(--canvas-hairline); }
+.canvas-screen .inspector-delete { min-height: 30px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--canvas-danger); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-delete:hover { background: color-mix(in srgb, var(--canvas-danger) 12%, transparent); }
+
+/* 정리 · 프로젝트로 옮기기 팝오버 */
+.canvas-screen .canvas-project-menu > .menu-popover { top: calc(100% + 4px); width: 248px; max-height: 280px; overflow-y: auto; }
+.canvas-screen .canvas-project-menu .menu-row { min-height: 36px; }
+.canvas-screen .project-menu-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }

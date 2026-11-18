@@ -68,29 +68,35 @@
   font-weight: 650;
 }
 .canvas-screen .canvas-header .header-actions .primary-button:hover { background: #0861e3; box-shadow: none; transform: none; }
-.canvas-screen .canvas-project-menu > .menu-popover { top: calc(100% + 4px); width: 248px; max-height: 280px; overflow-y: auto; }
-.canvas-screen .canvas-project-menu .menu-row { min-height: 36px; }
-.canvas-screen .project-menu-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 
 .canvas-screen .canvas-board {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  --canvas-grid-dot: light-dark(rgba(26, 27, 30, .08), rgba(255, 255, 255, .07));
+  /* 점 격자: 타일 안쪽 반 칸 위치에 점을 찍어 타일 경계에서 잘리지 않게 한다(GTK draw_grid와 같은 배치). */
+  --canvas-grid-dot: light-dark(rgba(26, 27, 30, .16), rgba(255, 255, 255, .13));
+  --grid-minor-dot: color-mix(in srgb, var(--canvas-grid-dot) var(--grid-minor-opacity), transparent);
+  --grid-half: calc(var(--grid-gap) / 2);
   background-color: var(--canvas-bg);
   background-image:
-    radial-gradient(circle at 0 0, var(--canvas-grid-dot) .75px, transparent .85px),
-    radial-gradient(circle at 0 0, color-mix(in srgb, var(--canvas-grid-dot) var(--grid-minor-opacity), transparent) .75px, transparent .85px),
-    radial-gradient(circle at 0 0, color-mix(in srgb, var(--canvas-grid-dot) var(--grid-minor-opacity), transparent) .75px, transparent .85px);
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--canvas-grid-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px);
   background-size: var(--grid-size) var(--grid-size);
-  background-position: var(--grid-x) var(--grid-y), calc(var(--grid-x) + var(--grid-gap)) var(--grid-y), var(--grid-x) calc(var(--grid-y) + var(--grid-gap));
+  background-position:
+    calc(var(--grid-x) - var(--grid-half)) calc(var(--grid-y) - var(--grid-half)),
+    calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) - var(--grid-half)),
+    calc(var(--grid-x) - var(--grid-half)) calc(var(--grid-y) + var(--grid-half)),
+    calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) + var(--grid-half));
   cursor: grab;
   touch-action: none;
 }
 .canvas-screen .canvas-board.panning { cursor: grabbing; }
 .canvas-screen .canvas-world { position: absolute; top: 0; left: 0; width: 1px; height: 1px; transform-origin: 0 0; }
 .canvas-screen .canvas-links { position: absolute; top: 0; left: 0; width: 20000px; height: 20000px; overflow: visible; color: var(--canvas-muted); pointer-events: none; }
+.canvas-screen .canvas-guides { position: absolute; top: 0; left: 0; z-index: 2; width: 1px; height: 1px; overflow: visible; pointer-events: none; stroke: color-mix(in srgb, var(--canvas-danger) 90%, transparent); shape-rendering: crispEdges; }
 .canvas-screen .canvas-links path { fill: none; stroke: color-mix(in srgb, var(--canvas-muted) 62%, transparent); stroke-width: 1.5; }
 
 .canvas-screen .canvas-note {
@@ -110,11 +116,20 @@
   opacity: 1;
   transform: none;
   transition: box-shadow 170ms ease-out, opacity 170ms ease-out, transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out;
-  outline: 2px solid transparent;
-  outline-offset: 3px;
+  outline: 1.5px solid transparent;
+  outline-offset: 1px;
 }
 .canvas-screen .canvas-note:hover { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 2px 4px var(--canvas-shadow), 0 10px 26px var(--canvas-shadow); }
-.canvas-screen .canvas-note.selected { z-index: 2; outline-color: var(--canvas-accent); }
+/*
+ * 선택: 파란 테두리 대신 카드 색을 짙게 한 1px 테두리 + 같은 색의 부드러운 후광 + 살짝 뜬 그림자.
+ * 카드 색과 어울려 내용보다 튀지 않고, 어떤 색 카드에서도 "집어 든" 느낌으로 읽힌다.
+ */
+.canvas-screen .canvas-note { --card-edge: color-mix(in srgb, var(--card-tone, var(--canvas-surface)), var(--canvas-text) 28%); }
+.canvas-screen .canvas-note.selected { z-index: 2; outline-color: transparent;
+  box-shadow: 0 0 0 1px var(--card-edge), 0 0 0 5px color-mix(in srgb, var(--card-edge) 18%, transparent), 0 4px 8px var(--canvas-shadow), 0 16px 34px var(--canvas-shadow); }
+/* 키보드 이동(Tab) 포커스는 선택과 구분되는 강조색 후광. 마우스로 고른 선택에는 겹쳐 그리지 않는다. */
+.canvas-screen .canvas-note:focus { outline: none; }
+.canvas-screen .canvas-note:focus-visible:not(.selected) { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px color-mix(in srgb, var(--canvas-accent) 70%, transparent), 0 6px 18px var(--canvas-shadow); }
 .canvas-screen .canvas-note.drop-target { outline: 2px dashed var(--canvas-accent); outline-offset: 5px; transform: scale(1.035); }
 .canvas-screen .canvas-note.done { opacity: .84; }
 .canvas-screen .canvas-note > header { min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 7px; }
@@ -212,48 +227,26 @@
 .canvas-screen .alignment-bar button.danger:hover { background: var(--canvas-danger); color: #fff; }
 .canvas-screen .alignment-bar > i { width: 1px; height: 18px; background: var(--canvas-hairline); }
 
-.canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 40px; display: flex; align-items: center; padding: 0 16px 8px; }
-.canvas-screen .canvas-navigator { display: flex; align-items: center; gap: 4px; max-width: 100%; padding: 3px; }
-.canvas-screen .canvas-navigator span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
-.canvas-screen .canvas-navigator i { color: var(--canvas-muted); font-style: normal; }
-.canvas-screen .canvas-navigator button { max-width: 180px; min-height: 28px; overflow: hidden; padding: 0 9px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.canvas-screen .canvas-navigator button:hover, .canvas-screen .canvas-navigator button[aria-current="page"] { color: var(--canvas-text); background: var(--canvas-hover); }
-.canvas-screen .canvas-navigator .canvas-home { display: inline-flex; align-items: center; gap: 6px; }
-.canvas-screen .canvas-navigator .canvas-pin { color: var(--canvas-accent); }
-.canvas-screen .canvas-navigator .canvas-shortcut { max-width: 132px; min-height: 30px; padding: 0 12px; border-radius: 999px; background: var(--canvas-surface); box-shadow: 0 2px 6px var(--canvas-shadow); }
-.canvas-screen .canvas-inspector { position: absolute; z-index: 7; top: 16px; right: 16px; width: 252px; max-height: calc(100% - 88px); overflow: auto; padding: 14px; border-radius: 13px; }
-.canvas-screen .canvas-inspector > header { display: flex; align-items: flex-start; gap: 8px; }
-.canvas-screen .canvas-inspector h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
-.canvas-screen .inspector-dot { flex: 0 0 10px; width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; background: var(--dot-yellow); }
-.canvas-screen .inspector-dot.pink { background: var(--dot-pink); }.canvas-screen .inspector-dot.blue { background: var(--dot-blue); }.canvas-screen .inspector-dot.green { background: var(--dot-green); }.canvas-screen .inspector-dot.purple { background: var(--dot-purple); }
-.canvas-screen .inspector-close, .canvas-screen .inspector-disconnect { border: 0; color: var(--canvas-muted); background: transparent; cursor: pointer; }
-.canvas-screen .inspector-preview { display: grid; gap: 3px; margin: 12px 0; }
-.canvas-screen .inspector-preview-row { display: flex; align-items: center; gap: 7px; min-width: 0; height: 20px; color: var(--canvas-muted); }
-.canvas-screen .inspector-preview-row > span { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; border: 1px solid var(--canvas-hairline); border-radius: 4px; }
-.canvas-screen .inspector-preview-row > span.checked { color: white; background: var(--canvas-accent); }
-.canvas-screen .inspector-preview-row.preview-text > span { border-color: transparent; }
-.canvas-screen .inspector-preview-row.preview-number > span, .canvas-screen .inspector-preview-row.preview-bullet > span { border-color: transparent; color: var(--canvas-muted); font-size: 11px; text-align: right; }
-.canvas-screen .inspector-preview-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.canvas-screen .inspector-preview-row small.checked { text-decoration: line-through; }
-.canvas-screen .inspector-task-count { color: var(--canvas-muted); }
-.canvas-screen .inspector-actions, .canvas-screen .inspector-section { display: grid; gap: 3px; margin-top: 10px; padding: 4px; border-radius: 10px; background: color-mix(in srgb, var(--canvas-text) 4%, transparent); }
-.canvas-screen .inspector-section > b { padding: 4px 6px; color: var(--canvas-muted); font-size: 11px; font-weight: 500; }
-.canvas-screen .inspector-action, .canvas-screen .inspector-link-title { min-height: 30px; overflow: hidden; padding: 0 7px; border: 0; border-radius: 7px; color: var(--canvas-text); background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.canvas-screen .inspector-action:hover, .canvas-screen .inspector-link-title:hover { background: var(--canvas-hover); }
-.canvas-screen .inspector-link { display: flex; align-items: center; }
-.canvas-screen .inspector-link-title { flex: 1; min-width: 0; }
-.canvas-screen .inspector-disconnect:hover, .canvas-screen .inspector-delete { color: var(--canvas-danger); }
-.canvas-screen .inspector-add-link { display: grid; gap: 4px; padding: 4px 6px; color: var(--canvas-muted); font-size: 11px; }
-.canvas-screen .inspector-add-link select { width: 100%; min-height: 30px; border: 1px solid var(--canvas-hairline); border-radius: 7px; color: var(--canvas-text); background: var(--canvas-surface); }
-.canvas-screen .inspector-delete { min-height: 30px; margin-top: 8px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; }
-.canvas-screen .inspector-delete:hover { background: var(--canvas-hover); }
+.canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 44px; display: flex; align-items: center; padding: 2px 12px 10px; }
+/* 경로: 머리 막대 닫기 버튼과 왼쪽을 맞추고, 모든 항목을 32px 높이·한 줄 기준선에 둔다. */
+.canvas-screen .canvas-navigator { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; font-size: 13px; line-height: 1; }
+.canvas-screen .canvas-navigator span { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.canvas-screen .canvas-navigator i { width: 14px; color: color-mix(in srgb, var(--canvas-muted) 70%, transparent); font-style: normal; text-align: center; }
+.canvas-screen .canvas-navigator button { display: inline-flex; align-items: center; max-width: 200px; height: 32px; overflow: hidden; padding: 0 10px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.canvas-screen .canvas-navigator button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .canvas-navigator button[aria-current="page"] { color: var(--canvas-text); font-weight: 600; background: var(--canvas-hover); }
+.canvas-screen .canvas-navigator .canvas-home { gap: 6px; padding-left: 8px; }
+.canvas-screen .canvas-navigator .canvas-pin { justify-content: center; width: 32px; margin-left: 2px; padding: 0; color: var(--canvas-accent); font-size: 15px; }
+/* 바로가기 묶음은 앞이 홈·경로·별 무엇이든 첫 칩부터 8px 띄운다. */
+.canvas-screen .canvas-navigator :not(.canvas-shortcut) + .canvas-shortcut { margin-left: 8px; }
+.canvas-screen .canvas-navigator .canvas-shortcut { max-width: 140px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--canvas-surface); box-shadow: 0 0 0 1px var(--canvas-hairline); }
 
 @container (max-width: 620px) {
   .canvas-screen .canvas-header { padding: 0 10px; }
   .canvas-screen .canvas-header .window-controls { gap: 2px; }
   .canvas-screen .canvas-dock { bottom: 8px; left: 8px; gap: 3px; padding: 0 5px; }
   .canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { display: none; }
-  .canvas-screen .canvas-inspector { right: 8px; width: min(252px, calc(100% - 16px)); }
-  .canvas-screen .canvas-navigator-row { min-height: 36px; padding: 0 8px 6px; }
+  .canvas-screen .canvas-navigator-row { min-height: 40px; padding: 0 10px 8px; }
   .canvas-screen .canvas-navigator { max-width: 100%; }
 }
+

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent, RefObject, SetStateAction } from 'react';
 import type { Note } from '../../../shared/engine_contract';
-import { CARD_HEIGHT, CARD_WIDTH, clampCanvasDelta, type CanvasPoint } from '../model/align';
+import { CARD_HEIGHT, CARD_WIDTH, cardRect, clampCanvasDelta, type CanvasPoint } from '../model/align';
+import { bounds } from '../model/motion';
+import { SNAP_PIXELS, snapRect, type SnapGuide } from '../model/snap';
 import type { Camera } from '../model/motion';
 import type { CanvasMode } from './useCanvasSelection';
 
@@ -16,6 +18,7 @@ const noteAt = (event: { clientX: number; clientY: number }) => document.element
 
 /**
  * 캔버스 포인터 상호작용 상태 기계: 화면 끌기(관성), 카드 끌기(프로젝트에 놓기), 범위 선택, 연결 잇기.
+ * 카드 끌기는 다른 카드 선에 붙고(Ctrl을 누르면 끔) 붙은 선을 guides로 내보낸다.
  * 결과 반영은 주입된 명령(onMovePositions·onMoveInto·onConnect)으로만 한다.
  */
 export function useCanvasPointer(options: {
@@ -35,15 +38,28 @@ export function useCanvasPointer(options: {
   const panSamples = useRef<Array<{ x: number; y: number; at: number }>>([]);
   const cardPointer = useRef<CanvasPoint | null>(null);
   const cardDown = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
+  const snapOff = useRef(false);
+  const [guides, setGuides] = useState<SnapGuide[]>([]);
 
   const screenPoint = (event: { clientX: number; clientY: number }): CanvasPoint => { const rect = o.host.current?.getBoundingClientRect(); return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) }; };
   const worldPoint = (screen: CanvasPoint): CanvasPoint => ({ x: screen.x / o.camera.zoom + o.camera.x, y: screen.y / o.camera.zoom + o.camera.y });
+  const snapped = (current: Drag, dx: number, dy: number): { delta: CanvasPoint; guides: SnapGuide[] } => {
+    const origins = Object.values(current.positions);
+    const raw = clampCanvasDelta(origins, dx, dy);
+    if (snapOff.current || !origins.length) return { delta: raw, guides: [] };
+    const others = o.notes.filter((note) => !current.positions[note.id] && o.positions[note.id]).map((note) => cardRect(o.positions[note.id]));
+    const moving = bounds(origins.map((point) => cardRect({ x: point.x + raw.x, y: point.y + raw.y })));
+    if (!moving) return { delta: raw, guides: [] };
+    const fit = snapRect(moving, others, SNAP_PIXELS / o.camera.zoom);
+    return { delta: clampCanvasDelta(origins, raw.x + fit.dx, raw.y + fit.dy), guides: fit.guides };
+  };
   const draggedTo = (current: Drag, pointer: CanvasPoint): Positions => {
     const world = worldPoint(pointer);
-    const delta = clampCanvasDelta(Object.values(current.positions), world.x - current.start.x, world.y - current.start.y);
+    const { delta, guides: found } = snapped(current, world.x - current.start.x, world.y - current.start.y);
+    setGuides(found);
     return Object.fromEntries(Object.entries(current.positions).map(([id, original]) => [id, { x: original.x + delta.x, y: original.y + delta.y }]));
   };
-  const reset = () => { cardDown.current = null; o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
+  const reset = () => { cardDown.current = null; setGuides([]); o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
   const beginPan = (event: ReactPointerEvent) => {
     o.setMode('pan'); panSamples.current = [{ x: event.clientX, y: event.clientY, at: performance.now() }];
     setDrag({ start: { x: event.clientX, y: event.clientY }, origin: { x: o.camera.x, y: o.camera.y }, positions: {}, shift: false });
@@ -53,13 +69,14 @@ export function useCanvasPointer(options: {
 
   // 자동 이동으로 카메라가 움직이는 동안 끌고 있는 카드가 포인터를 따라가게 한다.
   useEffect(() => {
-    if (o.mode !== 'cards' || !drag || !cardPointer.current) return;
+    if (o.mode !== 'cards' || !drag || !cardPointer.current || !cardDown.current?.moved) return;
     const moved = draggedTo(drag, cardPointer.current);
     o.setDraftPositions((current) => ({ ...current, ...moved }));
   }, [o.camera, drag, o.mode]);
 
   return {
     dropTarget,
+    guides,
     /** Esc: 진행 중 상호작용을 취소했으면 true. */
     cancel: () => {
       if (o.mode === 'idle') return false;
@@ -83,9 +100,12 @@ export function useCanvasPointer(options: {
           o.setCamera((current) => ({ ...current, x: drag.origin.x - dx / current.zoom, y: drag.origin.y - dy / current.zoom }));
           const now = performance.now(); panSamples.current = [...panSamples.current.filter((sample) => now - sample.at <= COAST_WINDOW_MS), { x: event.clientX, y: event.clientY, at: now }];
         } else if (o.mode === 'cards') {
+          snapOff.current = event.ctrlKey;
           const point = screenPoint(event); cardPointer.current = point; o.setAutopan([point.x, point.y]);
           const down = cardDown.current;
           if (down && !down.moved && Math.hypot(point.x - down.point.x, point.y - down.point.y) > DRAG_SLOP_PX) { down.moved = true; o.onCardsMoved?.(Object.keys(drag.positions)); }
+          // 끌기 문턱을 넘기 전(단순 클릭)에는 카드를 옮기거나 붙이지 않아 안내선도 뜨지 않는다.
+          if (down && !down.moved) return;
           const over = noteAt(event);
           const project = o.allNotes.find((note) => note.id === over && note.canvas.project);
           setDropTarget(project && o.canMoveInto(project.id, Object.keys(drag.positions)) ? project.id : null);
@@ -121,7 +141,7 @@ export function useCanvasPointer(options: {
             o.onMovePositions(Object.fromEntries(Object.entries(o.draftPositions).filter(([id, point]) => drag.positions[id] && (point.x !== drag.positions[id].x || point.y !== drag.positions[id].y))));
           }
         }
-        o.setMode('idle'); setDrag(null); o.setMarquee(null); setDropTarget(null);
+        o.setMode('idle'); setDrag(null); o.setMarquee(null); setDropTarget(null); setGuides([]);
       },
       onPointerCancel: () => {
         if (o.mode === 'cards' && drag) o.setDraftPositions((current) => ({ ...current, ...drag.positions }));

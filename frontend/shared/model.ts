@@ -10,12 +10,27 @@ const NOTE_PALETTE = {
   purple: { label: '보라', tone: 'var(--note-purple)', accent: 'var(--dot-purple)' },
 } as const;
 export type NoteColor = keyof typeof NOTE_PALETTE;
+export const NOTE_COLORS = Object.keys(NOTE_PALETTE) as NoteColor[];
 export const noteColor = (color: string) => NOTE_PALETTE[color as NoteColor] ?? NOTE_PALETTE.yellow;
 
 const checklistRow = /^\s*[-*+]\s+\[([ xX/])\]\s*(.*)$/;
 /** 체크리스트 줄 파싱의 단일 출처(목록 개수·캔버스 미리보기 공용). */
 function checklistRows(markdown: string): Array<{ done: boolean; text: string }> {
   return markdown.split('\n').flatMap((line) => { const match = checklistRow.exec(line); return match ? [{ done: match[1].toLowerCase() === 'x', text: match[2] }] : []; });
+}
+
+/** 메모 본문 = 첫 줄 제목 + 나머지 소개. 제목 줄의 머리 표식(#, >)은 보존한다. 제목·소개 편집의 단일 출처. */
+export function splitTitle(text: string): { marker: string; title: string; body: string } {
+  const lines = text.split('\n');
+  const index = lines.findIndex((line) => line.trim());
+  if (index < 0) return { marker: '', title: '', body: '' };
+  const match = /^(\s*(?:#{1,6}\s+|>\s+)?)(.*)$/.exec(lines[index]) as RegExpExecArray;
+  return { marker: match[1], title: match[2].trim(), body: lines.slice(index + 1).join('\n').replace(/^\n+/, '') };
+}
+export function joinTitle(parts: { marker?: string; title: string; body: string }): string {
+  const head = `${parts.marker ?? ''}${parts.title.trim()}`;
+  const body = parts.body.replace(/\s+$/, '');
+  return body ? `${head}\n\n${body}` : head;
 }
 
 export const emptyCanvas = (): CanvasNode => ({ position: null, next: [], done: false });
@@ -44,6 +59,11 @@ export function checklist(markdown: string): { total: number; done: number } {
 /** 프로젝트 할 일 합계: 프로젝트 본문과 모든 하위 메모의 체크리스트를 더한다. 목록·캔버스가 함께 쓴다. */
 export function projectTasks(project: Note, descendants: readonly Note[]): { total: number; done: number } {
   return [project, ...descendants].reduce((sum, item) => { const value = checklist(item.text); return { total: sum.total + value.total, done: sum.done + value.done }; }, { total: 0, done: 0 });
+}
+
+/** 카드·드로어가 보이는 할 일 합계: 프로젝트는 하위까지, 메모는 자기 본문만. */
+export function noteTasks(note: Note, descendants: readonly Note[]): { total: number; done: number } {
+  return note.canvas.project ? projectTasks(note, descendants) : checklist(note.text);
 }
 
 export function projectPath(note: Note, notes: Note[], title: (note: Note) => string = titleOf): string[] {
