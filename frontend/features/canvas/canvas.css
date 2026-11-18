@@ -152,7 +152,12 @@
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 /* 들여쓰기는 편집기와 같은 규칙: 깊이마다 표식 칸 + 간격 한 칸. */
 .canvas-screen .canvas-note .canvas-checklist-preview li { padding-left: calc(var(--depth, 0) * var(--preview-gutter)); }
-.canvas-screen .canvas-note .canvas-preview-more { display: block; margin-top: 3px; color: var(--note-muted); font-size: 11px; }
+.canvas-screen .canvas-note .canvas-preview-reveal { display: grid; place-items: center; margin-top: 1px; }
+.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); }
+.canvas-screen .canvas-note .canvas-preview-reveal .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
+/* 펼친 카드는 내용만큼 자라 이웃 카드 위에 뜬다. 하단 요약 자리는 비워 둔다. */
+/* shortcut: 연결선·정렬은 고정 CARD_HEIGHT 기준이라 펼친 카드 아래로 이어지지 않음, 펼침 상태를 저장하게 되면 실제 높이로 계산 검토 */
+.canvas-screen .canvas-note.is-expanded { z-index: 3; height: auto; min-height: var(--card-height, 156px); padding-bottom: 34px; }
 .canvas-screen .canvas-note .canvas-checklist-preview small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
 .canvas-screen .canvas-card-tasks { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; align-items: center; justify-content: space-between; }
 .canvas-screen .canvas-card-tasks small { color: var(--note-muted); font-size: 10px; line-height: 1.2; }
