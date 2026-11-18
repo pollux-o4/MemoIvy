@@ -13,6 +13,7 @@
   - Tab·Space·Enter와 expanded/controls 관계, 테마·배율·시스템 모션 줄이기를 유지한다. 모션 중 목록 전체나 하위 카드를 재생성하지 않는다.
   - 시각 변경은 사용자 참조·관찰된 문제·콘텐츠 역할에 근거를 남긴다. 아이콘·선·색·배경이 같은 역할을 반복하면 줄인다. 제목과 조작의 정렬·반복 간격·내포 카드의 여백을 실제 본문이 있는 화면에서 검토한다. 선택 이유: ADR-0012.
 - 할 일 완료 모션: 체크박스는 칠하기(140ms) → 체크 긋기(180ms, 60ms 뒤) → 줄 글자 흐려짐(200ms, 80ms 뒤)으로 이어진다. 상태가 바뀌어도 같은 요소를 고쳐 써 전이를 끊지 않고, 처음 그릴 때는 움직이지 않는다. 축소 모션은 도착 상태만. Storybook `Interactions/App` TaskCompletion.
+- 진행률 100% 순간: 막대가 다 찬 뒤 그 순간에만 두께가 커지고 빛이 한 번 지나가며 개수 표시가 살짝 튄다(약 0.9초). 처음부터 100%이거나 다시 열 때는 하지 않는다. 목록형·캔버스 공통(`TaskProgress`·`useCompletionMoment`). Storybook ProjectCompleteLibrary·ProjectCompleteCanvas.
 - 기본 컨트롤 금지: 앱 화면은 OS·브라우저 기본 모양의 선택 목록(`select`·`datalist`), 날짜·색·파일·범위 입력, `alert`·`confirm`·`prompt` 대화상자를 쓰지 않는다. 고르기는 공통 메뉴 표면(`menu-surface`·`menu-row`)과 `useMenu`, 확인은 앱 대화상자로 그려 테마·배율·키보드 동작을 맞춘다. Storybook 검수 도구는 제외한다. `native_controls` 정적 검사가 강제한다.
 - 스크롤바: 모양은 앱 공통 스타일 한 곳에서만 정한다. 화면별 CSS는 스크롤바 모양을 바꾸지 않고, 자리 확보(`scrollbar-gutter`)만 쓸 수 있다. CSS·TS·Electron 소스에서 스크롤바 언급을 막는 `scrollbar_ssot` 정적 검사가 강제한다.
 - 완료 기준: 모든 SVG 1×/2× decode, 라이트·다크·좁은 창·클릭 동작·포커스 확인.

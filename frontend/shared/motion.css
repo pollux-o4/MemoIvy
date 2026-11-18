@@ -35,6 +35,18 @@
 
 /* 할 일 진행 막대 · 완료 수가 바뀌면 왼쪽부터 차오르거나 줄어든다(TaskProgress). */
 .task-progress > i { transform-origin: left center; transition: transform 360ms var(--ease-out-expo); }
+/* 완료 순간 · 막대가 다 찬 뒤(360ms) 빛이 한 번 지나가고, 개수 표시가 살짝 튄다. 축소 모션이면 끝 상태만 남는다. */
+.task-progress::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, transparent 0 30%, rgb(255 255 255 / .9) 50%, transparent 70% 100%); transform: translateX(-100%); opacity: 0; pointer-events: none; }
+.task-progress[data-moment]::after { animation: task-sheen 560ms 300ms var(--ease-settle) both; }
+.task-progress[data-moment] { animation: task-swell 900ms var(--ease-settle); }
+.task-progress[data-moment] > i { animation: task-glow 900ms ease-out; }
+.task-count { display: inline-block; }
+.task-count[data-moment] { animation: task-pop 420ms 320ms cubic-bezier(.2,.9,.3,1.4) both; }
+@keyframes task-sheen { from { transform: translateX(-100%); opacity: 1; } to { transform: translateX(100%); opacity: 1; } }
+@keyframes task-glow { 40% { filter: brightness(1.25) saturate(1.2); } }
+/* 얇은 막대는 빛만으로 안 보여 그 순간만 두께를 키운다. */
+@keyframes task-swell { 0%, 100% { scale: 1 1; } 35%, 70% { scale: 1 1.8; } }
+@keyframes task-pop { 0% { scale: 1; } 45% { scale: 1.14; } 100% { scale: 1; } }
 
 /* 확인 대화상자 */
 .modal-backdrop { opacity: 1; transition: opacity 160ms ease-out; }

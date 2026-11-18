@@ -1,7 +1,7 @@
 import { Icon } from '../../shared/Icon';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { NoteMenu } from './NoteMenu';
-import { type TaskCount, TaskProgress } from '../../shared/TaskProgress';
+import { type TaskCount, TaskCountLabel, TaskProgress } from '../../shared/TaskProgress';
 
 export function ProjectHeading({ id, label, childCount, tasks, store, onOpenNote, onOpenCanvas }: { id: string; label: string; childCount: number; tasks: TaskCount; store: MemoStore; onOpenNote: (id: string) => void; onOpenCanvas: (id?: string) => void }) {
   const hasTasks = tasks.total > 0;
@@ -10,7 +10,7 @@ export function ProjectHeading({ id, label, childCount, tasks, store, onOpenNote
       <strong>
         <span className="project-folder" aria-hidden="true"><Icon name="project" size={16}/></span>
         <span className="project-name">{label}</span>
-        {hasTasks && <span className={`task-chip${tasks.done === tasks.total ? ' complete' : ''}`} title={`할 일 ${tasks.total}개 중 ${tasks.done}개 완료`}>{tasks.done}/{tasks.total}</span>}
+        {hasTasks && <TaskCountLabel tasks={tasks} className={`task-chip${tasks.done === tasks.total ? ' complete' : ''}`}>{tasks.done}/{tasks.total}</TaskCountLabel>}
       </strong>
       <span>메모 {childCount}개</span>
       {hasTasks && <TaskProgress className="project-progress" label={label} tasks={tasks}/>}

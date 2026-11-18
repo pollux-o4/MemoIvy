@@ -108,3 +108,36 @@ export const TaskCompletion: Story = {
     await expect(box).toHaveAttribute('aria-checked', 'false');
   },
 };
+
+const doneProjectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4';
+const doneChildId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5';
+const nearlyDone = { project: '# 출시 준비\n- [x] 문서 정리', child: '# 점검\n- [x] 테스트\n- [ ] 배포' };
+const completionSnapshot = (): Snapshot => {
+  const project: Note = { id: doneProjectId, text: nearlyDone.project, color: 'green', modified: now, canvas: { position: [80, 80], next: [], done: false, parent: null, project: true } };
+  const child: Note = { id: doneChildId, text: nearlyDone.child, color: 'yellow', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: doneProjectId } };
+  return { notes: [project, child], assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
+};
+/** 마지막 할 일을 끝내 100%에 닿게 한다. 다시 보려면 window.memoivyReopenLast() 뒤 memoivyCompleteLast()를 부른다. */
+const completionStory = (screen: 'library' | 'canvas', size: [number, number]): Story => {
+  const bridge = createMockBridge(completionSnapshot());
+  // 다른 창에서 고친 것처럼 최신 리비전을 기준으로 저장한다.
+  const write = async (text: string) => {
+    const { snapshot } = await bridge.request('snapshot') as { snapshot: Snapshot };
+    await bridge.request('update', { id: doneChildId, text, baseRevision: snapshot.revision });
+  };
+  const completeLast = () => write(nearlyDone.child.replace('- [ ] 배포', '- [x] 배포'));
+  const reopenLast = () => write(nearlyDone.child);
+  return {
+    render: () => { Object.assign(window, { memoivyCompleteLast: completeLast, memoivyReopenLast: reopenLast }); return frame(bridge, screen, undefined, size); },
+    play: async ({ canvasElement }) => {
+      const bar = await within(canvasElement).findByRole('progressbar', { name: '출시 준비 할 일 진행률' });
+      await expect(bar).toHaveAttribute('aria-valuenow', '2');
+      await completeLast();
+      await expect(await within(canvasElement).findByRole('progressbar', { name: '출시 준비 할 일 진행률' })).toHaveAttribute('aria-valuenow', '3');
+    },
+  };
+};
+/** 진행률 100% 순간: 막대가 다 찬 뒤 빛이 한 번 지나가고 개수 표시가 살짝 튄다(목록형). */
+export const ProjectCompleteLibrary: Story = completionStory('library', [440, 360]);
+/** 같은 순간을 캔버스 프로젝트 카드에서 본다. */
+export const ProjectCompleteCanvas: Story = completionStory('canvas', [640, 420]);

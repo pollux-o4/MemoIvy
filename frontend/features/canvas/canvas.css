@@ -260,3 +260,4 @@
   .canvas-screen .canvas-navigator { max-width: 100%; }
 }
 
+.canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success); font-weight: 600; }
