@@ -7,7 +7,7 @@ export function CanvasDock({ count, links, zoom, saving, error, canUndo, canRedo
 }) {
   const saveLabel = useSaveLabel(saving);
   const status = error ? '저장 실패' : saveLabel;
-  return <footer className="canvas-dock">
+  return <footer className="canvas-dock floating">
     <button aria-label="되돌리기" title="되돌리기 · Ctrl+Z" onClick={onUndo} disabled={!canUndo}><Icon name="undo"/></button>
     <button aria-label="다시 실행" title="다시 실행 · Ctrl+Shift+Z" onClick={onRedo} disabled={!canRedo}><Icon name="redo"/></button>
     <i/>

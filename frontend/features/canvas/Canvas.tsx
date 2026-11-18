@@ -8,6 +8,7 @@ import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { AlignmentBar } from './parts/AlignmentBar';
 import { canvasSlot, CARD_HEIGHT, CARD_WIDTH, type CanvasPoint } from './model/align';
+
 import { CanvasCard } from './parts/CanvasCard';
 import { CanvasDock } from './parts/CanvasDock';
 import { CanvasInspector } from './parts/CanvasInspector';
@@ -25,6 +26,10 @@ import { useCanvasScope } from './interaction/useCanvasScope';
 import { useCanvasSelection } from './interaction/useCanvasSelection';
 import { useCanvasWheel } from './interaction/useCanvasWheel';
 import { useRevealSelection } from './interaction/useRevealSelection';
+import { useFanQuiet } from './interaction/useFanQuiet';
+
+// 카드 치수의 원본은 model/align. CSS(카드·부채)는 이 변수만 읽는다.
+const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px` } as React.CSSProperties;
 
 const MAX_DEPTH = 3;
 const rectAt = (point: CanvasPoint) => ({ x: point.x, y: point.y, w: CARD_WIDTH, h: CARD_HEIGHT });
@@ -75,10 +80,11 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     const { width, height } = host.current.getBoundingClientRect();
     animateTo({ x: camera.x + width / camera.zoom / 2 - width / 2, y: camera.y + height / camera.zoom / 2 - height / 2, zoom: 1 });
   };
+  const fan = useFanQuiet();
   const pointer = useCanvasPointer({
     host, camera, setCamera: motion.setCamera, setAutopan: motion.setAutopan, startCoast: motion.startCoast, isPanHeld: () => keyboard.spaceDown.current,
     ...selection, notes, allNotes: store.notes, positions, draftPositions, setDraftPositions, canMoveInto: movable,
-    onMovePositions: commands.commitPositions, onMoveInto: commands.moveInto,
+    onCardsMoved: fan.hush, onMovePositions: commands.commitPositions, onMoveInto: commands.moveInto,
     onConnect: (from, to) => { const source = noteById.get(from); if (source && !source.canvas.next.includes(to)) commands.link(source, to); },
   });
   const keyboard = useCanvasKeyboard({
@@ -126,7 +132,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     deleteTarget.includes(note.id) && note.canvas.next.length > 0 || note.canvas.next.some((target) => deleteTarget.includes(target)),
   );
   const hasProjects = store.notes.some((note) => note.canvas.project);
-  return <div className="canvas-screen" onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
+  return <div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
@@ -135,7 +141,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} allNotes={store.notes} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag}
+        {notes.map((note) => <CanvasCard key={note.id} note={note} allNotes={store.notes} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
           onOpen={(item) => openCard(item)} onConnectStart={pointer.beginConnection}/>)}
       </div>
       {selection.marquee && <div className="selection-box" style={{ left: Math.min(selection.marquee.a.x, selection.marquee.b.x), top: Math.min(selection.marquee.a.y, selection.marquee.b.y), width: Math.abs(selection.marquee.a.x - selection.marquee.b.x), height: Math.abs(selection.marquee.a.y - selection.marquee.b.y) }}/>}

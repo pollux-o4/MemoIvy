@@ -9,6 +9,8 @@ type Positions = Record<string, CanvasPoint>;
 type Drag = { start: CanvasPoint; origin: CanvasPoint; positions: Positions; shift: boolean };
 type Marquee = { a: CanvasPoint; b: CanvasPoint } | null;
 const COAST_WINDOW_MS = 120;
+/** 이 거리(화면 px) 넘게 움직여야 카드 끌기로 본다. 그 아래는 클릭. */
+const DRAG_SLOP_PX = 3;
 
 const noteAt = (event: { clientX: number; clientY: number }) => document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-note-id]')?.dataset.noteId;
 
@@ -24,6 +26,7 @@ export function useCanvasPointer(options: {
   selected: string[]; setSelected: Dispatch<SetStateAction<string[]>>;
   notes: Note[]; allNotes: Note[]; positions: Positions; draftPositions: Positions; setDraftPositions: Dispatch<SetStateAction<Positions>>;
   canMoveInto: (target: string, ids: string[]) => boolean;
+  onCardsMoved?: (ids: string[]) => void;
   onMovePositions: (next: Positions) => void; onMoveInto: (ids: string[], parent: string, from: Positions) => void; onConnect: (from: string, to: string) => void;
 }) {
   const o = options;
@@ -31,6 +34,7 @@ export function useCanvasPointer(options: {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const panSamples = useRef<Array<{ x: number; y: number; at: number }>>([]);
   const cardPointer = useRef<CanvasPoint | null>(null);
+  const cardDown = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
 
   const screenPoint = (event: { clientX: number; clientY: number }): CanvasPoint => { const rect = o.host.current?.getBoundingClientRect(); return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) }; };
   const worldPoint = (screen: CanvasPoint): CanvasPoint => ({ x: screen.x / o.camera.zoom + o.camera.x, y: screen.y / o.camera.zoom + o.camera.y });
@@ -39,7 +43,7 @@ export function useCanvasPointer(options: {
     const delta = clampCanvasDelta(Object.values(current.positions), world.x - current.start.x, world.y - current.start.y);
     return Object.fromEntries(Object.entries(current.positions).map(([id, original]) => [id, { x: original.x + delta.x, y: original.y + delta.y }]));
   };
-  const reset = () => { o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
+  const reset = () => { cardDown.current = null; o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
   const beginPan = (event: ReactPointerEvent) => {
     o.setMode('pan'); panSamples.current = [{ x: event.clientX, y: event.clientY, at: performance.now() }];
     setDrag({ start: { x: event.clientX, y: event.clientY }, origin: { x: o.camera.x, y: o.camera.y }, positions: {}, shift: false });
@@ -80,6 +84,8 @@ export function useCanvasPointer(options: {
           const now = performance.now(); panSamples.current = [...panSamples.current.filter((sample) => now - sample.at <= COAST_WINDOW_MS), { x: event.clientX, y: event.clientY, at: now }];
         } else if (o.mode === 'cards') {
           const point = screenPoint(event); cardPointer.current = point; o.setAutopan([point.x, point.y]);
+          const down = cardDown.current;
+          if (down && !down.moved && Math.hypot(point.x - down.point.x, point.y - down.point.y) > DRAG_SLOP_PX) { down.moved = true; o.onCardsMoved?.(Object.keys(drag.positions)); }
           const over = noteAt(event);
           const project = o.allNotes.find((note) => note.id === over && note.canvas.project);
           setDropTarget(project && o.canMoveInto(project.id, Object.keys(drag.positions)) ? project.id : null);
@@ -98,7 +104,7 @@ export function useCanvasPointer(options: {
           const [first] = panSamples.current; const last = panSamples.current.at(-1)!; const elapsed = (last.at - first.at) / 1000;
           if (elapsed > 0) o.startCoast([(last.x - first.x) / elapsed, (last.y - first.y) / elapsed]);
         }
-        panSamples.current = []; cardPointer.current = null;
+        panSamples.current = []; cardPointer.current = null; cardDown.current = null;
         if (o.mode === 'marquee' && o.marquee) {
           const a = worldPoint(o.marquee.a); const b = worldPoint(o.marquee.b);
           const left = Math.min(a.x, b.x); const top = Math.min(a.y, b.y); const right = Math.max(a.x, b.x); const bottom = Math.max(a.y, b.y);
@@ -128,7 +134,7 @@ export function useCanvasPointer(options: {
       event.stopPropagation();
       const next = event.shiftKey ? o.selected.includes(id) ? o.selected.filter((item) => item !== id) : [...o.selected, id] : o.selected.includes(id) ? o.selected : [id];
       o.setSelected(next); o.setMode('cards');
-      cardPointer.current = screenPoint(event);
+      cardPointer.current = screenPoint(event); cardDown.current = { point: cardPointer.current, moved: false };
       setDrag({ start: worldPoint(screenPoint(event)), origin: { x: 0, y: 0 }, positions: Object.fromEntries(next.map((item) => [item, o.positions[item]])), shift: event.shiftKey });
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     },

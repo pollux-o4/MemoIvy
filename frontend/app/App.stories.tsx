@@ -45,6 +45,23 @@ const markdownSnapshot = (): Snapshot => ({
     text: '# 큰 제목\n## 리팩토링\n본문에 **굵게**, *기울임*, ~~취소선~~, [링크](https://example.com).\n### 셋째 단계는 본문 크기\n- 글머리 항목\n  Shift+Enter로 이어 쓴 줄\n  - 안쪽 항목\n- [ ] 할 일\n- [x] 끝난 일' }],
   assets: [], revision: 1, savedRevision: 1, preferences: {},
 });
+const canvasProjectsSnapshot = (): Snapshot => {
+  const now = Math.floor(Date.now() / 1000);
+  const id = (n: number) => `00000000-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`;
+  const node = (position: [number, number] | null, parent: string | null, project = false) => ({ position, next: [], done: false, parent, project });
+  const colors = ['blue', 'green', 'pink', 'purple', 'yellow'];
+  const children = (parent: string, count: number, offset: number): Note[] => Array.from({ length: count }, (_, i) => ({ id: id(offset + i), text: `# 하위 메모 ${i + 1}`, color: colors[i % colors.length], modified: now - i * 600, canvas: node(null, parent) }));
+  return {
+    notes: [
+      { id: id(1), text: '# 많은 프로젝트', color: 'yellow', modified: now, canvas: node([80, 240], null, true) },
+      { id: id(2), text: '# 작은 프로젝트', color: 'green', modified: now, canvas: node([420, 240], null, true) },
+      { id: id(3), text: '# 새 프로젝트', color: 'blue', modified: now, canvas: node([760, 240], null, true) },
+      ...children(id(1), 5, 10), ...children(id(2), 2, 20),
+    ],
+    assets: [], revision: 1, savedRevision: 1, preferences: {},
+  };
+};
+export const CanvasProjects: Story = { render: () => previewApp('canvas', undefined, canvasProjectsSnapshot(), [1100, 640]) };
 export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {

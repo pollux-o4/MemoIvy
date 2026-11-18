@@ -96,8 +96,8 @@
 .canvas-screen .canvas-note {
   position: absolute;
   z-index: 1;
-  width: 240px;
-  height: 156px;
+  width: var(--card-width, 240px);
+  height: var(--card-height, 156px);
   overflow: hidden;
   padding: 13px 14px 11px;
   border: 1px solid rgba(0, 0, 0, .035);
@@ -139,8 +139,7 @@
 .canvas-screen .canvas-card-tasks { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; align-items: center; justify-content: space-between; }
 .canvas-screen .canvas-card-tasks small { color: var(--note-muted); font-size: 10px; line-height: 1.2; }
 .canvas-screen .canvas-card-meta { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; justify-content: space-between; color: var(--note-muted); font-size: 10px; line-height: 1.2; }
-.canvas-screen .canvas-note.project { box-shadow: 0 5px 0 -2px color-mix(in srgb, var(--card-tone) 80%, black), 0 10px 0 -4px color-mix(in srgb, var(--card-tone) 62%, black), 0 14px 26px var(--canvas-shadow); }
-.canvas-screen .canvas-note.project:hover { box-shadow: 0 7px 0 -2px color-mix(in srgb, var(--card-tone) 80%, black), 0 14px 0 -4px color-mix(in srgb, var(--card-tone) 62%, black), 0 18px 32px var(--canvas-shadow); }
+.canvas-screen .canvas-project-folder { display: inline-grid; flex: none; color: var(--note-text); opacity: .8; }
 .canvas-screen .canvas-project-meta { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; align-items: center; justify-content: space-between; color: var(--note-muted); font-size: 10px; }
 .canvas-screen .canvas-project-meta small { display: inline-flex; align-items: center; gap: 5px; }
 .canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
@@ -157,6 +156,8 @@
 .canvas-screen .canvas-empty h2 { margin: 16px 0 7px; color: var(--canvas-muted); font-size: 15px; }
 .canvas-screen .canvas-empty p { margin: 0 0 18px; color: var(--canvas-muted); font-size: 11px; }
 
+/* 캔버스 위에 떠 있는 표면(도구 막대·검사 패널)의 유일한 원본: 불투명 바탕이라 아래 카드가 비치지 않는다. */
+.canvas-screen .floating { border: 1px solid var(--canvas-hairline); background: var(--canvas-surface, #fff); box-shadow: 0 4px 12px var(--canvas-shadow); }
 .canvas-screen .canvas-dock {
   position: absolute;
   z-index: 8;
@@ -168,20 +169,22 @@
   gap: 2px;
   margin: 0;
   padding: 4px;
-  border: 1px solid var(--canvas-hairline);
   border-radius: 12px;
   color: var(--canvas-muted);
-  background: var(--canvas-surface, #fff);
-  box-shadow: 0 4px 12px var(--canvas-shadow);
 }
 .canvas-screen .canvas-dock button { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; color: var(--canvas-text); background: transparent; cursor: pointer; }
 .canvas-screen .canvas-dock button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
-.canvas-screen .canvas-dock .zoom-value { width: 46px; min-width: 46px; color: var(--canvas-text); text-align: center; font-size: 9px; white-space: nowrap; }
-.canvas-screen .canvas-dock > i { flex: 0 0 1px; height: 18px; margin: 0 2px; border: 0; background: var(--canvas-hairline); }
+.canvas-screen .canvas-dock .zoom-value { width: 48px; min-width: 48px; color: var(--canvas-text); text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.canvas-screen .canvas-dock > i { flex: 0 0 1px; height: 18px; margin: 0 5px; border: 0; background: var(--canvas-hairline); }
+/* 아이콘은 한 크기(18px)로 맞춰 시각 무게를 통일한다. 도움말 원형은 같은 무게로 보이게 한 단계 작게. */
+.canvas-screen .canvas-dock button > svg { width: 18px; height: 18px; }
+.canvas-screen .canvas-dock .canvas-help-button > svg { width: 17px; height: 17px; }
 .canvas-screen .canvas-dock .canvas-fit-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .canvas-screen .canvas-dock .canvas-help-button { width: 30px; height: 30px; border: 0; border-radius: 8px; }
 .canvas-screen .canvas-dock button:disabled { opacity: .32; cursor: default; }
-.canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { margin-left: 6px; color: var(--canvas-muted); font-size: 10px; white-space: nowrap; }
+.canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { color: var(--canvas-muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.canvas-screen .canvas-dock .canvas-summary { margin-left: 8px; }
+.canvas-screen .canvas-dock .canvas-status { margin: 0 8px 0 12px; }
 .canvas-screen .canvas-dock .canvas-status.failed { color: var(--canvas-danger); }
 .canvas-screen .alignment-bar {
   position: absolute;
