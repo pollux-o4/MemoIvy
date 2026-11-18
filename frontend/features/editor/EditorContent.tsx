@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 export function EditorContent({ children, onFile }: { children: ReactNode; onFile: (file: File, drop?: { x: number; y: number }) => void }) {
+  // biome-ignore lint/a11y/noStaticElementInteractions: 붙여넣기·끌어 놓기로 파일을 받는 영역이다. 입력 자체는 안쪽 편집기가 맡는다.
   return <div className="editor-content"
     onPaste={(event) => {
       if (event.clipboardData.getData('text/plain')) return;

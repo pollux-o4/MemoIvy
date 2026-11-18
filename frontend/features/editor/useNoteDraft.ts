@@ -51,6 +51,7 @@ export function useNoteDraft(store: MemoStore, note: Note | undefined) {
     autosave.schedule(value);
   }, [dirty, autosave, store.snapshot?.revision]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 메모가 바뀌거나 화면을 떠날 때만, 떠나는 메모의 클로저로 마지막 초안을 저장한다.
   useEffect(() => () => {
     autosave.cancel();
     if (dirty && note && latest.current !== note.text) void store.updateNote(note, latest.current).catch(() => undefined);

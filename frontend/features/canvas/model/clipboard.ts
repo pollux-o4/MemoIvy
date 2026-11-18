@@ -2,7 +2,7 @@ import type { Note } from '../../../shared/engine_contract';
 import type { CanvasPoint } from './align';
 
 /** 복사한 카드 하나. 위치는 묶음 왼쪽 위 기준 상대값, 연결은 묶음 안 순번. */
-export type ClipItem = { text: string; color: string; project: boolean; done: boolean; offset: CanvasPoint; next: number[] };
+type ClipItem = { text: string; color: string; project: boolean; done: boolean; offset: CanvasPoint; next: number[] };
 export type ClipPayload = { items: ClipItem[]; origin: CanvasPoint };
 
 /** 붙여 넣을 때마다 이만큼 비껴 놓아 원본·이전 사본과 겹치지 않게 한다. */

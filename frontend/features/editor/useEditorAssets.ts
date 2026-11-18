@@ -1,30 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { MemoStore } from '../../shared/useMemoivy';
+import { useAssetUrls } from '../../shared/useAssetUrls';
 import type { EditorView } from '@codemirror/view';
 import { parseListItem } from '../../shared/markdown/list_item';
 
 export function useEditorAssets(store: MemoStore, change: (value: string) => void, currentDraft: () => string) {
-  const [assetUrls, setAssetUrls] = useState<Record<string, string>>({});
+  const assetUrls = useAssetUrls(store);
   const editorView = useRef<EditorView | null>(null);
-  const objectUrls = useRef<string[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-    store.assets.forEach((asset) => {
-      void store.request('readAsset', { id: asset.id }).then((result) => {
-        if (!alive || !result.data) return;
-        const binary = atob(result.data);
-        const bytes = new Uint8Array(binary.length);
-        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-        const url = URL.createObjectURL(new Blob([bytes], { type: result.mime ?? asset.mime }));
-        objectUrls.current.push(url);
-        setAssetUrls((current) => ({ ...current, [asset.id]: url }));
-      }).catch(() => undefined);
-    });
-    return () => { alive = false; };
-  }, [store.assets]);
-
-  useEffect(() => () => objectUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
   const addFile = async (file: File, setError: (error: string | null) => void, drop?: { x: number; y: number }) => {
     if (file.size > 20 * 1024 * 1024) { setError('파일은 20 MiB 이하만 첨부할 수 있어요.'); return; }

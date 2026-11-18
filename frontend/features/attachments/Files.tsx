@@ -6,6 +6,7 @@ import { Icon } from '../../shared/Icon';
 import { titleOf } from '../../shared/model';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { ImageViewer } from '../../shared/ImageViewer';
+import { useAssetUrls } from '../../shared/useAssetUrls';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import { daysAgo, readableBytes, reference, usersByAsset } from './files_model';
 import './files.css';
@@ -13,12 +14,11 @@ import './files.css';
 export function Files({ store, onClose, onOpenNote, initialTab = 'used' }: { store: MemoStore; onClose: () => void; onOpenNote: (id: string) => void; initialTab?: 'used' | 'unused' }) {
   const [tab, setTab] = useState<'used' | 'unused'>(initialTab);
   const [selected, setSelected] = useState<string | null>(null);
-  const [urls, setUrls] = useState<Record<string, string>>({});
+  const urls = useAssetUrls(store);
   const [confirm, setConfirm] = useState<'one' | 'all' | null>(null);
   const [viewing, setViewing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [autoPrune, setAutoPrune] = useState(Boolean(store.snapshot?.preferences?.autoPrune));
-  const objectUrls = useRef<string[]>([]);
   const gridRef = useRef<HTMLElement>(null);
   const confirmTrigger = useRef<HTMLElement | null>(null);
   const assets = useMemo(() => {
@@ -32,23 +32,6 @@ export function Files({ store, onClose, onOpenNote, initialTab = 'used' }: { sto
   const lastNote = active?.usedBy[0] ?? active?.lastNote ?? undefined;
   const lastNoteItem = lastNote ? store.notes.find((note) => note.id === lastNote) : undefined;
 
-  useEffect(() => {
-    let live = true;
-    store.assets.forEach((asset) => {
-      if (urls[asset.id]) return;
-      void store.request('readAsset', { id: asset.id }).then((result) => {
-        if (!live || !result.data) return;
-        const binary = atob(result.data);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const url = URL.createObjectURL(new Blob([bytes], { type: result.mime ?? asset.mime }));
-        objectUrls.current.push(url);
-        setUrls((current) => ({ ...current, [asset.id]: url }));
-      }).catch(() => undefined);
-    });
-    return () => { live = false; };
-  }, [store.assets]);
-  useEffect(() => () => objectUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
   useEffect(() => setAutoPrune(Boolean(store.snapshot?.preferences?.autoPrune)), [store.snapshot?.preferences?.autoPrune]);
   useEffect(() => { if (!confirm) confirmTrigger.current?.focus(); }, [confirm]);
 
@@ -90,7 +73,7 @@ export function Files({ store, onClose, onOpenNote, initialTab = 'used' }: { sto
   return <div className="files-screen">
     <WindowHeader className="files-header" title={<h1 className="files-title">파일</h1>} bridge={store.bridge} onClose={onClose}/>
     <div className="files-toolbar">
-      <div className="segmented view-tabs" aria-label="파일 보기"><button type="button" aria-pressed={tab === 'used'} className={tab === 'used' ? 'selected' : ''} onClick={() => { setSelected(null); setTab('used'); }}>사용 중 <b>{used.length}</b></button><button type="button" aria-pressed={tab === 'unused'} className={tab === 'unused' ? 'selected' : ''} onClick={() => { setSelected(null); setTab('unused'); }}>사용 안 함 <b>{unused.length}</b></button></div>
+      <div className="segmented view-tabs" role="group" aria-label="파일 보기"><button type="button" aria-pressed={tab === 'used'} className={tab === 'used' ? 'selected' : ''} onClick={() => { setSelected(null); setTab('used'); }}>사용 중 <b>{used.length}</b></button><button type="button" aria-pressed={tab === 'unused'} className={tab === 'unused' ? 'selected' : ''} onClick={() => { setSelected(null); setTab('unused'); }}>사용 안 함 <b>{unused.length}</b></button></div>
       {tab === 'unused' && <><label className="toggle-row" title="사용 안 함이 된 지 30일 지난 파일을 앱을 열 때 지워요"><input type="checkbox" checked={autoPrune} onChange={(event) => void setAutoPruneValue(event.target.checked)}/><span className="toggle-slider"/><span>30일 지난 항목 자동 정리</span></label>{unused.length > 0 && <button className="danger-quiet" onClick={(event) => { confirmTrigger.current = event.currentTarget; setConfirm('all'); }}>사용 안 함 모두 삭제…</button>}</>}
     </div>
     <div className="files-layout">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import { Icon } from '../../shared/Icon';
 import { useSaveLabel } from '../../shared/useSaveLabel';
 import type { MemoStore } from '../../shared/useMemoivy';

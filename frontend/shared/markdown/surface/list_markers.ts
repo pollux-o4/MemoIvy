@@ -91,7 +91,7 @@ function itemAtLine(state: EditorView['state'], number: number) {
   }
   return null;
 }
-const leadingSpaces = (text: string) => /^ */.exec(text)![0].length;
+const leadingSpaces = (text: string) => text.length - text.replace(/^ +/, '').length;
 const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-list${extra}`, attributes: { style: `padding-left: ${GUTTER * (depth + 1)}px` } });
 
 /**

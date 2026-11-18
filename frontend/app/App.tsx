@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import type { DesktopBridge } from '../shared/engine_contract';
 import { useMemoivy } from '../shared/useMemoivy';
 import { Icon } from '../shared/Icon';
@@ -59,14 +59,16 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     if (window.memoivy || bridge) { store.bridge.windowAction('close'); return; }
     setScreen('library'); setActiveId(undefined);
   };
+  // 전역 단축키는 한 번만 걸고, 누를 때마다 지금 화면의 동작을 읽는다.
+  const onGlobalKey = useEffectEvent((event: KeyboardEvent) => {
+    handle(() => { void createNote(false); })(event);
+    if (event.key === 'F1') { event.preventDefault(); void openHelp(); }
+  });
   useEffect(() => {
-    const create = () => { void createNote(false); };
-    const listener = handle(create);
+    const listener = (event: KeyboardEvent) => onGlobalKey(event);
     window.addEventListener('keydown', listener);
-    const help = (event: KeyboardEvent) => { if (event.key === 'F1') { event.preventDefault(); void openHelp(); } };
-    window.addEventListener('keydown', help);
-    return () => { window.removeEventListener('keydown', listener); window.removeEventListener('keydown', help); };
-  }, [screen]);
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
   useEffect(() => {
     if (window.memoivy) return;
     const navigate = (event: Event) => {

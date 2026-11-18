@@ -1,7 +1,7 @@
 import type { Note } from '../../../shared/engine_contract';
 
 /** 부채에 펼칠 최대 장수. 넘치는 수는 "외 N개"로만 알린다(장수가 늘면 읽히지 않는다). */
-export const FAN_LIMIT = 3;
+const FAN_LIMIT = 3;
 
 export type ProjectFan = { recent: Note[]; more: number };
 

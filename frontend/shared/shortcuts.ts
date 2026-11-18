@@ -1,5 +1,5 @@
 /** GTK shared/shortcuts.rs 안내 데이터의 단일 출처: [뜻, Markdown 문법, 키들]. */
-export type ShortcutRow = readonly [meaning: string, syntax: string, keys: readonly string[]];
+type ShortcutRow = readonly [meaning: string, syntax: string, keys: readonly string[]];
 export type ShortcutSection = readonly [title: string, rows: readonly ShortcutRow[]];
 
 export const NOTE_SHORTCUTS: readonly ShortcutSection[] = [

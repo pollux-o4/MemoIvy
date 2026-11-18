@@ -1,5 +1,5 @@
 import { WidgetType, type EditorView } from '@codemirror/view';
-import { deleteImageLine, displayImageSize, imageMarkup, MAX_IMAGE_WIDTH, moveImageLine, resizeImageWidth } from './commands';
+import { deleteImageLine, imageMarkup, MAX_IMAGE_WIDTH, moveImageLine, resizeImageWidth } from './commands';
 
 export interface ImageHandlers {
   view(hash: string): void;
@@ -65,6 +65,7 @@ export class AssetWidget extends WidgetType {
     wrapper.append(remove);
 
     if (image && wrapper.draggable) {
+      const picture = image;
       const handle = document.createElement('button');
       handle.type = 'button';
       handle.className = 'cm-image-resize';
@@ -73,7 +74,7 @@ export class AssetWidget extends WidgetType {
       handle.addEventListener('pointerdown', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        const rect = image!.getBoundingClientRect();
+        const rect = picture.getBoundingClientRect();
         const startWidth = rect.width;
         const ratio = rect.height / Math.max(1, rect.width);
         const available = Math.max(64, view.contentDOM.clientWidth);
@@ -81,7 +82,7 @@ export class AssetWidget extends WidgetType {
         const startY = event.clientY;
         const move = (next: PointerEvent) => {
           const nextWidth = resizeImageWidth(startWidth, next.clientX - startX, next.clientY - startY, ratio, available);
-          image!.style.width = `${nextWidth}px`;
+          picture.style.width = `${nextWidth}px`;
         };
         const finish = (next: PointerEvent) => {
           handle.removeEventListener('pointermove', move);
@@ -100,7 +101,7 @@ export class AssetWidget extends WidgetType {
           handle.removeEventListener('pointermove', move);
           handle.removeEventListener('pointerup', finish);
           handle.removeEventListener('pointercancel', cancel);
-          image!.style.width = `${width ?? 'auto'}${width ? 'px' : ''}`;
+          picture.style.width = `${width ?? 'auto'}${width ? 'px' : ''}`;
         };
         handle.addEventListener('pointermove', move);
         handle.addEventListener('pointerup', finish);
@@ -125,8 +126,8 @@ export function installImageDropHandlers(view: EditorView) {
   const dragStart = (event: DragEvent) => {
     const element = (event.target as HTMLElement | null)?.closest<HTMLElement>('.cm-asset-preview');
     const hash = element?.dataset.assetHash;
-    if (!hash || !event.dataTransfer) return;
-    const from = view.posAtDOM(element!);
+    if (!element || !hash || !event.dataTransfer) return;
+    const from = view.posAtDOM(element);
     const line = view.state.doc.lineAt(from);
     const match = /^\s*!\[([^\]]*)\]\(asset:([a-f\d]{64})\)$/i.exec(line.text);
     if (!match) return;

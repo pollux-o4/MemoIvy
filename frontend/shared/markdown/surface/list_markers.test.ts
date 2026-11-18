@@ -26,8 +26,9 @@ test('a line indented less than the marker width is not a continuation', () => {
 
 test('ordered list markers are displayed and continue their numbering', () => {
   const item = parseListItem('  9) 다음 항목');
-  expect(item?.marker).toBe('  9) ');
-  expect(nextListMarker(item!)).toBe('  10) ');
+  if (!item) throw new Error('목록 줄로 읽혀야 한다');
+  expect(item.marker).toBe('  9) ');
+  expect(nextListMarker(item)).toBe('  10) ');
 });
 
 test('a list prefix requires its separating space', () => {

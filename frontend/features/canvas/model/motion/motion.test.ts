@@ -34,7 +34,7 @@ test('coast slows exponentially, stops below threshold, and caps starting speed'
   assert.equal(Coast.start([119, 0]), null);
   let coast = Coast.start([2400, 0]);
   assert.ok(coast);
-  let first = coast.advance(0.05);
+  const first = coast.advance(0.05);
   assert.ok(first.delta[0] > 0 && first.delta[0] < 60);
   coast = first.next;
   assert.ok(coast);

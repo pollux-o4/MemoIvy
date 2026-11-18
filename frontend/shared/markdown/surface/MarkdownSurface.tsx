@@ -37,6 +37,7 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
   // GTK 빼기는 문서에서 참조 줄만 지우므로 앱 쪽 추가 동작이 없다.
   const imageHandlers = useMemo<ImageHandlers>(() => ({ view: (hash) => callbacks.current.onViewImage(hash), extract: () => {} }), []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 편집기는 한 번만 만든다. 이후 값·모드·안내 변경은 아래 효과들이 reconfigure로 반영한다.
   useEffect(() => {
     if (!host.current) return;
     const state = EditorState.create({ doc: value, extensions: [

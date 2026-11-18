@@ -68,6 +68,7 @@ export function useCanvasPointer(options: {
   const wantsPan = (event: ReactPointerEvent) => event.button === 1 || o.isPanHeld();
 
   // 자동 이동으로 카메라가 움직이는 동안 끌고 있는 카드가 포인터를 따라가게 한다.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 카메라 이동이 다시 계산할 계기다. 나머지는 매 계산 때 최신 값을 읽는다.
   useEffect(() => {
     if (o.mode !== 'cards' || !drag || !cardPointer.current || !cardDown.current?.moved) return;
     const moved = draggedTo(drag, cardPointer.current);
@@ -121,7 +122,7 @@ export function useCanvasPointer(options: {
           return;
         }
         if (o.mode === 'pan' && panSamples.current.length > 1) {
-          const [first] = panSamples.current; const last = panSamples.current.at(-1)!; const elapsed = (last.at - first.at) / 1000;
+          const [first] = panSamples.current; const last = panSamples.current[panSamples.current.length - 1]; const elapsed = (last.at - first.at) / 1000;
           if (elapsed > 0) o.startCoast([(last.x - first.x) / elapsed, (last.y - first.y) / elapsed]);
         }
         panSamples.current = []; cardPointer.current = null; cardDown.current = null;

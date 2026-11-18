@@ -9,8 +9,6 @@ const TRAVEL_SECONDS = 0.65;
 const SIGNAL_SECONDS = 0.95;
 const LINK_SECONDS = 0.28;
 const CAMERA_RESPONSE = 0.34;
-const CARD_RESPONSE = 0.36;
-const CARD_DAMPING = 0.84;
 
 const SPRING_STEP = 1 / 240;
 const INERTIA_FRICTION = 12;
@@ -178,7 +176,7 @@ export class CameraMotion {
 
   tick(elapsed: number): Camera {
     if (!this.springs) return this.current;
-    this.springs.forEach((spring) => spring.advance(elapsed));
+    for (const spring of this.springs) spring.advance(elapsed);
     const [logZoom, centerX, centerY] = this.springs.map((spring) => spring.value);
     const zoom = Math.exp(logZoom);
     this.current = {

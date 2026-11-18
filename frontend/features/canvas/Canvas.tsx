@@ -79,7 +79,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     try { const project = await commands.group(); if (project) { setSelected([project.id]); onOpenNote(project.id); } } catch { /* 저장 오류는 상태 막대가 알린다 */ }
   };
   const liftSelected = () => { if (scopedProject && selected.length) commands.moveInto(selected, scopedProject.canvas.parent ?? null); };
-  const fit = (onlySelection = false) => {
+  const fitView = (onlySelection = false) => {
     const board = host.current?.getBoundingClientRect();
     const target = bounds(onlySelection ? selectedRects : cardRects);
     if (board && target) animateTo(fitting(target, [board.width, board.height]));
@@ -102,13 +102,13 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     align: commands.align, undo: commands.history.undo, redo: commands.history.redo,
     removeSelected: actions.remove, toggleDone: actions.toggleDone,
     connectSelected: () => { if (selected.length === 1) setFocusConnectList(true); },
-    fit, resetZoom, groupSelected: () => void groupSelected(), liftSelected,
+    fit: fitView, resetZoom, groupSelected: () => void groupSelected(), liftSelected,
     nudge: commands.nudge, cancelInteraction: pointer.cancel,
     copy: actions.copy, cut: actions.cut, paste: actions.paste, duplicate: actions.duplicate, rename: actions.rename,
     openMenu: () => cardMenu.openForSelection(selected),
   });
 
-  const fitScope = useEffectEvent(() => fit());
+  const fitScope = useEffectEvent(() => fitView());
   const previousScope = useRef(activeScope);
   useEffect(() => {
     if (previousScope.current === activeScope) return;
@@ -190,7 +190,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       links={notes.reduce((count, note) => count + note.canvas.next.filter((id) => noteById.has(id)).length, 0)}
       zoom={camera.zoom} saving={store.saving} error={store.error}
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
-      onZoom={motion.zoomByStep} onFit={fit} onReset={resetZoom}
+      onZoom={motion.zoomByStep} onFit={fitView} onReset={resetZoom}
       onHelp={() => void store.bridge.openWindow('help')}/>
   </div></ProgressProvider>;
 }

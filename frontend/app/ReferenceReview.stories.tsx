@@ -88,6 +88,7 @@ function ReferenceReview({ initialCase = 'library', initialTheme = 'light' }: { 
   const expectedFile = spec.filename(theme);
   const record = manifest?.captures?.find((capture) => capturePath(capture) === expectedFile && capture.theme === theme);
   const liveSnapshot = spec.dataset === 'image-used' ? imageSnapshot : spec.dataset === 'library-expanded' ? expandedSnapshot : canonicalSnapshot;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 같은 데이터셋이어도 사례마다 새 브리지로 시작해 이전 사례의 편집이 섞이지 않게 한다.
   const bridge: DesktopBridge = useMemo(() => referenceBridge(liveSnapshot), [caseId, liveSnapshot]);
   const frameSize: [number, number] = record ? [record.width, record.height] : spec.size;
   const liveWindow = <div className={`theme-${theme} review-live-window`} style={{ width: frameSize[0], height: frameSize[1] }}><App key={`${caseId}-${theme}`} bridge={bridge} preview={false} initialScreen={spec.screen} initialId={spec.editorId} initialFilesTab={spec.filesTab}/></div>;

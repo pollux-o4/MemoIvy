@@ -53,7 +53,7 @@ export function alignPositions(ids: string[], positions: Record<string, CanvasPo
     const horizontal = kind === 'distribute-x';
     const sorted = ids.filter((id) => positions[id]).sort((a, b) => (horizontal ? positions[a].x - positions[b].x : positions[a].y - positions[b].y));
     const first = horizontal ? positions[sorted[0]].x : positions[sorted[0]].y;
-    const last = horizontal ? positions[sorted.at(-1)!].x : positions[sorted.at(-1)!].y;
+    const last = horizontal ? positions[sorted[sorted.length - 1]].x : positions[sorted[sorted.length - 1]].y;
     const size = horizontal ? CARD_WIDTH : CARD_HEIGHT;
     const gap = (last + size - first - sorted.length * size) / (sorted.length - 1);
     let cursor = first;
@@ -108,7 +108,7 @@ function flowPositions(ids: string[], positions: Record<string, CanvasPoint>, ed
     if (marks[root]) continue;
     marks[root] = 1; const stack: Array<[number, number]> = [[root, 0]];
     while (stack.length) {
-      const top = stack.at(-1)!; const target = outgoing[top[0]][top[1]];
+      const top = stack[stack.length - 1]; const target = outgoing[top[0]][top[1]];
       if (target === undefined) { marks[top[0]] = 2; stack.pop(); continue; }
       top[1] += 1;
       if (marks[target] === 1) continue;
@@ -119,7 +119,7 @@ function flowPositions(ids: string[], positions: Record<string, CanvasPoint>, ed
   const rank = order.map(() => 0);
   for (let round = 0; round < order.length; round++) for (const [from, to] of forward) rank[to] = Math.max(rank[to], rank[from] + 1);
   const columns: number[][] = Array.from({ length: Math.max(...rank) + 1 }, () => []);
-  rank.forEach((value, index) => columns[value].push(index));
+  rank.forEach((value, index) => { columns[value].push(index); });
   const row = order.map(() => 0);
   for (const column of columns) {
     column.sort((a, b) => {

@@ -20,6 +20,7 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
   const taskText = progressLabel(note, progress);
   const label = libraryTitle(note);
   const id = `preview-${note.id}`;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 본문·펼침이 바뀌면 높이를 다시 잰다(값은 DOM에서 읽는다).
   useLayoutEffect(() => {
     const element = previewRef.current;
     if (!element) { setNeedsReveal(false); return; }

@@ -14,7 +14,7 @@ export function createMockBridge(initial?: Snapshot): DesktopBridge {
   let snapshot: Snapshot = initial ?? { notes: structuredClone(sampleNotes), assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
   const listeners = new Set<(event: EngineEvent) => void>();
   const assetData = new Map<string, { data: string; mime: string }>();
-  const publish = () => listeners.forEach((listener) => listener({ version: 1, event: 'snapshot', snapshot: structuredClone(snapshot) }));
+  const publish = () => { for (const listener of listeners) listener({ version: 1, event: 'snapshot', snapshot: structuredClone(snapshot) }); };
   const update = (mutate: () => EngineResult): EngineResult => {
     const result = mutate();
     snapshot = { ...snapshot, revision: snapshot.revision + 1, savedRevision: snapshot.revision + 1 };
