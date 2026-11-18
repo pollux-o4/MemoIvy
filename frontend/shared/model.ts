@@ -41,25 +41,29 @@ export function checklist(markdown: string): { total: number; done: number } {
   return { total: rows.length, done: rows.filter((row) => row.done).length };
 }
 
+/** 프로젝트 할 일 합계: 프로젝트 본문과 모든 하위 메모의 체크리스트를 더한다. 목록·캔버스가 함께 쓴다. */
+export function projectTasks(project: Note, descendants: readonly Note[]): { total: number; done: number } {
+  return [project, ...descendants].reduce((sum, item) => { const value = checklist(item.text); return { total: sum.total + value.total, done: sum.done + value.done }; }, { total: 0, done: 0 });
+}
+
 export function projectPath(note: Note, notes: Note[], title: (note: Note) => string = titleOf): string[] {
   const byId = new Map(notes.map((item) => [item.id, item]));
   const path: string[] = [];
   const seen = new Set<string>();
   let parent = note.canvas.parent;
-  while (parent && byId.has(parent) && !seen.has(parent)) {
-    seen.add(parent);
-    const ancestor = byId.get(parent)!;
+  for (let ancestor = parent ? byId.get(parent) : undefined; ancestor && !seen.has(ancestor.id); ancestor = parent ? byId.get(parent) : undefined) {
+    seen.add(ancestor.id);
     path.unshift(title(ancestor));
     parent = ancestor.canvas.parent;
   }
   return path;
 }
 
-
 /** 프로젝트 하위(중첩 포함) 메모. 부모 순환은 끊는다. */
 export function descendantsOf(projectId: string, notes: Note[]): Note[] {
   const byId = new Map(notes.map((item) => [item.id, item]));
   return notes.filter((item) => {
+    if (item.id === projectId) return false;
     let parent = item.canvas.parent;
     const seen = new Set<string>();
     while (parent && !seen.has(parent)) {
@@ -69,4 +73,9 @@ export function descendantsOf(projectId: string, notes: Note[]): Note[] {
     }
     return false;
   });
+}
+
+/** 프로젝트 종이 더미 장수: 프로젝트는 비어도 1장, 하위 메모가 2개 이상이면 2장. 목록·캔버스가 함께 쓴다. */
+export function projectSheets(childCount: number): 1 | 2 {
+  return childCount > 1 ? 2 : 1;
 }

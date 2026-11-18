@@ -47,11 +47,6 @@ export function orderedLibraryChildren(parent: string | null, notes: Note[]): No
   return children.sort((a, b) => Number(b.canvas.project) - Number(a.canvas.project) || newest(b) - newest(a));
 }
 
-export function descendantNotes(id: string, notes: Note[]): Note[] {
-  const children = notes.filter((note) => note.canvas.parent === id);
-  return children.flatMap((child) => [child, ...(child.canvas.project ? descendantNotes(child.id, notes) : [])]);
-}
-
 function firstLine(markdown: string): string {
   return markdown.split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? '';
 }
