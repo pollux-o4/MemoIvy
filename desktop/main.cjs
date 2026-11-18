@@ -26,7 +26,8 @@ if (dataOverride) app.setPath('userData', path.join(dataOverride, 'electron-prof
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
-const DEV_URL = 'http://127.0.0.1:5173';
+// 개발 렌더러 주소. 이미 쓰는 dev 서버와 겹치지 않게 검수용 포트로 바꿀 수 있다.
+const DEV_URL = process.env.MEMOIVY_RENDERER_URL || 'http://127.0.0.1:5173';
 const CLOSE_TIMEOUT_MS = 12000;
 const windows = new Set();
 const windowByKey = new Map();
@@ -303,7 +304,7 @@ function createWindow(kind = 'library', id) {
 
 function configureCsp() {
   const scriptSource = app.isPackaged ? "'self'" : `'self' 'unsafe-inline' ${DEV_URL}`;
-  const connectSource = app.isPackaged ? "'self'" : `'self' ${DEV_URL} ws://127.0.0.1:5173`;
+  const connectSource = app.isPackaged ? "'self'" : `'self' ${DEV_URL} ${DEV_URL.replace(/^http/, 'ws')}`;
   const csp = `default-src 'self'; script-src ${scriptSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${connectSource}; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'`;
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] } }));
 }
