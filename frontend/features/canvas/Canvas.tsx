@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import type { Note } from '../../shared/engine_contract';
@@ -142,7 +143,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   );
   const deleteSubject = deleteTarget.length === 1 ? store.notes.find((note) => note.id === deleteTarget[0]) : undefined;
   const hasProjects = store.notes.some((note) => note.canvas.project);
-  return <div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
+  return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
@@ -189,5 +190,5 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
       onZoom={motion.zoomByStep} onFit={fit} onReset={resetZoom}
       onHelp={() => void store.bridge.openWindow('help')}/>
-  </div>;
+  </div></ProgressProvider>;
 }

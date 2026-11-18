@@ -1,5 +1,4 @@
 import type { CanvasNode, Note } from './engine_contract';
-import { parseListItem } from './markdown/list_item';
 
 
 /** 메모 색 이름의 단일 출처. 실제 색값은 tokens.css의 --note-* / --dot-* 가 가진다. */
@@ -13,14 +12,6 @@ const NOTE_PALETTE = {
 export type NoteColor = keyof typeof NOTE_PALETTE;
 export const NOTE_COLORS = Object.keys(NOTE_PALETTE) as NoteColor[];
 export const noteColor = (color: string) => NOTE_PALETTE[color as NoteColor] ?? NOTE_PALETTE.yellow;
-
-/** 체크리스트 줄 파싱. 줄 문법은 markdown/list_item이 단일 출처다(목록 개수·진행률 공용). */
-function checklistRows(markdown: string): Array<{ done: boolean; text: string }> {
-  return markdown.split('\n').flatMap((line) => {
-    const item = parseListItem(line);
-    return item?.task ? [{ done: item.task === 'x', text: line.slice(item.contentIndent) }] : [];
-  });
-}
 
 /** 메모 본문 = 첫 줄 제목 + 나머지 소개. 제목 줄의 머리 표식(#, >)은 보존한다. 제목·소개 편집의 단일 출처. */
 export function splitTitle(text: string): { marker: string; title: string; body: string } {
@@ -54,21 +45,6 @@ export function plainText(markdown: string): string {
     .replace(/[`*_~]/g, '')
     .replace(/<[^>]+>/g, '')
     .trim();
-}
-
-export function checklist(markdown: string): { total: number; done: number } {
-  const rows = checklistRows(markdown);
-  return { total: rows.length, done: rows.filter((row) => row.done).length };
-}
-
-/** 프로젝트 할 일 합계: 프로젝트 본문과 모든 하위 메모의 체크리스트를 더한다. 목록·캔버스가 함께 쓴다. */
-export function projectTasks(project: Note, descendants: readonly Note[]): { total: number; done: number } {
-  return [project, ...descendants].reduce((sum, item) => { const value = checklist(item.text); return { total: sum.total + value.total, done: sum.done + value.done }; }, { total: 0, done: 0 });
-}
-
-/** 카드·드로어가 보이는 할 일 합계: 프로젝트는 하위까지, 메모는 자기 본문만. */
-export function noteTasks(note: Note, descendants: readonly Note[]): { total: number; done: number } {
-  return note.canvas.project ? projectTasks(note, descendants) : checklist(note.text);
 }
 
 export function projectPath(note: Note, notes: Note[], title: (note: Note) => string = titleOf): string[] {

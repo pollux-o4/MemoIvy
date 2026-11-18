@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
 import './inspector.css';
 import type { Note } from '../../../../shared/engine_contract';
-import { descendantsOf, noteTasks } from '../../../../shared/model';
+import { descendantsOf } from '../../../../shared/model';
+import { progressLabel } from '../../../../shared/progress';
+import { useProgress } from '../../../../shared/ProgressProvider';
 import { InspectorIdentity } from './InspectorIdentity';
 import { InspectorLinks } from './InspectorLinks';
 import { InspectorOrganize } from './InspectorOrganize';
@@ -25,11 +27,13 @@ export function CanvasInspector({ note, notes, allNotes, projects, renameRequest
   const titleRef = useRef<HTMLInputElement>(null);
   const project = Boolean(note.canvas.project);
   const descendants = useMemo(() => project ? descendantsOf(note.id, allNotes) : [], [project, note.id, allNotes]);
-  const tasks = noteTasks(note, descendants);
+  const progress = useProgress();
+  const tasks = progressLabel(note, progress);
+  const hasTasks = progress.of(note).total > 0;
   useEffect(() => { if (renameRequest) { titleRef.current?.focus(); titleRef.current?.select(); } }, [renameRequest]);
   return <aside className="canvas-inspector floating" aria-label={project ? '선택한 프로젝트' : '선택한 메모'}>
     <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal} onOpenAsNote={() => onOpenAsNote(note)}/>
-    <InspectorPrimary note={note} childCount={descendants.length} tasks={tasks} onOpen={() => onOpen(note)} onToggleDone={onToggleDone}/>
+    <InspectorPrimary note={note} childCount={descendants.length} tasks={hasTasks ? tasks : undefined} onOpen={() => onOpen(note)} onToggleDone={onToggleDone}/>
     <InspectorLinks note={note} notes={notes} onSelect={onSelect} onToggleLink={onToggleLink} onSignal={onSignal}/>
     <InspectorOrganize projects={projects} onLift={onLift} onMoveInto={onMoveInto}/>
     <footer><button className="inspector-delete" title="삭제 · Delete" onClick={onDelete}>{project ? '프로젝트 삭제…' : '메모 삭제…'}</button></footer>

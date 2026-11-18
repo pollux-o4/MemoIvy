@@ -1,9 +1,10 @@
-import { type TaskCount, TaskCountLabel, TaskProgress } from '../../../../shared/TaskProgress';
+import type { Progress } from '../../../../shared/progress';
+import { TaskCountLabel, TaskProgress } from '../../../../shared/TaskProgress';
 
-/** 프로젝트 카드 아래쪽: 하위 메모 수·할 일 합계와 진행 막대. */
-export function ProjectSummary({ label, count, tasks }: { label: string; count: number; tasks: TaskCount }) {
+/** 프로젝트 카드 아래쪽: 하위 메모 수, 하위 항목 단위 진행과 막대. */
+export function ProjectSummary({ label, count, progress, text }: { label: string; count: number; progress: Progress; text: { short: string; title: string } }) {
   return <>
-    <div className="canvas-project-meta"><small><b>메모 {count}</b></small>{tasks.total > 0 && <small><TaskCountLabel tasks={tasks} className={tasks.done === tasks.total ? 'complete' : undefined}>할 일 {tasks.done}/{tasks.total}</TaskCountLabel></small>}</div>
-    {tasks.total > 0 && <TaskProgress className="canvas-project-progress" label={label} tasks={tasks}/>}
+    <div className="canvas-project-meta"><small><b>메모 {count}</b></small>{progress.total > 0 && <small><TaskCountLabel progress={progress} title={text.title}>완료 {text.short}</TaskCountLabel></small>}</div>
+    {progress.total > 0 && <TaskProgress className="canvas-project-progress" label={label} progress={progress}/>}
   </>;
 }

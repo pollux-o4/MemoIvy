@@ -130,10 +130,10 @@ const completionStory = (screen: 'library' | 'canvas', size: [number, number]): 
   return {
     render: () => { Object.assign(window, { memoivyCompleteLast: completeLast, memoivyReopenLast: reopenLast }); return frame(bridge, screen, undefined, size); },
     play: async ({ canvasElement }) => {
-      const bar = await within(canvasElement).findByRole('progressbar', { name: '출시 준비 할 일 진행률' });
-      await expect(bar).toHaveAttribute('aria-valuenow', '2');
+      const bar = await within(canvasElement).findByRole('progressbar', { name: '출시 준비 진행률' });
+      await expect(bar).toHaveAttribute('aria-valuenow', '1');
       await completeLast();
-      await expect(await within(canvasElement).findByRole('progressbar', { name: '출시 준비 할 일 진행률' })).toHaveAttribute('aria-valuenow', '3');
+      await expect(await within(canvasElement).findByRole('progressbar', { name: '출시 준비 진행률' })).toHaveAttribute('aria-valuenow', '2');
     },
   };
 };

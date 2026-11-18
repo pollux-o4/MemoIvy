@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Note } from './engine_contract';
-import { descendantsOf, joinTitle, projectTasks, splitTitle } from './model';
+import { descendantsOf, joinTitle, splitTitle } from './model';
 
 const note = (id: string, text: string, parent: string | null = null, project = false): Note => ({ id, text, color: 'yellow', modified: 0, canvas: { position: null, next: [], done: false, parent, project } });
 
@@ -11,9 +11,6 @@ describe('project aggregates', () => {
     expect(descendantsOf('p', notes).map((item) => item.id).sort()).toEqual(['a', 'b', 'sub']);
   });
 
-  test('sums project and descendant checklists', () => {
-    expect(projectTasks(notes[0], descendantsOf('p', notes))).toEqual({ total: 4, done: 2 });
-  });
 
   test('survives parent cycles', () => {
     const cyclic = [note('c1', '', 'c2', true), note('c2', '', 'c1', true)];
