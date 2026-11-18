@@ -31,11 +31,12 @@ export function CanvasCard({ note, position, selected, dropTarget, fanQuiet = fa
   const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}`;
   return <>
     <article className={`canvas-note${state}`} style={{ left: position.x, top: position.y, '--card-tone': tone } as CSSProperties}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: 카드는 키보드로 선택·열기(Enter)·삭제하는 캔버스 항목이라 포커스를 받아야 한다.
       data-note-id={note.id} onPointerDown={(event) => onPointerDown(event, note.id)} onPointerLeave={onPointerLeave && (() => onPointerLeave(note.id))} onDoubleClick={() => onOpen(note)} onContextMenu={onContextMenu && ((event) => onContextMenu(event, note.id))} tabIndex={0} aria-label={`${title} 카드`}>
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => onOpen(note)} onToggleDone={onToggleDone}/>
-      <CardPreview rows={preview.rows} empty={!note.text.trim()}/>
+      <CardPreview rows={preview.rows} remaining={preview.remaining} empty={!note.text.trim()}/>
       {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText}/>
-        : <div className="canvas-card-meta">{tasks.total > 0 && <small title={taskText.title}>할 일 {taskText.short}</small>}{preview.remaining > 0 && <small>외 {preview.remaining}줄</small>}</div>}
+        : <div className="canvas-card-meta">{tasks.total > 0 && <small title={taskText.title}>할 일 {taskText.short}</small>}</div>}
       {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => onConnectStart(note.id)}/>}
     </article>
     {project && <ProjectFan fan={projectFan(children)} position={position} tone={tone}/>}

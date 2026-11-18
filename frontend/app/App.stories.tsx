@@ -54,7 +54,7 @@ const canvasProjectsSnapshot = (): Snapshot => {
   return {
     notes: [
       { id: id(1), text: '# 많은 프로젝트', color: 'yellow', modified: now, canvas: node([80, 240], null, true) },
-      { id: id(2), text: '# 작은 프로젝트', color: 'green', modified: now, canvas: node([420, 240], null, true) },
+      { id: id(2), text: '# 작은 프로젝트\n안녕하세요\n- [ ] 위 할 일\n  - [ ] 상세 할 일\n  - [ ] 또 다른 할 일', color: 'green', modified: now, canvas: node([420, 240], null, true) },
       { id: id(3), text: '# 새 프로젝트', color: 'blue', modified: now, canvas: node([760, 240], null, true) },
       ...children(id(1), 5, 10), ...children(id(2), 2, 20),
     ],

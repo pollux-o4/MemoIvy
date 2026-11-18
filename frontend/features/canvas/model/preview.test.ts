@@ -10,6 +10,10 @@ describe('canvas markdown preview', () => {
   });
 
   test('keeps each line break as its own row', () => {
-    expect(canvasPreview('Title\nFirst\nSecond', 3).rows).toEqual([{ kind: 'text', text: 'First' }, { kind: 'text', text: 'Second' }]);
+    expect(canvasPreview('Title\nFirst\nSecond', 3).rows).toEqual([{ kind: 'text', text: 'First', depth: 0 }, { kind: 'text', text: 'Second', depth: 0 }]);
+  });
+
+  test('keeps the editor list depth for nested items', () => {
+    expect(canvasPreview('T\n- [ ] 위\n  - [ ] 아래', 3).rows.map((row) => row.depth)).toEqual([0, 1]);
   });
 });

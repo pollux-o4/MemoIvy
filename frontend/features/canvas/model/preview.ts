@@ -1,7 +1,8 @@
 import { parseListItem } from '../../../shared/markdown/list_item';
 import { plainText } from '../../../shared/model';
 
-export type PreviewItem = { kind: 'task' | 'bullet' | 'number' | 'text'; text: string; done?: boolean; mark?: string };
+/** depth는 편집기 목록 들여쓰기(list_item.depth)와 같은 값이다. 일반 줄은 0. */
+export type PreviewItem = { kind: 'task' | 'bullet' | 'number' | 'text'; text: string; depth: number; done?: boolean; mark?: string };
 
 export function canvasPreview(markdown: string, budget: number): { title: PreviewItem; rows: PreviewItem[]; remaining: number } {
   const source = markdown.split('\n');
@@ -15,8 +16,9 @@ export function canvasPreview(markdown: string, budget: number): { title: Previe
 function previewLine(line: string): PreviewItem {
   const item = parseListItem(line);
   const text = plainText(item ? line.slice(item.contentIndent) : line);
-  if (!item) return { kind: 'text', text };
-  if (item.task) return { kind: 'task', text, done: item.task === 'x' };
-  if (item.ordered) return { kind: 'number', text, mark: `${item.number}${item.delimiter}` };
-  return { kind: 'bullet', text };
+  if (!item) return { kind: 'text', text, depth: 0 };
+  const { depth } = item;
+  if (item.task) return { kind: 'task', text, depth, done: item.task === 'x' };
+  if (item.ordered) return { kind: 'number', text, depth, mark: `${item.number}${item.delimiter}` };
+  return { kind: 'bullet', text, depth };
 }
