@@ -33,10 +33,12 @@ const rowsHeight = (list: HTMLElement) => {
 const stop = (event: SyntheticEvent) => event.stopPropagation();
 
 /** 카드 본문 미리보기. 메모·프로젝트 카드가 같이 쓴다. 넘치는 줄은 가리고 공통 펼침 버튼을 두며, 비었으면 안내 문구를 둔다. */
-export function CardPreview({ id, label, rows, empty, onExpandedChange }: { id: string; label: string; rows: Rows; empty: boolean; onExpandedChange: (expanded: boolean) => void }) {
+export function CardPreview({ id, label, rows, empty, onGrow }: { id: string; label: string; rows: Rows; empty: boolean; onGrow: (px: number) => void }) {
   const preview = useCollapsible<HTMLUListElement>(rowsHeight, [rows]);
   const { expanded } = preview;
-  useEffect(() => onExpandedChange(expanded), [expanded, onExpandedChange]);
+  // 카드는 목록과 같은 곡선으로 늘어난 높이만큼 자라고 줄어든다(canvas.css `--preview-extra`).
+  const grow = expanded ? preview.extra : 0;
+  useEffect(() => onGrow(grow), [grow, onGrow]);
   if (!rows.length) return empty ? <p>내용을 적어 보세요.</p> : null;
   return <>
     <PreviewList ref={preview.ref} id={id} className={`canvas-checklist-preview ${preview.className}`} rows={rows}/>

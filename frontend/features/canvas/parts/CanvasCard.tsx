@@ -24,18 +24,18 @@ export function CanvasCard({ note, position, selected, dropTarget, fanQuiet = fa
   const preview = useMemo(() => canvasPreview(note.text), [note.text]);
   const title = preview.title.text || canvasTitle(note);
   const tone = noteColor(note.color).tone;
-  const [expanded, setExpanded] = useState(false);
+  const [grow, setGrow] = useState(0);
   const progress = useProgress();
   const children = progress.children(note.id);
   const tasks = progress.of(note);
   const taskText = progressLabel(note, progress);
-  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${expanded ? ' is-expanded' : ''}`;
+  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${grow > 0 ? ' is-expanded' : ''}`;
   return <>
-    <article className={`canvas-note${state}`} style={{ left: position.x, top: position.y, '--card-tone': tone } as CSSProperties}
+    <article className={`canvas-note${state}`} style={{ left: position.x, top: position.y, '--card-tone': tone, '--preview-extra': `${grow}px` } as CSSProperties}
       // biome-ignore lint/a11y/noNoninteractiveTabindex: 카드는 키보드로 선택·열기(Enter)·삭제하는 캔버스 항목이라 포커스를 받아야 한다.
       data-note-id={note.id} onPointerDown={(event) => onPointerDown(event, note.id)} onPointerLeave={onPointerLeave && (() => onPointerLeave(note.id))} onDoubleClick={() => onOpen(note)} onContextMenu={onContextMenu && ((event) => onContextMenu(event, note.id))} tabIndex={0} aria-label={`${title} 카드`}>
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => onOpen(note)} onToggleDone={onToggleDone}/>
-      <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onExpandedChange={setExpanded}/>
+      <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onGrow={setGrow}/>
       {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText}/>
         : <div className="canvas-card-meta">{tasks.total > 0 && <small title={taskText.title}>할 일 {taskText.short}</small>}</div>}
       {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => onConnectStart(note.id)}/>}
