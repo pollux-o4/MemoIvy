@@ -109,6 +109,15 @@ export function panned(camera: Camera, [dx, dy]: [number, number]): Camera {
   return { ...camera, x: camera.x + dx / camera.zoom, y: camera.y + dy / camera.zoom };
 }
 
+/** 연속 휠로 이동 목표가 현재 화면보다 너무 앞서 나가지 않게 화면 기준 maxLead(px) 안으로 줄인다. */
+export function limitLead(current: Camera, target: Camera, maxLead: number): Camera {
+  const dx = (target.x - current.x) * current.zoom; const dy = (target.y - current.y) * current.zoom;
+  const lead = Math.hypot(dx, dy);
+  if (lead <= maxLead) return target;
+  const ratio = maxLead / lead;
+  return { ...target, x: current.x + (target.x - current.x) * ratio, y: current.y + (target.y - current.y) * ratio };
+}
+
 export function zoomAt(camera: Camera, screen: [number, number], zoom: number): Camera {
   const clamped = Math.max(MIN_ZOOM, Math.min(zoom, MAX_ZOOM));
   const worldX = screen[0] / camera.zoom + camera.x;

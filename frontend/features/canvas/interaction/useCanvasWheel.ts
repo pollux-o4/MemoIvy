@@ -12,7 +12,7 @@ export function useCanvasWheel(host: RefObject<HTMLDivElement | null>, camera: C
     if (!board) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const intent = wheelIntent(event);
+      const intent = wheelIntent(event, window.devicePixelRatio || 1);
       if (intent.kind === 'zoom') {
         const rect = board.getBoundingClientRect();
         latest.current.zoomAtScreen([event.clientX - rect.left, event.clientY - rect.top], intent.factor);

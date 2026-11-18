@@ -1,10 +1,13 @@
 import { onMotionPreferenceChange, prefersReducedMotion } from '../../../shared/appearance';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, linkProgress, panned, pulseSample, zoomAt } from '../model/motion';
+import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, limitLead, linkProgress, panned, pulseSample, zoomAt } from '../model/motion';
 import type { Camera, Rect } from '../model/motion';
+import { WHEEL_PAN } from '../model/wheel';
 
 type LinkSample = { progress: number; travel: number; alpha: number; creating: boolean; pulsing: boolean };
+/** 휠을 빠르게 굴려도 화면이 따라잡을 거리. 약 네 칸(WHEEL_PAN×4)을 넘으면 더 쌓지 않는다. */
+const MAX_WHEEL_LEAD = WHEEL_PAN * 4;
 const restingLink: LinkSample = { progress: 1, travel: 1, alpha: 1, creating: false, pulsing: false };
 
 export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: Rect[], selectedCards: Rect[]) {
@@ -152,7 +155,7 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
   /** 화면 거리만큼 이동. animated면 진행 중인 이동 목표에 이어 붙인다(GTK wheel_pan). */
   const panBy = useCallback((delta: [number, number], smooth: boolean) => {
     coastRef.current = null;
-    if (smooth) animateTo(panned(motionTarget(), delta));
+    if (smooth) animateTo(limitLead(cameraRef.current, panned(motionTarget(), delta), MAX_WHEEL_LEAD));
     else setCamera(panned(cameraRef.current, delta));
   }, [animateTo, motionTarget, setCamera]);
   const startCoast = useCallback((velocity: [number, number]) => {
