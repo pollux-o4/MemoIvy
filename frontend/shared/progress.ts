@@ -1,4 +1,5 @@
 import type { Note } from './engine_contract';
+import { type ChildIndex, createChildIndex } from './hierarchy';
 import { parseListItem } from './markdown/list_item';
 
 /** 완료 수 / 전체 수. 할 일·하위 항목 모두 같은 모양이다. */
@@ -22,6 +23,8 @@ export interface ProgressIndex {
   of: (note: Note) => Progress;
   /** 하위 전체 체크박스 합계. 단계 진행의 보조 설명용. */
   detail: (note: Note) => Progress;
+  /** 집계가 기준으로 삼는 바로 아래 메모. 개수·부채 표시도 같은 단계를 쓴다. */
+  children: ChildIndex;
 }
 
 /**
@@ -30,11 +33,7 @@ export interface ProgressIndex {
  * 할 일도 완료 표시도 없는 참고용 메모는 세지 않는다. 메모 목록 한 벌로 만들어 결과를 기억한다.
  */
 export function createProgress(notes: readonly Note[]): ProgressIndex {
-  const children = new Map<string, Note[]>();
-  for (const item of notes) {
-    const parent = item.canvas.parent;
-    if (parent) children.set(parent, [...(children.get(parent) ?? []), item]);
-  }
+  const children = createChildIndex(notes);
   const levels = new Map<string, Progress>();
   const details = new Map<string, Progress>();
   const visiting = new Set<string>(); // 부모 순환을 끊는다.
@@ -51,7 +50,7 @@ export function createProgress(notes: readonly Note[]): ProgressIndex {
     if (!note.canvas.project) return checklist(note.text);
     if (visiting.has(note.id)) return NONE;
     visiting.add(note.id);
-    const result = (children.get(note.id) ?? []).filter((child) => !visiting.has(child.id)).map(unit).reduce(add, checklist(note.text));
+    const result = children(note.id).filter((child) => !visiting.has(child.id)).map(unit).reduce(add, checklist(note.text));
     visiting.delete(note.id);
     levels.set(note.id, result);
     return result;
@@ -61,12 +60,12 @@ export function createProgress(notes: readonly Note[]): ProgressIndex {
     if (cached) return cached;
     if (visiting.has(note.id)) return NONE;
     visiting.add(note.id);
-    const result = (children.get(note.id) ?? []).map(detail).reduce(add, checklist(note.text));
+    const result = children(note.id).map(detail).reduce(add, checklist(note.text));
     visiting.delete(note.id);
     details.set(note.id, result);
     return result;
   };
-  return { of, detail };
+  return { of, detail, children };
 }
 
 /** 진행 표시 문구의 단일 출처. 프로젝트는 하위 항목 단위, 메모는 할 일 단위로 말한다. */

@@ -1,3 +1,4 @@
+import { childCountLabel } from '../../../../shared/hierarchy';
 import type { Note } from '../../../../shared/engine_contract';
 import { Icon } from '../../../../shared/Icon';
 
@@ -7,7 +8,7 @@ export function InspectorPrimary({ note, childCount, tasks, onOpen, onToggleDone
   onOpen: () => void; onToggleDone: () => void;
 }) {
   const project = Boolean(note.canvas.project);
-  const facts = [project && `메모 ${childCount}개`, tasks && `${project ? '완료' : '할 일'} ${tasks.short}`].filter(Boolean).join(' · ');
+  const facts = [project && childCountLabel(childCount), tasks && `${project ? '완료' : '할 일'} ${tasks.short}`].filter(Boolean).join(' · ');
   return <section className="inspector-primary">
     <div className="inspector-status">
       <span title={tasks?.title}>{facts || (project ? '빈 프로젝트' : '')}</span>

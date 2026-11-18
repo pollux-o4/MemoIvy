@@ -60,22 +60,6 @@ export function projectPath(note: Note, notes: Note[], title: (note: Note) => st
   return path;
 }
 
-/** 프로젝트 하위(중첩 포함) 메모. 부모 순환은 끊는다. */
-export function descendantsOf(projectId: string, notes: Note[]): Note[] {
-  const byId = new Map(notes.map((item) => [item.id, item]));
-  return notes.filter((item) => {
-    if (item.id === projectId) return false;
-    let parent = item.canvas.parent;
-    const seen = new Set<string>();
-    while (parent && !seen.has(parent)) {
-      if (parent === projectId) return true;
-      seen.add(parent);
-      parent = byId.get(parent)?.canvas.parent ?? null;
-    }
-    return false;
-  });
-}
-
 /** 프로젝트 종이 더미 장수: 프로젝트는 비어도 1장, 하위 메모가 2개 이상이면 2장. 목록·캔버스가 함께 쓴다. */
 export function projectSheets(childCount: number): 1 | 2 {
   return childCount > 1 ? 2 : 1;

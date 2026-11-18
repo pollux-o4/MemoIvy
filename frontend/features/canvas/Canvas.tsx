@@ -152,7 +152,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} allNotes={store.notes} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
+        {notes.map((note) => <CanvasCard key={note.id} note={note} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
           onOpen={(item) => openCard(item)} onConnectStart={pointer.beginConnection}
           onContextMenu={(event, id) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); }}/>)}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
@@ -168,7 +168,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
         </button>
       </div>}
     </div>
-    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} allNotes={store.notes} renameRequest={renameRequest} onExternal={(url) => void store.bridge.openExternal(url)}
+    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} renameRequest={renameRequest} onExternal={(url) => void store.bridge.openExternal(url)}
       onSaveText={actions.saveText} revision={store.snapshot?.revision} onColor={(note, color) => actions.recolor([note.id], color)}
       projects={store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && movable(note.id, [selectedNote.id]))}
       onClose={() => setSelected([])} onOpen={(note) => openCard(note)} onOpenAsNote={(note) => openCard(note, true)}

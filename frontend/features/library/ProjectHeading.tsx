@@ -1,3 +1,4 @@
+import { childCountLabel } from '../../shared/hierarchy';
 import { Icon } from '../../shared/Icon';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { NoteMenu } from './NoteMenu';
@@ -18,7 +19,7 @@ export function ProjectHeading({ id, label, childCount, note, store, onOpenNote,
         <span className="project-name">{label}</span>
         {hasTasks && <TaskCountLabel progress={level} title={text.title} className="task-chip">{text.short}</TaskCountLabel>}
       </strong>
-      <span>메모 {childCount}개</span>
+      <span>{childCountLabel(childCount)}</span>
       {hasTasks && <TaskProgress className="project-progress" label={label} progress={level}/>}
     </button>
     <button className="icon-button enter-project" title="캔버스에서 프로젝트 열기" aria-label={`${label} 캔버스 열기`} onClick={() => onOpenCanvas(id)}><Icon name="enter" size={17}/></button>

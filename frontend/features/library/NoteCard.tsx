@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { Note } from '../../shared/engine_contract';
 import { Disclosure } from '../../shared/Disclosure';
+import { childCountLabel } from '../../shared/hierarchy';
 import { Icon } from '../../shared/Icon';
 import { progressLabel } from '../../shared/progress';
 import { useProgress } from '../../shared/ProgressProvider';
@@ -13,9 +14,8 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
   const [expanded, setExpanded] = useState(false);
   const [needsReveal, setNeedsReveal] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
-  const childCount = store.notes.filter((child) => child.canvas.parent === note.id).length;
-  const summary = note.canvas.project ? `메모 ${childCount}개` : libraryBody(note.text) || (note.text.trim() ? '' : '열어서 내용을 적어 보세요');
   const progress = useProgress();
+  const summary = note.canvas.project ? childCountLabel(progress.children(note.id).length) : libraryBody(note.text) || (note.text.trim() ? '' : '열어서 내용을 적어 보세요');
   const task = progress.of(note);
   const taskText = progressLabel(note, progress);
   const label = libraryTitle(note);
