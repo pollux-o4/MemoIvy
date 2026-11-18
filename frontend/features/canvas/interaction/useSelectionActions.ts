@@ -7,18 +7,21 @@ import type { MemoStore } from '../../../shared/useMemoivy';
  */
 export function useSelectionActions({ store, selected, selectedNote, openCard, clipboard, toggleDone, requestDelete, requestRename }: {
   store: MemoStore; selected: string[]; selectedNote?: Note;
-  openCard: (note: Note) => void;
+  openCard: (note: Note, asNote?: boolean) => void;
   clipboard: { copy: () => boolean; paste: () => Promise<void>; duplicate: () => Promise<void> };
   toggleDone: (ids: string[]) => void; requestDelete: (ids: string[]) => void; requestRename: () => void;
 }) {
   const ignore = () => undefined;
-  const saveText = (note: Note, text: string) => { void store.updateNote(note, text).catch(ignore); };
+  /** 기준 revision과 함께 저장하고 새 revision을 돌려준다. 충돌·실패는 호출자(초안)가 처리하도록 reject를 그대로 넘긴다. */
+  const saveText = async (note: Note, text: string, baseRevision?: number) => (await store.updateNote(note, text, undefined, undefined, baseRevision)).snapshot?.revision;
   const recolor = (ids: string[], color: string) => {
     for (const note of store.notes) if (ids.includes(note.id) && note.color !== color) void store.updateNote(note, undefined, undefined, color).catch(ignore);
   };
   return {
     saveText, recolor,
     open: () => { if (selectedNote) openCard(selectedNote); },
+    /** 프로젝트도 들어가지 않고 메모 편집기로 연다(목록형 제목 클릭과 같은 경로). */
+    openAsNote: () => { if (selectedNote) openCard(selectedNote, true); },
     rename: () => { if (selectedNote) requestRename(); },
     color: (color: string) => recolor(selected, color),
     toggleDone: () => toggleDone(selected),

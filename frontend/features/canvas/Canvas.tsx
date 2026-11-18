@@ -167,10 +167,10 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
         </button>
       </div>}
     </div>
-    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} allNotes={store.notes} renameRequest={renameRequest}
-      onSaveText={actions.saveText} onColor={(note, color) => actions.recolor([note.id], color)}
+    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} allNotes={store.notes} renameRequest={renameRequest} onExternal={(url) => void store.bridge.openExternal(url)}
+      onSaveText={actions.saveText} revision={store.snapshot?.revision} onColor={(note, color) => actions.recolor([note.id], color)}
       projects={store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && movable(note.id, [selectedNote.id]))}
-      onClose={() => setSelected([])} onOpen={(note) => openCard(note)}
+      onClose={() => setSelected([])} onOpen={(note) => openCard(note)} onOpenAsNote={(note) => openCard(note, true)}
       onLift={scopedProject ? liftSelected : undefined} onMoveInto={(parent) => commands.moveInto(selected, parent)}
       onToggleDone={() => commands.toggleDone([selectedNote.id])}
       onSignal={() => selectedNote.canvas.next.forEach((id) => triggerLink(`${selectedNote.id}:${id}`, false))}

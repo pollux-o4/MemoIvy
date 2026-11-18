@@ -9,7 +9,7 @@ describe('canvas markdown preview', () => {
     expect(result.remaining).toBe(1);
   });
 
-  test('joins adjacent paragraphs into a preview row', () => {
-    expect(canvasPreview('Title\nFirst\nSecond', 3).rows).toEqual([{ kind: 'text', text: 'First Second', lines: 2 }]);
+  test('keeps each line break as its own row', () => {
+    expect(canvasPreview('Title\nFirst\nSecond', 3).rows).toEqual([{ kind: 'text', text: 'First' }, { kind: 'text', text: 'Second' }]);
   });
 });

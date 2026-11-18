@@ -7,7 +7,7 @@ import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import { ImageViewer } from '../../shared/ImageViewer';
 import { EditorContent } from './EditorContent';
 import { EditorToolbar } from './EditorToolbar';
-import { MarkdownSurface } from './MarkdownSurface';
+import { MarkdownSurface } from '../../shared/markdown/surface/MarkdownSurface';
 import { useEditorAssets } from './useEditorAssets';
 import { useNoteDraft } from './useNoteDraft';
 

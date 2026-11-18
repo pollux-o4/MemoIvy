@@ -8,7 +8,7 @@ import { NOTE_COLORS, noteColor } from '../../../shared/model';
 export const CARD_MENU_SIZE = { width: 236, height: 300 };
 
 export type CardMenuActions = {
-  open: () => void; rename: () => void; color: (color: string) => void; toggleDone: () => void;
+  open: () => void; openAsNote: () => void; rename: () => void; color: (color: string) => void; toggleDone: () => void;
   copy: () => void; duplicate: () => void; remove: () => void;
 };
 
@@ -27,6 +27,7 @@ export function CardMenu({ at, notes, actions, onClose }: { at: { x: number; y: 
   return <div ref={root} className="menu-surface card-menu" role="menu" aria-label={single ? '카드 메뉴' : `카드 ${notes.length}개 메뉴`} style={{ left: at.x, top: at.y, '--card-menu-width': `${CARD_MENU_SIZE.width}px` } as React.CSSProperties}
     onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}>
     {single && row(project ? 'enter' : 'note', project ? '프로젝트 들어가기' : '메모 열기', 'Enter', actions.open)}
+    {single && project && row('note', '메모로 열기', 'Shift+Enter', actions.openAsNote)}
     {single && row('source', project ? '이름·소개 편집' : '제목 바꾸기', 'F2', actions.rename)}
     <div className="card-menu-colors" role="group" aria-label="색">
       {NOTE_COLORS.map((color) => <button key={color} role="menuitemradio" aria-checked={notes.every((note) => note.color === color)} aria-label={noteColor(color).label} title={noteColor(color).label} style={{ background: noteColor(color).accent }} onClick={run(() => actions.color(color))}/>)}

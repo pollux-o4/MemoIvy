@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MemoStore } from '../../shared/useMemoivy';
 import type { EditorView } from '@codemirror/view';
-import { parseListItem } from './list_markers';
+import { parseListItem } from '../../shared/markdown/list_item';
 
 export function useEditorAssets(store: MemoStore, change: (value: string) => void, currentDraft: () => string) {
   const [assetUrls, setAssetUrls] = useState<Record<string, string>>({});

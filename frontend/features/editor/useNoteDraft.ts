@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createAutosave, LIVE_SAVE } from '../../shared/draft/autosave';
 import type { Note } from '../../shared/engine_contract';
 import type { MemoStore } from '../../shared/useMemoivy';
 
@@ -10,8 +11,9 @@ export function useNoteDraft(store: MemoStore, note: Note | undefined) {
   const composing = useRef(false);
   const latest = useRef(draft);
   const baseRevision = useRef<number | undefined>(undefined);
-  const timer = useRef<number | undefined>(undefined);
-  const started = useRef<number | undefined>(undefined);
+  const saveRef = useRef<(value: string) => Promise<boolean>>(async () => true);
+  // 저장 시점 규칙은 인스펙터와 공유한다.
+  const autosave = useMemo(() => createAutosave<string>(LIVE_SAVE, (value) => void saveRef.current(value)), []);
   latest.current = draft;
 
   useEffect(() => {
@@ -19,10 +21,9 @@ export function useNoteDraft(store: MemoStore, note: Note | undefined) {
   }, [note?.text, note, dirty, store.snapshot?.revision]);
 
   const save = useCallback(async (value = latest.current) => {
-    if (composing.current) { timer.current = window.setTimeout(() => void save(value), 100); return false; }
+    if (composing.current) { autosave.schedule(value); return false; }
     if (!note || value === note.text) { setDirty(false); return true; }
-    window.clearTimeout(timer.current);
-    window.clearTimeout(started.current);
+    autosave.cancel();
     const sentBase = baseRevision.current ?? store.snapshot?.revision;
     try {
       const result = await store.updateNote(note, value, undefined, undefined, sentBase);
@@ -38,7 +39,8 @@ export function useNoteDraft(store: MemoStore, note: Note | undefined) {
       setError(failure.message ?? (reason instanceof Error ? reason.message : String(reason)));
       return false;
     }
-  }, [note, store.updateNote, store.snapshot?.revision]);
+  }, [note, store.updateNote, store.snapshot?.revision, autosave]);
+  saveRef.current = save;
 
   const change = useCallback((value: string) => {
     if (!dirty) baseRevision.current = store.snapshot?.revision;
@@ -46,14 +48,11 @@ export function useNoteDraft(store: MemoStore, note: Note | undefined) {
     setDirty(true);
     setError(null);
     latest.current = value;
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => void save(value), 300);
-    if (started.current === undefined) started.current = window.setTimeout(() => void save(latest.current), 1000);
-  }, [dirty, save, store.snapshot?.revision]);
+    autosave.schedule(value);
+  }, [dirty, autosave, store.snapshot?.revision]);
 
   useEffect(() => () => {
-    window.clearTimeout(timer.current);
-    window.clearTimeout(started.current);
+    autosave.cancel();
     if (dirty && note && latest.current !== note.text) void store.updateNote(note, latest.current).catch(() => undefined);
   }, [dirty, note?.id]);
 

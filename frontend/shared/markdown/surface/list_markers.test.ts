@@ -1,6 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { expect, test } from 'vitest';
-import { createListScanner, nextListMarker, parseListItem } from './list_markers';
+import { parseListItem } from '../list_item';
+import { createListScanner, nextListMarker } from './list_markers';
 
 const scan = (doc: string) => {
   const state = EditorState.create({ doc });

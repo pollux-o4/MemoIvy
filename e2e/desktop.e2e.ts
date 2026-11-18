@@ -62,6 +62,34 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await quit(reopened.app);
   });
 
+  test('인스펙터 소개 입력이 포커스를 잃기 전에도 카드에 실시간 반영되고 유지된다', async () => {
+    const { app, library } = await launch();
+    await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+    const canvas = await windowWith(app, '.canvas-screen');
+    await canvas.getByRole('button', { name: 'New' }).click();
+    await canvas.getByRole('menuitem', { name: /프로젝트/ }).click();
+    const intro = canvas.getByRole('textbox', { name: '프로젝트 소개' });
+    await intro.click();
+    await intro.pressSequentially('실시간 소개 반영');
+    // 포커스는 그대로 두고 카드가 따라오는지만 본다.
+    await expect.poll(() => canvas.locator('[data-note-id]').filter({ hasText: '실시간 소개 반영' }).count(), { timeout: 3_000 }).toBeGreaterThan(0);
+    await expect.poll(() => intro.textContent()).toBe('실시간 소개 반영');
+    if (process.env.E2E_SHOT) await canvas.screenshot({ path: process.env.E2E_SHOT });
+    // 이름이 빈 프로젝트라도 소개가 이름으로 올라가지 않는다.
+    await expect.poll(() => canvas.getByRole('textbox', { name: '프로젝트 이름' }).inputValue()).toBe('이름 없는 프로젝트');
+    // 프로젝트 설명은 드로어에서 전체 메모 편집기로 열 수 있다.
+    await canvas.getByRole('button', { name: '메모로 열기' }).click();
+    const editor = await windowWith(app, '.editor-screen');
+    await expect.poll(() => editor.locator('.cm-content').textContent()).toContain('실시간 소개 반영');
+    await quit(app);
+
+    const reopened = await launch();
+    await reopened.library.getByRole('button', { name: '캔버스 열기' }).first().click();
+    const again = await windowWith(reopened.app, '.canvas-screen');
+    await expect.poll(() => again.getByText('실시간 소개 반영').count()).toBeGreaterThan(0);
+    await quit(reopened.app);
+  });
+
   test('설정의 테마·모션 선택이 열린 창 전체에 반영되고 유지된다', async () => {
     const { app, library } = await launch();
     await library.keyboard.press('Control+,');

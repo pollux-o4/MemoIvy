@@ -1,4 +1,5 @@
 import type { CanvasNode, Note } from './engine_contract';
+import { parseListItem } from './markdown/list_item';
 
 
 /** 메모 색 이름의 단일 출처. 실제 색값은 tokens.css의 --note-* / --dot-* 가 가진다. */
@@ -13,10 +14,12 @@ export type NoteColor = keyof typeof NOTE_PALETTE;
 export const NOTE_COLORS = Object.keys(NOTE_PALETTE) as NoteColor[];
 export const noteColor = (color: string) => NOTE_PALETTE[color as NoteColor] ?? NOTE_PALETTE.yellow;
 
-const checklistRow = /^\s*[-*+]\s+\[([ xX/])\]\s*(.*)$/;
-/** 체크리스트 줄 파싱의 단일 출처(목록 개수·캔버스 미리보기 공용). */
+/** 체크리스트 줄 파싱. 줄 문법은 markdown/list_item이 단일 출처다(목록 개수·진행률 공용). */
 function checklistRows(markdown: string): Array<{ done: boolean; text: string }> {
-  return markdown.split('\n').flatMap((line) => { const match = checklistRow.exec(line); return match ? [{ done: match[1].toLowerCase() === 'x', text: match[2] }] : []; });
+  return markdown.split('\n').flatMap((line) => {
+    const item = parseListItem(line);
+    return item?.task ? [{ done: item.task === 'x', text: line.slice(item.contentIndent) }] : [];
+  });
 }
 
 /** 메모 본문 = 첫 줄 제목 + 나머지 소개. 제목 줄의 머리 표식(#, >)은 보존한다. 제목·소개 편집의 단일 출처. */
@@ -29,8 +32,10 @@ export function splitTitle(text: string): { marker: string; title: string; body:
 }
 export function joinTitle(parts: { marker?: string; title: string; body: string }): string {
   const head = `${parts.marker ?? ''}${parts.title.trim()}`;
-  const body = parts.body.replace(/\s+$/, '');
-  return body ? `${head}\n\n${body}` : head;
+  // 끝의 빈 줄만 지운다. 마지막 줄의 공백은 남겨야 쓰는 중인 빈 할 일(`- [ ] `)이 글머리로 바뀌지 않는다(메모 편집기와 같은 원문).
+  const body = parts.body.replace(/(\n[ \t]*)+$/, '');
+  if (!body.trim()) return head;
+  return `${head}\n\n${body}`;
 }
 
 export const emptyCanvas = (): CanvasNode => ({ position: null, next: [], done: false });

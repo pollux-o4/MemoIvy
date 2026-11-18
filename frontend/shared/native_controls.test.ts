@@ -7,7 +7,7 @@ import { repo, sourceFiles } from '../test_support/source_files';
 const source = /(?<!\.stories|\.test)\.tsx?$/; // Storybook 검수 도구·테스트는 제외
 const nativeControl = /<select\b|<datalist\b|type=["'](date|datetime-local|month|week|time|color|file|range)["']|window\.(alert|confirm|prompt)\(/;
 // shortcut: 링크 주소 수정이 window.prompt를 쓴다, 앱 대화상자로 링크 편집을 만들 때 이 예외를 지운다.
-const knownExceptions = new Set(['frontend/features/editor/link_preview/link_preview.ts']);
+const knownExceptions = new Set(['frontend/shared/markdown/surface/link_preview/link_preview.ts']);
 
 describe('native controls (UI-001)', () => {
   it('app screens draw their own pickers and dialogs', () => {

@@ -1,16 +1,4 @@
-/* GTK views/memo.css · live_editor 여백을 따른다. */
-.cm-mark-hidden { display: none; }
-.markdown-surface .md-list { position: relative; }
-/* GTK memo.css 표식 칸: 체크박스·기호는 본문 첫 줄 가운데 */
-.md-marker-slot { position: absolute; top: 0; width: 18px; height: 1.5em; display: inline-flex; align-items: center; justify-content: center; }
-.md-bullet { color: var(--note-muted); }
-.md-checkbox { box-sizing: content-box; width: 13px; height: 13px; padding: 0; border: 1.5px solid color-mix(in srgb, var(--note-text) 46%, transparent); border-radius: 5px; background: transparent; cursor: pointer; transition: background-color 120ms ease-out, border-color 120ms ease-out, transform 140ms cubic-bezier(.2,.9,.3,1.3); }
-.md-checkbox:hover { border-color: var(--memoivy-accent); background-color: color-mix(in srgb, var(--memoivy-accent) 12%, transparent); }
-.md-checkbox:active { transform: scale(.9); }
-.md-checkbox.is-checked { border-color: var(--memoivy-accent); background: var(--memoivy-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.5 9.5 3.6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 11px no-repeat; }
-.md-checkbox.is-doing { border-color: var(--memoivy-accent); background: linear-gradient(to right, var(--memoivy-accent) 50%, transparent 50%); }
-.md-task-done { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
-.cm-asset-preview [role=img] { display: inline-flex; padding: 12px; border-radius: 8px; color: var(--note-muted); background: color-mix(in srgb,var(--note-text) 5%,transparent); font-size: 11px; }
+/* 메모 편집 화면 · GTK views/memo.css. 편집 표면 자체는 shared/markdown/surface. */
 .palette-popover { position: absolute; z-index: 30; top: calc(100% + 5px); right: 0; }
 .palette-popover { min-width: 0; }
 .palette-popover .swatch { width: 26px; height: 26px; border-radius: 50%; }
@@ -28,18 +16,7 @@
 .editor-title { color: var(--note-text); font-size: 13px; font-weight: 600; }
 .editor-tools .menu-popover { top: 38px; }
 .editor-content { flex: 1; min-height: 0; overflow: auto; }
-.markdown-surface { height: 100%; }
-.markdown-surface .cm-editor { height: 100%; background: transparent; color: var(--note-text); }
-.markdown-surface .cm-scroller { overflow: auto; padding: 20px 0 24px; font-family: inherit; font-size: 13.333px; line-height: 1.5; }
-.markdown-surface .cm-content { min-height: 100%; padding: 0 20px 24px; caret-color: var(--memoivy-accent); }
-.markdown-surface .cm-line { min-height: 1.5em; padding: 0; }
-.markdown-surface .cm-focused { outline: none; }
-.markdown-surface .cm-gutters { display: none; }
-.markdown-surface.raw-mode .cm-content { font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 13px; }
 .editor-status { min-height: 22px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 2px 20px 5px; color: var(--note-muted); font-size: 10px; }
 .editor-status.save-error { justify-content: flex-start; color: var(--memoivy-danger); }
 .editor-status button { padding: 2px 6px; border: 0; border-radius: 5px; color: var(--note-text); background: color-mix(in srgb,var(--note-text) 7%,transparent); cursor: pointer; font-size: 10px; }
 .editor-status button:hover { background: color-mix(in srgb,var(--note-text) 12%,transparent); }
-/* GTK 라이브 편집: 캐럿 줄 이미지 원문은 보조 텍스트로 표시 */
-.markdown-surface .md-image-source, .markdown-surface .md-image-source * { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 11px; text-decoration: none; }
-/* GTK 오버레이 스크롤바와 같이 평소엔 숨김 */

@@ -1,11 +1,9 @@
 import { Decoration, WidgetType, type EditorView } from '@codemirror/view';
+import { type ListItem as Item, parseListItem, type TaskState } from '../list_item';
 
 /** GTK live_editor: 표식 칸 24px(깊이마다 추가), 표식과 본문 사이 6px, 글머리표 •◦▪. */
 const GUTTER = 24;
 const BULLETS = ['•', '◦', '▪'] as const;
-const LIST_LINE = /^(\s*)(?:(?:([-*+])\s+(?:\[([ xX/])\]\s+)?|(\d+)([.)])\s+))/;
-
-type TaskState = ' ' | 'x' | '/';
 type Range = { from: number; to: number; value: Decoration };
 
 abstract class MarkerWidget extends WidgetType {
@@ -32,46 +30,54 @@ class BulletWidget extends MarkerWidget {
   }
 }
 
+const TASK_VIEW: Record<TaskState, { className: string; checked: string; label: string }> = {
+  ' ': { className: '', checked: 'false', label: '할 일' },
+  x: { className: ' is-checked', checked: 'true', label: '할 일 완료됨' },
+  '/': { className: ' is-doing', checked: 'mixed', label: '진행 중인 할 일' },
+};
+/** 슬롯이 지금 그리는 위젯. 상태만 바뀌면 DOM을 재사용하므로 클릭은 최신 위젯을 읽는다. */
+const currentTask = new WeakMap<HTMLElement, TaskWidget>();
+
+/**
+ * 체크박스는 상태가 바뀌어도 같은 DOM을 고쳐 쓴다(updateDOM). 새로 그리면 CSS 전이가 일어나지 않아 완료 모션이 끊긴다.
+ */
 class TaskWidget extends MarkerWidget {
   constructor(depth: number, readonly state: TaskState, readonly box: number) { super(depth); }
   eq(other: WidgetType) { return other instanceof TaskWidget && other.depth === this.depth && other.state === this.state && other.box === this.box; }
   toDOM(view: EditorView) {
     const box = document.createElement('button');
     box.type = 'button';
-    box.className = `md-checkbox${this.state === 'x' ? ' is-checked' : this.state === '/' ? ' is-doing' : ''}`;
     box.setAttribute('role', 'checkbox');
-    box.setAttribute('aria-checked', this.state === 'x' ? 'true' : this.state === '/' ? 'mixed' : 'false');
-    box.setAttribute('aria-label', this.state === 'x' ? '할 일 완료됨' : this.state === '/' ? '진행 중인 할 일' : '할 일');
     box.addEventListener('mousedown', (event) => event.preventDefault());
+    const slot = this.slot(box);
     box.addEventListener('click', (event) => {
       event.preventDefault();
-      if (view.composing) return;
-      const next = event.shiftKey ? (this.state === '/' ? ' ' : '/') : this.state === 'x' ? ' ' : 'x';
-      view.dispatch({ changes: { from: this.box, to: this.box + 3, insert: `[${next}]` }, scrollIntoView: false });
+      const widget = currentTask.get(slot);
+      if (view.composing || !widget) return;
+      const next = event.shiftKey ? (widget.state === '/' ? ' ' : '/') : widget.state === 'x' ? ' ' : 'x';
+      view.dispatch({ changes: { from: widget.box, to: widget.box + 3, insert: `[${next}]` }, scrollIntoView: false });
       view.focus();
     });
-    return this.slot(box);
+    this.apply(slot);
+    return slot;
+  }
+  updateDOM(dom: HTMLElement) {
+    if (!currentTask.has(dom) || currentTask.get(dom)?.depth !== this.depth) return false;
+    this.apply(dom);
+    return true;
+  }
+  private apply(slot: HTMLElement) {
+    currentTask.set(slot, this);
+    const box = slot.firstElementChild as HTMLElement;
+    const view = TASK_VIEW[this.state];
+    box.className = `md-checkbox${view.className}`;
+    box.setAttribute('aria-checked', view.checked);
+    box.setAttribute('aria-label', view.label);
   }
 }
 
-type Item = { depth: number; contentIndent: number; marker: string; ordered: boolean; number?: number; delimiter?: string; task?: TaskState };
 type Line = { from: number; text: string };
 
-export function parseListItem(text: string): (Item & { markerEnd: number }) | null {
-  const match = LIST_LINE.exec(text);
-  if (!match) return null;
-  const marker = match[0];
-  return {
-    depth: Math.min(Math.floor(match[1].replace(/\t/g, '  ').length / 2), 8),
-    contentIndent: marker.length,
-    marker,
-    ordered: match[4] !== undefined,
-    number: match[4] ? Number(match[4]) : undefined,
-    delimiter: match[5],
-    markerEnd: marker.length,
-    task: match[3]?.toLowerCase() as TaskState | undefined,
-  };
-}
 function itemAtLine(state: EditorView['state'], number: number) {
   const line = state.doc.line(number);
   const direct = parseListItem(line.text);
