@@ -59,9 +59,15 @@
 .canvas-screen .inspector-disconnect { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--canvas-muted); }
 .canvas-screen .inspector-chip > .inspector-disconnect { padding: 0; }
 .canvas-screen .inspector-disconnect:hover { color: var(--canvas-danger); background: var(--canvas-hover); }
-.canvas-screen .inspector-add-link { position: relative; display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; border-radius: 8px; color: var(--canvas-muted); cursor: pointer; }
-.canvas-screen .inspector-add-link:hover { color: var(--canvas-text); background: var(--canvas-hover); }
-.canvas-screen .inspector-add-link select { flex: 1; min-width: 0; height: 100%; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; appearance: none; }
+.canvas-screen .inspector-add-trigger { width: 100%; height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
+.canvas-screen .inspector-add-trigger span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .inspector-add-trigger:hover, .canvas-screen .inspector-add-trigger[aria-expanded="true"] { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-add-trigger:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: -2px; }
+.canvas-screen .inspector-add-trigger[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+/* 스크롤하는 인스펙터 안에서 잘리지 않도록 트리거 아래에 펼친다. */
+.canvas-screen .inspector-link-menu { position: static; min-width: 0; max-height: 220px; margin-top: 4px; overflow-y: auto; }
+.canvas-screen .inspector-link-menu .menu-row > .inspector-dot { flex: 0 0 10px; }
+.canvas-screen .inspector-link-menu .menu-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .canvas-screen .inspector-action { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; overflow: hidden; padding: 0 8px; border: 0; border-radius: 8px; color: var(--canvas-text); background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .canvas-screen .inspector-action:hover { background: var(--canvas-hover); }
 

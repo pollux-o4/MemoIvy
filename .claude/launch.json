@@ -4,8 +4,31 @@
     {
       "name": "prototypes",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "6020", "--bind", "127.0.0.1", "--directory", "prototypes"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "6020",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "prototypes"
+      ],
       "port": 6020
+    },
+    {
+      "name": "storybook",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "storybook",
+        "dev",
+        "-p",
+        "6016",
+        "--host",
+        "127.0.0.1",
+        "--no-open",
+        "--ci"
+      ],
+      "port": 6016
     }
   ]
 }

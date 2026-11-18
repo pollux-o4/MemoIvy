@@ -16,9 +16,9 @@ const librarySnapshot = (): Snapshot => {
   const note: Note = { id: childId, text: '# 키보드 포커스 카드\nTab으로 검색에서 이동합니다.', color: 'blue', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: null } };
   return { notes: [note], assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
 };
-const frame = (bridge: DesktopBridge, screen: 'library' | 'note', id?: string) => <div className="theme-light" style={{ width: 440, height: 600, margin: '0 auto' }}><App bridge={bridge} preview={false} initialScreen={screen} initialId={id}/></div>;
+const frame = (bridge: DesktopBridge, screen: 'library' | 'note' | 'canvas', id?: string, size: [number, number] = [440, 600]) => <div className="theme-light" style={{ width: size[0], height: size[1], margin: '0 auto' }}><App bridge={bridge} preview={false} initialScreen={screen} initialId={id}/></div>;
 
-const meta: Meta<typeof App> = { title: 'MemoIvy/Interactions', component: App, parameters: { layout: 'fullscreen' } };
+const meta: Meta<typeof App> = { title: 'Interactions/App', component: App, parameters: { layout: 'fullscreen' } };
 export default meta;
 type Story = StoryObj<typeof App>;
 
@@ -66,5 +66,24 @@ export const SaveFailure: Story = {
     await userEvent.keyboard('\n상태 확인용 초안');
     await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
     await expect(editor).toHaveTextContent('상태 확인용 초안');
+  },
+};
+
+/** CANVAS-003 정렬 막대: 첫 면은 묶음만, 묶음을 열면 같은 막대가 동작으로 바뀌고 Esc는 한 단계만 올라간다. */
+export const AlignmentBarMorph: Story = {
+  render: () => frame(createMockBridge(), 'canvas', undefined, [1000, 720]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByRole('article');
+    canvasElement.querySelector<HTMLElement>('.canvas-screen')?.focus();
+    await userEvent.keyboard('{Control>}a{/Control}');
+    const bar = await canvas.findByRole('toolbar', { name: '선택 항목 정렬' });
+    await expect(within(bar).queryByRole('button', { name: '왼쪽 맞춤' })).toBeNull();
+    await userEvent.click(within(bar).getByRole('button', { name: /맞춤/ }));
+    const align = await canvas.findByRole('toolbar', { name: '선택 항목 맞춤' });
+    await expect(within(align).getByRole('button', { name: '왼쪽 맞춤' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    const back = await canvas.findByRole('toolbar', { name: '선택 항목 정렬' });
+    await expect(within(back).getByRole('button', { name: /맞춤/ })).toHaveFocus();
   },
 };

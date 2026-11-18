@@ -108,7 +108,7 @@ function ReferenceReview({ initialCase = 'library', initialTheme = 'light' }: { 
   </main>;
 }
 
-const meta: Meta<typeof ReferenceReview> = { title: 'UI review/GTK fidelity', component: ReferenceReview, parameters: { layout: 'fullscreen' }, argTypes: { initialCase: { control: 'select', options: Object.keys(specs) }, initialTheme: { control: 'inline-radio', options: ['light', 'dark'] } } };
+const meta: Meta<typeof ReferenceReview> = { title: 'Reference/GTK Fidelity', component: ReferenceReview, parameters: { layout: 'fullscreen' }, argTypes: { initialCase: { control: 'select', options: Object.keys(specs) }, initialTheme: { control: 'inline-radio', options: ['light', 'dark'] } } };
 export default meta;
 type Story = StoryObj<typeof ReferenceReview>;
 export const LibraryComparison: Story = { args: { initialCase: 'library', initialTheme: 'light' } };

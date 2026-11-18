@@ -62,7 +62,7 @@ mise run install
 
 실행 중인 MemoIvy는 종료한 뒤 다시 열어 주세요.
 
-원본 GTK 화면·합성 데이터·캡처 메타정보는 **UI-REF-001**로 검색합니다. Storybook의 `UI review/GTK fidelity`에서 같은 조건으로 비교하며 기준 이미지는 일반 빌드·테스트에서 갱신하지 않습니다. GTK 비교 실행은 별도 시스템 GTK 개발 패키지를 설치한 환경에서 `mise run dev:legacy`로 진행합니다.
+원본 GTK 화면·합성 데이터·캡처 메타정보는 **UI-REF-001**로 검색합니다. Storybook의 `Reference/GTK Fidelity`에서 같은 조건으로 비교하며 기준 이미지는 일반 빌드·테스트에서 갱신하지 않습니다. GTK 비교 실행은 별도 시스템 GTK 개발 패키지를 설치한 환경에서 `mise run dev:legacy`로 진행합니다.
 
 </details>
 

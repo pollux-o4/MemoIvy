@@ -1,8 +1,7 @@
 import { useRef } from 'react';
 import type { KeyboardEvent, MutableRefObject } from 'react';
 import type { Alignment } from '../model/align';
-
-const alignmentKeys: Record<string, Alignment> = { a: 'left', h: 'center', d: 'right', w: 'top', v: 'middle', s: 'bottom', t: 'grid', f: 'flow' };
+import { alignmentForKey } from '../model/alignment_actions';
 
 function isTypingTarget(target: EventTarget): boolean {
   return target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
@@ -46,14 +45,14 @@ export function useCanvasKeyboard(actions: {
     if ((event.key === 'Delete' || event.key === 'Backspace') && actions.hasSelection()) { event.preventDefault(); actions.removeSelected?.(); }
     if (mod && event.key === 'Enter') { event.preventDefault(); actions.toggleDone?.(); }
     if (event.key === 'Enter' && !isInteractiveTarget(event.target)) actions.openSelected(event.shiftKey);
-    if (event.altKey && event.shiftKey && !event.ctrlKey && ['h', 'v'].includes(event.key.toLowerCase())) { event.preventDefault(); actions.align(event.key.toLowerCase() === 'h' ? 'distribute-x' : 'distribute-y'); }
     if (event.shiftKey && event.key === '1') { event.preventDefault(); actions.fit?.(false); }
     if (event.shiftKey && event.key === '2') { event.preventDefault(); actions.fit?.(true); }
     if (mod && event.key === '0') { event.preventDefault(); actions.resetZoom?.(); }
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key) && actions.hasSelection() && !isInteractiveTarget(event.target)) {
       event.preventDefault(); actions.nudge?.(event.key, event.shiftKey ? 80 : 16);
     }
-    if (event.altKey && !event.ctrlKey && !event.shiftKey && alignmentKeys[event.key.toLowerCase()]) { event.preventDefault(); actions.align(alignmentKeys[event.key.toLowerCase()]); }
+    const alignment = alignmentForKey(event);
+    if (alignment) { event.preventDefault(); actions.align(alignment); }
     if (event.altKey && event.key === 'ArrowUp') { event.preventDefault(); actions.goBack(); }
     if (event.altKey && event.key.toLowerCase() === 'g') { event.preventDefault(); event.shiftKey ? actions.liftSelected?.() : actions.groupSelected?.(); }
   };

@@ -35,6 +35,6 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 
 ## 관찰 범위
 
-화면 이관은 UI-REF-001의 GTK 외형을 유지한다. Storybook의 `UI review/GTK fidelity`에서 원본 PNG와 같은 데이터·테마·치수의 이관 화면을 비교한다. 원본 자산 재캡처는 사용자가 명시적으로 요청했을 때만 `mise run test:gtk-reference`로 실행한다.
+화면 이관은 UI-REF-001의 GTK 외형을 유지한다. Storybook의 `Reference/GTK Fidelity`에서 원본 PNG와 같은 데이터·테마·치수의 이관 화면을 비교한다. 원본 자산 재캡처는 사용자가 명시적으로 요청했을 때만 `mise run test:gtk-reference`로 실행한다.
 
 Linux에서 실행 화면과 저장 복원을 확인한다. Windows·macOS는 해당 환경에서 실제 확인한 범위만 기록한다. Mac이 없다는 이유로 Linux 개발 완료를 막거나 운영체제별 자동 검사 체계를 새 필수 과업으로 만들지 않는다.

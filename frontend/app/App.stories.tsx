@@ -30,7 +30,7 @@ function previewApp(screen: 'library' | 'note' | 'canvas' | 'files' | 'settings'
   return <div className="theme-light" style={{ width: size[0], height: size[1], margin: '0 auto', background: 'var(--memoivy-bg)' }}><App bridge={storyBridge(snapshot)} preview={false} initialScreen={screen} initialId={id}/></div>;
 }
 
-const meta: Meta<typeof App> = { title: 'MemoIvy/Window states', component: App, parameters: { layout: 'fullscreen' } };
+const meta: Meta<typeof App> = { title: 'Screens/Window States', component: App, parameters: { layout: 'fullscreen' } };
 export default meta;
 type Story = StoryObj<typeof App>;
 

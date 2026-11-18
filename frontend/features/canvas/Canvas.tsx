@@ -6,7 +6,7 @@ import { Icon } from '../../shared/Icon';
 import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
-import { AlignmentBar } from './parts/AlignmentBar';
+import { AlignmentBar } from './parts/alignment/AlignmentBar';
 import { canvasSlot, CARD_HEIGHT, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
 
 import { CanvasCard } from './parts/CanvasCard';

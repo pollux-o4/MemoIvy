@@ -1,6 +1,7 @@
 import type { Note } from '../../../../shared/engine_contract';
 import { Icon } from '../../../../shared/Icon';
 import { canvasTitle } from '../../model/labels';
+import { LinkPicker } from './LinkPicker';
 
 /** 3층 · 흐름: 이전 → 이 메모 → 다음. 연결이 없으면 추가 칸만 보인다. 신호는 다음 메모가 있을 때만. */
 export function InspectorLinks({ note, notes, onSelect, onToggleLink, onSignal }: {
@@ -18,8 +19,6 @@ export function InspectorLinks({ note, notes, onSelect, onToggleLink, onSignal }
         <button title={canvasTitle(item)} onClick={() => onSelect(item.id)}>{canvasTitle(item)}</button>
         <button className="inspector-disconnect" aria-label={`${canvasTitle(item)} 연결 해제`} title="이 연결 해제 · 메모는 유지" onClick={() => onToggleLink(note, item.id)}><Icon name="close" size={11}/></button>
       </span>)}</div>}
-    {candidates.length > 0 && <label className="inspector-add-link"><Icon name="plus" size={13}/><select aria-label="다음 메모 연결 추가" value="" onChange={(event) => event.target.value && onToggleLink(note, event.target.value)}>
-      <option value="" disabled>다음 메모 연결…</option>{candidates.map((item) => <option key={item.id} value={item.id}>{canvasTitle(item)}</option>)}
-    </select></label>}
+    {candidates.length > 0 && <LinkPicker candidates={candidates} onPick={(id) => onToggleLink(note, id)}/>}
   </section>;
 }

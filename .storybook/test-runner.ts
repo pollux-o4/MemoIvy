@@ -5,7 +5,7 @@ import { checkA11y, injectAxe } from 'axe-playwright';
 const config: TestRunnerConfig = {
   async preVisit(page) { await injectAxe(page); },
   async postVisit(page, context) {
-    if (context.id.startsWith('ui-review-gtk-fidelity')) return;
+    if (context.title.startsWith('Reference/')) return;
     await checkA11y(page, '#storybook-root', { detailedReport: true, detailedReportOptions: { html: true } });
   },
 };

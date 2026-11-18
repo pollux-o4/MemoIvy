@@ -201,31 +201,41 @@
 .canvas-screen .canvas-dock .canvas-summary { margin-left: 8px; }
 .canvas-screen .canvas-dock .canvas-status { margin: 0 8px 0 12px; }
 .canvas-screen .canvas-dock .canvas-status.failed { color: var(--canvas-danger); }
+/* 다중 선택 막대: 한 표면이 면(첫 면 ↔ 묶음)에 따라 폭을 바꾸며 모양을 잇는다. 동작 정의는 model/alignment_actions.ts. */
 .canvas-screen .alignment-bar {
   position: absolute;
   z-index: 8;
   top: 66px;
   left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  translate: -50% 0;
   width: max-content;
   max-width: calc(100% - 24px);
+  overflow: hidden;
   padding: 5px;
   border: 1px solid var(--canvas-hairline);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--canvas-surface);
   box-shadow: 0 4px 12px var(--canvas-shadow);
+  interpolate-size: allow-keywords;
+  transition: width 260ms var(--ease-out-expo);
 }
-.canvas-screen .alignment-bar > span { padding: 0 5px; color: var(--canvas-muted); font-size: 11px; }
-.canvas-screen .alignment-bar button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--canvas-text); cursor: pointer; }
+.canvas-screen .alignment-face { display: flex; align-items: center; gap: 4px; white-space: nowrap; opacity: 1; translate: 0 0; transition: opacity 160ms ease-out, translate 260ms var(--ease-out-expo); }
+@starting-style {
+  .canvas-screen .alignment-face[data-dir="in"] { opacity: 0; translate: 10px 0; }
+  .canvas-screen .alignment-face[data-dir="out"] { opacity: 0; translate: -10px 0; }
+}
+.canvas-screen .alignment-count, .canvas-screen .alignment-title { padding: 0 6px; color: var(--canvas-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.canvas-screen .alignment-title { padding-left: 0; color: var(--canvas-text); font-weight: 600; }
+.canvas-screen .alignment-row { display: flex; gap: 2px; padding-left: 6px; border-left: 1px solid var(--canvas-hairline); }
+.canvas-screen .alignment-bar button { height: 28px; min-width: 28px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--canvas-text); font: inherit; font-size: 12px; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
 .canvas-screen .alignment-bar button:hover { background: var(--canvas-hover); }
+.canvas-screen .alignment-bar button:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: -2px; }
+.canvas-screen .alignment-bar button:disabled { opacity: .32; cursor: default; background: transparent; }
+.canvas-screen .alignment-group > svg:last-child { margin-left: -2px; color: var(--canvas-muted); }
+.canvas-screen .alignment-back > svg { rotate: 180deg; }
 .canvas-screen .alignment-bar button.danger { color: var(--canvas-danger); }
 .canvas-screen .alignment-bar button.danger:hover { background: var(--canvas-danger); color: #fff; }
-.canvas-screen .alignment-bar > i { width: 1px; height: 18px; background: var(--canvas-hairline); }
+.canvas-screen .alignment-face > i { width: 1px; height: 18px; margin: 0 2px; background: var(--canvas-hairline); }
 
 .canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 44px; display: flex; align-items: center; padding: 2px 12px 10px; }
 /* 경로: 머리 막대 닫기 버튼과 왼쪽을 맞추고, 모든 항목을 32px 높이·한 줄 기준선에 둔다. */
