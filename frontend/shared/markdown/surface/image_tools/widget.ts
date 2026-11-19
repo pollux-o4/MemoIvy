@@ -161,17 +161,25 @@ export function installImageDropHandlers(view: EditorView) {
     if (!source) return;
     event.preventDefault();
     event.stopPropagation();
-    clearMarker();
     const target = targetAt(event);
     const allowed = source.doc === view.state.doc && target && target.line !== source.line && !view.state.readOnly;
     if (event.dataTransfer) event.dataTransfer.dropEffect = allowed ? 'move' : 'none';
-    if (allowed && target.element) {
-      marker = target.element;
-      marker.dataset.imageDrop = target.after ? 'after' : 'before';
-    }
+    if (!allowed || !target.element) { clearMarker(); return; }
+
+    // Both sides of a shared line boundary use the next line's leading edge.
+    const nextLine = target.after ? target.element.nextElementSibling : null;
+    const sharedBoundary = nextLine instanceof HTMLElement && nextLine.matches('.cm-line');
+    const element = sharedBoundary ? nextLine : target.element;
+    const edge = target.after && !sharedBoundary ? 'after' : 'before';
+    if (marker === element && marker.dataset.imageDrop === edge) return;
+    clearMarker();
+    marker = element;
+    marker.dataset.imageDrop = edge;
   };
   const dragLeave = (event: DragEvent) => {
-    if (!(event.relatedTarget instanceof Node) || !view.dom.contains(event.relatedTarget)) clearMarker();
+    if (event.relatedTarget instanceof Node && view.dom.contains(event.relatedTarget)) return;
+    const rect = view.dom.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX >= rect.right || event.clientY < rect.top || event.clientY >= rect.bottom) clearMarker();
   };
   const drop = (event: DragEvent) => {
     if (!source) return;
