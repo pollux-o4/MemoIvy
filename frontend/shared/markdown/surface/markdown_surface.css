@@ -29,3 +29,24 @@
 /* GTK 라이브 편집: 캐럿 줄 이미지 원문은 보조 텍스트로 표시 */
 .markdown-surface .md-image-source, .markdown-surface .md-image-source * { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 11px; text-decoration: none; }
 /* GTK 오버레이 스크롤바와 같이 평소엔 숨김 */
+
+.markdown-surface .md-inline-code,
+.markdown-surface .cm-line.md-code-block {
+  background-color: color-mix(in srgb, var(--note-text) 10%, transparent);
+}
+.markdown-surface .md-inline-code {
+  border-radius: 4px;
+  padding-inline: .2em;
+  box-decoration-break: clone;
+}
+.markdown-surface .cm-line.md-code-block {
+  padding-inline: 8px;
+}
+.markdown-surface .md-code-block:not(.md-code-block + .md-code-block) {
+  border-start-start-radius: 6px;
+  border-start-end-radius: 6px;
+}
+.markdown-surface .md-code-block:not(:has(+ .md-code-block)) {
+  border-end-start-radius: 6px;
+  border-end-end-radius: 6px;
+}

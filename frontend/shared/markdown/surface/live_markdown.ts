@@ -3,6 +3,8 @@ import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codem
 import { createListScanner } from './list_markers';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
 
+const inlineCode = Decoration.mark({ class: 'md-inline-code' });
+const codeBlock = Decoration.line({ class: 'md-code-block' });
 const imageSource = Decoration.mark({ class: 'md-image-source' });
 
 export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: ImageHandlers) {
@@ -37,7 +39,20 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
         }
         ranges.push(...listLine(line));
       }
-      syntaxTree(view.state).iterate({ from: view.visibleRanges[0]?.from ?? 0, to: view.visibleRanges.at(-1)?.to ?? view.state.doc.length, enter(node) {
+      const { from: visibleFrom, to: visibleTo } = view.viewport;
+      syntaxTree(view.state).iterate({ from: visibleFrom, to: visibleTo, enter(node) {
+        if (node.name === 'InlineCode') {
+          ranges.push({ from: node.from, to: node.to, value: inlineCode });
+        }
+        if (node.name === 'FencedCode') {
+          const doc = view.state.doc;
+          const first = doc.lineAt(Math.max(node.from, visibleFrom)).number;
+          const last = doc.lineAt(Math.min(node.to, visibleTo)).number;
+          for (let number = first; number <= last; number++) {
+            const { from } = doc.line(number);
+            ranges.push({ from, to: from, value: codeBlock });
+          }
+        }
         if (marks.has(node.name) && (node.name !== 'URL' || node.node.parent?.name === 'Link') && view.state.doc.lineAt(node.from).number !== active && node.to > node.from) {
           // GTK처럼 제목 기호 뒤 공백까지 숨겨 본문이 줄 시작에 붙게 한다.
           // 링크 주소(URL)도 GTK처럼 커서 밖에서는 숨기고 링크 글자만 남긴다.
