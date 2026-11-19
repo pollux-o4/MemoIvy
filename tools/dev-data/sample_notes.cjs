@@ -98,7 +98,7 @@ function linkEdgeCases({ add }) {
   add('끝난 하위 메모', { parent: project, position: [80, 80], done: true });
   add('프로젝트 아래에서 위로', { position: [3000, -40], next: [project] });
   add('프로젝트 오른쪽에서 왼쪽으로', { position: [3500, -420], next: [project] });
-  const long = add(['펼치면 길어지는 메모', ...Array.from({ length: 8 }, (_, i) => `- [ ] 펼친 미리보기 줄 ${i + 1}`)].join('\n'), { color: 'blue', position: [3000, 300] });
+  const long = add(['펼치면 길어지는 메모', ...Array.from({ length: 8 }, (_, i) => `- [ ] 펼친 미리보기 줄 ${i + 1}`)].join('\n'), { color: 'blue', position: [3000, 300], next: [project] });
   add('긴 메모 아래에서 위로', { position: [3000, 900], next: [long] });
 }
 

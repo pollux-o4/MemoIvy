@@ -46,10 +46,12 @@ export const CanvasCard = memo(function CanvasCard({ note, position, selected, d
       data-note-id={note.id} onPointerDown={(event) => actions.pointerDown(event, note.id)} onPointerLeave={() => actions.pointerLeave(note.id)} onDoubleClick={() => actions.open(note)} onContextMenu={(event) => actions.contextMenu(event, note.id)} tabIndex={0} aria-label={`${title} 카드`}>
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => actions.open(note)} onToggleDone={() => actions.toggleDone(note.id)}/>
       <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onGrow={setGrow}/>
-      {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText} peek={peeking === undefined ? undefined : { open: peeking, onToggle: () => actions.togglePeek(note.id), targetId: `card-fan-${note.id}` }}/>
-        : <div className="canvas-card-meta">{tasks.total > 0 && <small title={taskText.title}>할 일 {taskText.short}</small>}</div>}
+      {(project || tasks.total > 0 || note.canvas.next.length > 0) && <footer className="canvas-card-footer">
+        {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText} peek={peeking === undefined ? undefined : { open: peeking, onToggle: () => actions.togglePeek(note.id), targetId: `card-fan-${note.id}` }}/>
+          : tasks.total > 0 && <div className="canvas-card-meta"><small title={taskText.title}>할 일 {taskText.short}</small></div>}
+        {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => actions.connectStart(note.id)}/>}
+      </footer>}
       <BranchHandle title={title} onConnectStart={(event) => actions.connectStart(note.id, event)} onAdd={() => actions.addBranch(note.id)}/>
-      {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => actions.connectStart(note.id)}/>}
     </article>
     {project && <ProjectFan id={`card-fan-${note.id}`} fan={projectFan(children)} position={position} tone={tone}/>}
   </>;

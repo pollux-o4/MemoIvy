@@ -377,6 +377,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await library.getByRole('button', { name: '캔버스 열기' }).first().click();
       const canvas = await windowWith(app, '.canvas-screen');
       await expect.poll(() => canvas.locator('.canvas-link path').count()).toBeGreaterThan(10);
+      const checklist = canvas.getByRole('article', { name: '펼치면 길어지는 메모 카드' });
+      const footerIsSeparated = () => checklist.evaluate((card) => {
+        const tasks = card.querySelector('.canvas-card-meta small')?.getBoundingClientRect();
+        const links = card.querySelector('footer button')?.getBoundingClientRect();
+        return Boolean(tasks && links && tasks.right < links.left);
+      });
+      await expect.poll(footerIsSeparated).toBe(true);
       await settle(canvas);
       // 전체 보기 버튼이 실제로 카메라를 옮긴다(클릭 이벤트가 '선택만 맞추기' 인자로 새던 회귀 방지).
       const zoomOf = () => canvas.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
@@ -423,6 +430,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       let previous = '';
       await expect.poll(async () => { const now = await heightsNow(); const same = now === previous; previous = now; return same; }, { intervals: [150] }).toBe(true);
       expect((await hiddenTips()).hidden).toEqual([]);
+      expect(await footerIsSeparated()).toBe(true);
       // 여러 부모: 가지 개요는 한 갈래 나무 + "다른 곳에서도 이어짐"으로 나머지 부모를 모두 보이고, 연결 칸은 같은 부모를 되풀이하지 않는다.
       await canvas.locator('.canvas-note', { hasText: '여러 곳에서 모이는 메모' }).click();
       const also = canvas.locator('.outline-also .inspector-chip');
