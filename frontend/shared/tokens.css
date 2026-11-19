@@ -22,6 +22,8 @@
   --memoivy-danger-hover: light-dark(rgba(200, 36, 47, .1), rgba(255, 141, 148, .13));
   --memoivy-keycap: light-dark(rgba(0, 0, 0, .055), rgba(255, 255, 255, .09));
   --memoivy-success: light-dark(#1f9d5c, #35b673);
+  /* 작은 글자용 성공 색: 연한 성공 바탕 위에서도 WCAG AA(4.5:1)를 넘는다. 테두리·채움은 --memoivy-success. */
+  --memoivy-success-text: light-dark(#136b3c, #4fcb89);
   --memoivy-shadow: light-dark(rgba(27,34,48,.1), rgba(0,0,0,.28));
   --memoivy-shadow-deep: light-dark(rgba(27,34,48,.2), rgba(0,0,0,.48));
   --note-text: light-dark(#2a2a2c, #f1f0ec);

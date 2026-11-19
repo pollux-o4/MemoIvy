@@ -23,4 +23,4 @@
 .link-preview-action { padding: 5px 9px; border: 0; border-radius: 6px; color: var(--memoivy-text); background: transparent; cursor: pointer; font: inherit; font-size: var(--font-meta); }
 .link-preview-action:hover { background: var(--memoivy-hover); }
 .link-preview-action.primary { color: var(--memoivy-on-accent); background: var(--memoivy-accent); }
-.link-preview-action.confirmed { color: var(--memoivy-success); }
+.link-preview-action.confirmed { color: var(--memoivy-success-text); }

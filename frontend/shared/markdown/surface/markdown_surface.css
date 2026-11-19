@@ -12,7 +12,8 @@
 .md-checkbox:active { transform: scale(.9); }
 .md-checkbox.is-checked { border-color: var(--memoivy-accent); background-color: var(--memoivy-accent); }
 .md-checkbox.is-doing { border-color: var(--memoivy-accent); background: linear-gradient(to right, var(--memoivy-accent) 50%, transparent 50%); }
-.md-task-done { color: color-mix(in srgb, var(--note-text) 62%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+/* 완료 줄은 흐리되 초록 완료 카드 위에서도 4.5:1을 지킨다. */
+.md-task-done { color: color-mix(in srgb, var(--note-text) 72%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
 .cm-asset-preview [role=img] { display: inline-flex; padding: 12px; border-radius: 8px; color: var(--note-muted); background: color-mix(in srgb,var(--note-text) 5%,transparent); font-size: 11px; }
 .markdown-surface { height: 100%; }
 .markdown-surface .cm-editor { height: 100%; background: transparent; color: var(--note-text); }

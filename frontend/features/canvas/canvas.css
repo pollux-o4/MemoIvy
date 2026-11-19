@@ -8,6 +8,7 @@
   --canvas-accent: var(--memoivy-accent);
   --canvas-danger: var(--memoivy-danger);
   --canvas-success: var(--memoivy-success);
+  --canvas-success-text: var(--memoivy-success-text);
   --canvas-shadow: var(--memoivy-shadow);
   position: relative;
   height: 100%;
@@ -154,7 +155,7 @@
 .canvas-screen .canvas-note > p { display: -webkit-box; overflow: hidden; margin: 12px 0 0; color: var(--note-muted); font-size: 12px; font-weight: 400; line-height: 1.42; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .canvas-screen .canvas-note .card-done { flex: 0 0 20px; width: 20px; height: 20px; display: grid; place-items: center; margin-left: auto; padding: 0; border: 1.5px solid color-mix(in srgb, var(--note-text) 34%, transparent); border-radius: 50%; color: transparent; background: transparent; opacity: 0; cursor: pointer; transition: opacity 130ms ease-out, background-color 130ms ease-out, border-color 130ms ease-out, transform 130ms cubic-bezier(.2,.9,.3,1.3); }
 .canvas-screen .canvas-note:hover .card-done, .canvas-screen .canvas-note.selected .card-done, .canvas-screen .canvas-note.done .card-done { opacity: 1; }
-.canvas-screen .canvas-note .card-done:hover { border-color: var(--canvas-success); color: var(--canvas-success); transform: scale(1.08); }
+.canvas-screen .canvas-note .card-done:hover { border-color: var(--canvas-success); color: var(--canvas-success-text); transform: scale(1.08); }
 .canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
 .canvas-screen .canvas-note .canvas-checklist-preview { --preview-gutter: 20px; display: grid; gap: 3px; margin: 11px 0 0; padding: 0; list-style: none; }
 .canvas-screen .canvas-note .canvas-checklist-preview li { min-width: 0; display: flex; align-items: flex-start; gap: 6px; min-height: 19px; color: var(--note-muted); }
@@ -281,4 +282,4 @@
   .canvas-screen .canvas-navigator { max-width: 100%; }
 }
 
-.canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success); font-weight: 600; }
+.canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success-text); font-weight: 600; }

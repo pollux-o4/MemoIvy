@@ -36,7 +36,7 @@
 .canvas-screen .inspector-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 0 8px; color: var(--canvas-muted); font-size: 12px; }
 .canvas-screen .inspector-done { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--canvas-hairline); border-radius: 999px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
 .canvas-screen .inspector-done:hover { color: var(--canvas-text); background: var(--canvas-hover); }
-.canvas-screen .inspector-done[aria-pressed="true"] { border-color: transparent; color: var(--canvas-success); background: color-mix(in srgb, var(--canvas-success) 14%, transparent); }
+.canvas-screen .inspector-done[aria-pressed="true"] { border-color: transparent; color: var(--canvas-success-text); background: color-mix(in srgb, var(--canvas-success) 14%, transparent); }
 .canvas-screen .inspector-main { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 0; border-radius: 10px; color: #fff; background: var(--canvas-accent); font-weight: 600; cursor: pointer; transition: background-color 120ms; }
 .canvas-screen .inspector-main:hover { background: color-mix(in srgb, var(--canvas-accent), black 10%); }
 .canvas-screen .inspector-main span { flex: 1; text-align: left; }

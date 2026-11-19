@@ -40,7 +40,7 @@
 .card-title { min-width: 0; flex: 1; overflow: hidden; color: var(--memoivy-text); font-size: 1.04em; font-weight: 600; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .card-location { overflow: hidden; color: var(--memoivy-accent); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .task-chip { flex: 0 0 auto; padding: 1px 7px; border-radius: 999px; color: var(--memoivy-muted); background: color-mix(in srgb,var(--memoivy-text) 7%,transparent); font-size: 10px; font-feature-settings: "tnum"; }
-.task-chip.complete, .task-count.task-chip.complete { color: var(--memoivy-success); background: color-mix(in srgb,var(--memoivy-success) 16%,transparent); }
+.task-chip.complete, .task-count.task-chip.complete { color: var(--memoivy-success-text); background: color-mix(in srgb,var(--memoivy-success) 16%,transparent); }
 .note-card > .disclosure { display: grid; margin: 0 auto 6px; }
 .project-section { position: relative; background: var(--memoivy-surface); box-shadow: inset 0 0 0 1px var(--memoivy-hairline), 0 2px 6px var(--memoivy-shadow); }
 /* 프로젝트 = 종이 더미(GTK와 다르게 감): 접힘에서 하위 수만큼 뒤 종이가 오른쪽 아래로 비껴 쌓이고, 펼치면 풀린다. 카드 폭은 다른 카드와 같게 두고 종이는 목록 여백으로 삐져나온다. */
