@@ -9,7 +9,7 @@ import { CreationMenu } from '../../shared/menu/CreationMenu';
 import { NoteCard } from './NoteCard';
 import { ProjectSection } from './ProjectSection';
 import { libraryPath, orderedLibraryChildren, searchLibraryNotes } from './library_model';
-import libraryEmptyIllustration from '../../../src/presentation/icons/illustrations/library-empty.svg?url';
+import libraryEmptyIllustration from '../../shared/assets/icons/illustrations/library-empty.svg?url';
 import './library.css';
 
 

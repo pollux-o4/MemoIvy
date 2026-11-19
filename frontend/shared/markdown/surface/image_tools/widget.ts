@@ -1,6 +1,6 @@
 import { WidgetType, type EditorView } from '@codemirror/view';
-import expandIcon from '../../../../../src/presentation/icons/actions/media/expand.svg?raw';
-import removeIcon from '../../../../../src/presentation/icons/actions/note/trash.svg?raw';
+import expandIcon from '../../../assets/icons/actions/media/expand.svg?raw';
+import removeIcon from '../../../assets/icons/actions/note/trash.svg?raw';
 import { deleteImageLine, imageMarkup, MAX_IMAGE_WIDTH, parseImageLine, resizeImageWidth } from './commands';
 
 export interface ImageHandlers {
@@ -131,8 +131,7 @@ function button(label: string, icon: string, action: () => void) {
   const element = document.createElement('button');
   element.type = 'button';
   element.className = 'cm-image-tool';
-  element.innerHTML = icon.replaceAll('COLOR', 'currentColor');
-  element.firstElementChild?.setAttribute('aria-hidden', 'true');
+  element.innerHTML = icon;
   element.title = label;
   element.setAttribute('aria-label', label);
   element.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); action(); });

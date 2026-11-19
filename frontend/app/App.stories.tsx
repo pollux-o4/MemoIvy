@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { App } from './App';
-import markdownImage from '../../docs/assets/gtk-reference/fixtures/image-used/assets/dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8.png?inline';
+import markdownImage from '../../fixtures/attachments/dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8.png?inline';
 import windowKinds from '../../desktop/window_kinds.json';
 import { createMockBridge, fixtureNoteIds } from '../shared/mock_bridge';
 import type { DesktopBridge, Note, Snapshot } from '../shared/engine_contract';

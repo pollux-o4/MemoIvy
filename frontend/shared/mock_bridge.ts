@@ -1,6 +1,6 @@
 import type { DesktopBridge, EngineEvent, EngineResult, Note, Snapshot } from './engine_contract';
 import { emptyCanvas } from './model';
-import visualFixture from '../../rooms/desktop-migration/visual-fixture.json';
+import visualFixture from '../../fixtures/visual-notebook.json';
 
 export const fixtureNoteIds = {
   ideas: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',

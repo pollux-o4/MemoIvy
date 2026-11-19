@@ -1,44 +1,44 @@
 import type { ReactNode, SVGProps } from 'react';
-import add from '../../src/presentation/icons/actions/note/add.svg?raw';
-import more from '../../src/presentation/icons/actions/more.svg?raw';
-import palette from '../../src/presentation/icons/actions/palette.svg?raw';
-import copy from '../../src/presentation/icons/actions/media/copy.svg?raw';
-import expand from '../../src/presentation/icons/actions/media/expand.svg?raw';
-import files from '../../src/presentation/icons/actions/media/files.svg?raw';
-import keyboard from '../../src/presentation/icons/actions/keyboard.svg?raw';
-import note from '../../src/presentation/icons/actions/note/note.svg?raw';
-import source from '../../src/presentation/icons/actions/note/source.svg?raw';
-import trash from '../../src/presentation/icons/actions/note/trash.svg?raw';
-import alignFlow from '../../src/presentation/icons/align/flow.svg?raw';
-import alignTidy from '../../src/presentation/icons/align/tidy.svg?raw';
-import alignLeft from '../../src/presentation/icons/align/position/left.svg?raw';
-import alignCenterX from '../../src/presentation/icons/align/spacing/center-x.svg?raw';
-import alignRight from '../../src/presentation/icons/align/position/right.svg?raw';
-import alignTop from '../../src/presentation/icons/align/position/top.svg?raw';
-import alignCenterY from '../../src/presentation/icons/align/spacing/center-y.svg?raw';
-import alignBottom from '../../src/presentation/icons/align/position/bottom.svg?raw';
-import distributeX from '../../src/presentation/icons/align/spacing/distribute-x.svg?raw';
-import distributeY from '../../src/presentation/icons/align/spacing/distribute-y.svg?raw';
-import canvasCheck from '../../src/presentation/icons/canvas/flow/check.svg?raw';
-import canvasLink from '../../src/presentation/icons/canvas/flow/link.svg?raw';
-import signal from '../../src/presentation/icons/canvas/flow/signal.svg?raw';
-import help from '../../src/presentation/icons/canvas/help.svg?raw';
-import undo from '../../src/presentation/icons/canvas/history/undo.svg?raw';
-import redo from '../../src/presentation/icons/canvas/history/redo.svg?raw';
-import chevronRight from '../../src/presentation/icons/canvas/navigation/chevron.svg?raw';
-import home from '../../src/presentation/icons/canvas/navigation/home.svg?raw';
-import pin from '../../src/presentation/icons/canvas/navigation/pin.svg?raw';
-import open from '../../src/presentation/icons/canvas/open.svg?raw';
-import enter from '../../src/presentation/icons/canvas/project/enter.svg?raw';
-import project from '../../src/presentation/icons/canvas/project/project.svg?raw';
-import up from '../../src/presentation/icons/canvas/project/up.svg?raw';
-import fit from '../../src/presentation/icons/canvas/zoom/fit.svg?raw';
-import zoomIn from '../../src/presentation/icons/canvas/zoom/zoom-in.svg?raw';
-import zoomOut from '../../src/presentation/icons/canvas/zoom/zoom-out.svg?raw';
-import close from '../../src/presentation/icons/window/close.svg?raw';
-import maximize from '../../src/presentation/icons/window/maximize.svg?raw';
-import minimize from '../../src/presentation/icons/window/minimize.svg?raw';
-import restore from '../../src/presentation/icons/window/restore.svg?raw';
+import add from './assets/icons/actions/note/add.svg?raw';
+import more from './assets/icons/actions/more.svg?raw';
+import palette from './assets/icons/actions/palette.svg?raw';
+import copy from './assets/icons/actions/media/copy.svg?raw';
+import expand from './assets/icons/actions/media/expand.svg?raw';
+import files from './assets/icons/actions/media/files.svg?raw';
+import keyboard from './assets/icons/actions/keyboard.svg?raw';
+import note from './assets/icons/actions/note/note.svg?raw';
+import source from './assets/icons/actions/note/source.svg?raw';
+import trash from './assets/icons/actions/note/trash.svg?raw';
+import alignFlow from './assets/icons/align/flow.svg?raw';
+import alignTidy from './assets/icons/align/tidy.svg?raw';
+import alignLeft from './assets/icons/align/position/left.svg?raw';
+import alignCenterX from './assets/icons/align/spacing/center-x.svg?raw';
+import alignRight from './assets/icons/align/position/right.svg?raw';
+import alignTop from './assets/icons/align/position/top.svg?raw';
+import alignCenterY from './assets/icons/align/spacing/center-y.svg?raw';
+import alignBottom from './assets/icons/align/position/bottom.svg?raw';
+import distributeX from './assets/icons/align/spacing/distribute-x.svg?raw';
+import distributeY from './assets/icons/align/spacing/distribute-y.svg?raw';
+import canvasCheck from './assets/icons/canvas/flow/check.svg?raw';
+import canvasLink from './assets/icons/canvas/flow/link.svg?raw';
+import signal from './assets/icons/canvas/flow/signal.svg?raw';
+import help from './assets/icons/canvas/help.svg?raw';
+import undo from './assets/icons/canvas/history/undo.svg?raw';
+import redo from './assets/icons/canvas/history/redo.svg?raw';
+import chevronRight from './assets/icons/canvas/navigation/chevron.svg?raw';
+import home from './assets/icons/canvas/navigation/home.svg?raw';
+import pin from './assets/icons/canvas/navigation/pin.svg?raw';
+import open from './assets/icons/canvas/open.svg?raw';
+import enter from './assets/icons/canvas/project/enter.svg?raw';
+import project from './assets/icons/canvas/project/project.svg?raw';
+import up from './assets/icons/canvas/project/up.svg?raw';
+import fit from './assets/icons/canvas/zoom/fit.svg?raw';
+import zoomIn from './assets/icons/canvas/zoom/zoom-in.svg?raw';
+import zoomOut from './assets/icons/canvas/zoom/zoom-out.svg?raw';
+import close from './assets/icons/window/close.svg?raw';
+import maximize from './assets/icons/window/maximize.svg?raw';
+import minimize from './assets/icons/window/minimize.svg?raw';
+import restore from './assets/icons/window/restore.svg?raw';
 
 const fallbackPaths = {
   search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
@@ -73,8 +73,7 @@ const svgBodies: Record<SvgName, string> = Object.fromEntries(
 function innerSvg(svg: string): string {
   return svg
     .replace(/^\s*<svg\b[^>]*>/, '')
-    .replace(/<\/svg>\s*$/, '')
-    .replaceAll('COLOR', 'currentColor');
+    .replace(/<\/svg>\s*$/, '');
 }
 
 export function Icon({ name, size = 20, ...props }: IconProps) {

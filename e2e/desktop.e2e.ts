@@ -520,7 +520,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const id = 'd0000000-0000-4000-8000-000000000001';
     const hash = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
     const image = `![첨부](asset:${hash})`;
-    const data = readFileSync(path.join(root, 'docs/assets/gtk-reference/fixtures/image-used/assets', `${hash}.png`)).toString('base64');
+    const data = readFileSync(path.join(root, 'fixtures/attachments', `${hash}.png`)).toString('base64');
     const markdown = [
       '입력 확인', '**굵게**와 `인라인`',
       '- [ ] 실제 할 일', '  - [x] 하위 할 일',
