@@ -140,12 +140,22 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const handle = (id: string) => card(id).locator('.card-branch');
     const box = async (locator: ReturnType<typeof card>) => { const found = await locator.boundingBox(); if (!found) throw new Error('보이지 않는 요소'); return found; };
     await canvas.locator('.canvas-screen').press('Escape');
-    // 누르기: 하위 가지가 생기고 선 하나가 이어진다.
+    // 누르기: 바로 만들지 않고 고르기 상태가 된다. Esc는 취소, 빈 곳을 누르면 그 자리에 하위 가지.
     const links0 = await linkCount();
+    const hint = canvas.locator('.canvas-pick-hint');
     await card(root).hover();
     await handle(root).click();
+    await expect.poll(() => hint.count()).toBe(1);
+    expect((await ids()).length).toBe(before.length + 1);
+    await canvas.keyboard.press('Escape');
+    await expect.poll(() => hint.count()).toBe(0);
+    await card(root).hover();
+    await handle(root).click();
+    const rootBox = await box(card(root));
+    await canvas.mouse.click(rootBox.x + rootBox.width + 160, rootBox.y + 40);
     await expect.poll(async () => (await ids()).length).toBe(before.length + 2);
     await expect.poll(linkCount).toBe(links0 + 1);
+    await expect.poll(() => hint.count()).toBe(0);
     // 빈 곳에 놓기: 끄는 동안 미리보기 선이 보이고, 놓은 자리에 새 가지가 생긴다.
     await card(root).hover();
     const start = await box(handle(root));
@@ -168,6 +178,12 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => card(first).getAttribute('class')).toContain('link-target');
     await canvas.mouse.up();
     await expect.poll(linkCount).toBe(links0 + 3);
+    expect((await ids()).length).toBe(before.length + 3);
+    // 누르고 카드 고르기: 새 카드 없이 연결만 는다.
+    await card(first).hover();
+    await handle(first).click();
+    await card(root).click();
+    await expect.poll(linkCount).toBe(links0 + 4);
     expect((await ids()).length).toBe(before.length + 3);
     await quit(app);
   });

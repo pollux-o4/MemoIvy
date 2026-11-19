@@ -89,7 +89,13 @@ export function useCanvasPointer(options: {
     },
     beginConnection: connect.begin,
     connectPreview: o.mode === 'connect' ? connect.preview : null,
+    connectPicking: o.mode === 'connect' && connect.picking,
     board: {
+      onPointerDownCapture: (event: ReactPointerEvent) => {
+        if (o.mode !== 'connect' || !connect.picking || event.button !== 0) return;
+        event.preventDefault(); event.stopPropagation();
+        connect.pick(noteAt(event), event);
+      },
       onPointerDown: (event: ReactPointerEvent) => {
         if (wantsPan(event)) { beginPan(event); return; }
         if (event.target !== event.currentTarget) return;

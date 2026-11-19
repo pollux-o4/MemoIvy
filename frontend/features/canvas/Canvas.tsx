@@ -104,7 +104,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     ...selection, notes, allNotes: store.notes, positions, draftPositions, setDraftPositions, canMoveInto: movable,
     onCardsMoved: fan.hush, onMovePositions: commands.commitPositions, onMoveInto: commands.moveInto,
     onConnectEmpty: (from, at) => branch('child', { seed: from, at }),
-    onConnectTap: (from) => branch('child', { seed: from }),
     onConnect: (from, to) => { const source = noteById.get(from); if (source && !source.canvas.next.includes(to)) commands.link(source, to); },
   });
   const keyboard = useCanvasKeyboard({
@@ -193,7 +192,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
-    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}`} role="application" aria-label="캔버스"
+    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}${pointer.connectPicking ? ' picking' : ''}`} role="application" aria-label="캔버스"
       {...pointer.board}
 >
       <div className="canvas-grid" aria-hidden="true" style={gridStyle(camera) as React.CSSProperties}/>
@@ -206,6 +205,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
       </div>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}
+      {pointer.connectPicking && <p className="canvas-pick-hint" role="status">이을 메모를 누르세요 · 빈 곳은 새 가지 · Esc 취소</p>}
       {selection.marquee && <SelectionBox a={selection.marquee.a} b={selection.marquee.b}/>}
       {!notes.length && <CanvasEmpty onCreate={() => void store.createNote({ parent: activeScope }).then((note) => note && selectAndReveal([note.id])).catch(() => undefined)}/>}
     </div>
