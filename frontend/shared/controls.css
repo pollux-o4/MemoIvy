@@ -33,7 +33,7 @@
 .disclosure svg { transform: rotate(0deg); transition: transform 240ms cubic-bezier(.22,1,.36,1); }
 .disclosure.is-open svg { transform: rotate(180deg); }
 /* 접힘 내용: 접힌 높이만 보이고 끝을 페이드로 가린다. 높이 값은 useCollapsible이 잰다. */
-.collapsible { max-height: var(--preview-collapsed-height, var(--preview-collapsed-fallback, 3em)); overflow: hidden; transition: max-height 300ms cubic-bezier(.333,1,.667,1); }
+.collapsible { max-height: var(--preview-collapsed-height, var(--preview-collapsed-fallback, 3em)); overflow: hidden; transition: max-height var(--disclosure-duration) var(--disclosure-ease); }
 .collapsible.has-more { -webkit-mask-image: linear-gradient(to bottom,#000 50%,transparent 100%); mask-image: linear-gradient(to bottom,#000 50%,transparent 100%); }
 .collapsible.is-expanded { max-height: var(--preview-full-height, none); }
 .window-header button { -webkit-app-region: no-drag; }

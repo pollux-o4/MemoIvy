@@ -1,5 +1,7 @@
 /* GTK src/presentation/styles 값을 그대로 옮긴다(UI-REF-001 외형 유지). 진입은 @starting-style, 축소 모션은 도착 상태만. */
 :root { --ease-out-expo: cubic-bezier(.22, 1, .36, 1); --ease-settle: cubic-bezier(.2, .8, .2, 1); }
+/* 펼침·접힘(목록 미리보기·프로젝트 영역·캔버스 카드)은 한 속도·곡선으로 움직인다. */
+:root { --disclosure-duration: 300ms; --disclosure-ease: cubic-bezier(.333, 1, .667, 1); }
 
 /* 메뉴 · menus.css popover.memoivy-menu */
 .menu-popover, .palette-popover { transform: none; opacity: 1; transition: transform 140ms ease-out, opacity 140ms ease-out, display 140ms allow-discrete; }

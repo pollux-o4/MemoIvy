@@ -115,7 +115,7 @@
   user-select: none;
   opacity: 1;
   transform: none;
-  transition: height 300ms cubic-bezier(.333,1,.667,1), box-shadow 170ms ease-out, opacity 170ms ease-out, transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out;
+  transition: height var(--disclosure-duration) var(--disclosure-ease), box-shadow 170ms ease-out, opacity 170ms ease-out, transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out;
   outline: 1.5px solid transparent;
   outline-offset: 1px;
 }
