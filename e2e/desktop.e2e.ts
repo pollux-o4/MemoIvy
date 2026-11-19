@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { _electron as electron, chromium, type ElectronApplication, type Page } from 'playwright';
@@ -25,8 +25,8 @@ async function settle(page: Page): Promise<void> {
   let previous = '';
   await expect.poll(async () => { const now = await world(); const same = now === previous; previous = now; return same; }, { intervals: [120] }).toBe(true);
 }
-async function launch(): Promise<{ app: ElectronApplication; library: Page }> {
-  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dataDir } as Record<string, string> });
+async function launch(dir = dataDir): Promise<{ app: ElectronApplication; library: Page }> {
+  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dir } as Record<string, string> });
   const library = await app.firstWindow();
   await library.waitForSelector('.library-screen');
   return { app, library };
@@ -113,6 +113,57 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => reopened.library.evaluate(() => document.documentElement.classList.contains('theme-dark'))).toBe(true);
     await quit(reopened.app);
   });
+  test('원점에서 끌어 음수 좌표로 옮기면 새로고침 및 앱 재시작 후 유지된다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-drag-'));
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id, text: '위치 확인 메모', color: 'yellow', modified: 1794576000, canvas: { position: [0, 0], next: [], done: false } },
+    ]));
+    const openCanvas = async (app: ElectronApplication, library: Page) => {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      return windowWith(app, '.canvas-screen');
+    };
+    const cardIn = (page: Page) => page.locator(`.canvas-note[data-note-id="${id}"]`);
+    const positionIn = (page: Page) => cardIn(page).evaluate((item: HTMLElement) => [item.offsetLeft, item.offsetTop]);
+    let running: ElectronApplication | undefined;
+    try {
+      const { app, library } = await launch(dir);
+      running = app;
+      const canvas = await openCanvas(app, library);
+      await cardIn(canvas).waitFor();
+      await settle(canvas);
+      expect(await positionIn(canvas)).toEqual([0, 0]);
+      const box = await cardIn(canvas).boundingBox();
+      if (!box) throw new Error('카드가 보이지 않음');
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await canvas.mouse.move(x, y);
+      await canvas.mouse.down();
+      await canvas.mouse.move(x - 80, y - 65, { steps: 8 });
+      await canvas.mouse.up();
+
+      // 저장 완료 신호는 다른 렌더러가 받은 엔진 스냅숏으로 확인한다.
+      const persisted = () => library.evaluate(async (noteId) => {
+        const result = await window.memoivy?.request('snapshot');
+        return result?.snapshot?.notes.find((note) => note.id === noteId)?.canvas.position;
+      }, id);
+      await expect.poll(async () => (await persisted())?.every((axis) => axis < 0)).toBe(true);
+      const saved = await persisted();
+      await canvas.reload();
+      await expect.poll(() => positionIn(canvas)).toEqual(saved);
+      await quit(app);
+      running = undefined;
+
+      const reopened = await launch(dir);
+      running = reopened.app;
+      const restored = await openCanvas(reopened.app, reopened.library);
+      await expect.poll(() => positionIn(restored)).toEqual(saved);
+    } finally {
+      if (running) await quit(running);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   // 미리보기 창은 메모가 마운트 때 바로 있어 연결 신호 rAF가 StrictMode 재마운트 정리 중에 취소된다(Wayland 실기에서 발견).
   test('캔버스 휠·확대 버튼: 마운트 직후 예약한 프레임이 취소돼도 화면이 움직인다', async () => {
     const browser = await chromium.launch();

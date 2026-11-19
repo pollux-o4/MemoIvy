@@ -22,7 +22,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 카드 기하·저장 좌표 | `align`(진입점) → geometry의 `CARD_WIDTH`·`CANVAS_LIMIT`·`clampCanvasDelta`, savedPositions의 `savedPoint`, alignment의 `alignPositions` |
+| 카드 기하·저장 좌표 | `align`(진입점) → geometry의 `CARD_WIDTH`·`CANVAS_LIMIT`·`CANVAS_MIN`(출처 `desktop/canvas_bounds.json`, IPC 검증·엔진과 공유)·`clampCanvasDelta`, savedPositions의 `savedPoint`·`settleDraft`, alignment의 `alignPositions` |
 | 카메라·물리 | `motion`(진입점) → geometry의 `fitting`·`zoomAt`, physics의 `Spring`·`Coast`, cameraMotion, signals의 `pulseSample` |
 | 끌기·선택 카드 표시 | drag의 `dragDelta`·`releaseVelocity`, reveal의 `visibleArea`·`revealCamera` |
 | 연결선 | links의 `graph`·`anchors`·`paths`(`PATH_STRATEGIES`)·`mindmap_layout`·`outline_edit` |

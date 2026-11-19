@@ -45,7 +45,9 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
   const [focusConnectList, setFocusConnectList] = useState(false);
   const [renameRequest, setRenameRequest] = useState(0);
-  const [draftPositions, setDraftPositions] = useState<Record<string, CanvasPoint>>({});
+  const [dragPositions, setDragPositions] = useState<Record<string, CanvasPoint>>({});
+  const [pendingPositions, setPendingPositions] = useState<Record<string, CanvasPoint>>({});
+  const draftPositions = useMemo(() => ({ ...pendingPositions, ...dragPositions }), [pendingPositions, dragPositions]);
   const selection = useCanvasSelection();
   const { selected, setSelected, mode } = selection;
   const scopeState = useCanvasScope(store.notes, scope, setSelected, onBack);
@@ -53,7 +55,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const notes = useMemo(() => store.notes.filter((note) => (note.canvas.parent ?? null) === activeScope), [store.notes, activeScope]);
   const { noteById, positions, cardRects, selectedRects } = useCanvasLayout(notes, draftPositions, selected);
   const { motion, camera, triggerLink, reveal, fitView, resetZoom } = useCanvasCamera({ host, notes, noteById, scope: activeScope, cardRects, selected, selectedRects, idle: mode === 'idle' });
-  const commands = useCanvasCommands({ store, notes, positions, selected, activeScope, setDraftPositions, triggerLink });
+  const commands = useCanvasCommands({ store, notes, positions, selected, activeScope, setDraftPositions: setPendingPositions, triggerLink });
   const clipboard = useCanvasClipboard({ store, notes, positions, selected, activeScope, onPasted: (ids) => selectAndReveal(ids) });
   const movable = (target: string, ids: string[]) => canMoveInto(target, ids, store.notes);
   const selectAndReveal = (ids: string[]) => { setSelected(ids); reveal(); };
@@ -77,7 +79,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const fan = useFanQuiet();
   const pointer = useCanvasPointer({
     host, camera, setCamera: motion.setCamera, setAutopan: motion.setAutopan, startCoast: motion.startCoast, isPanHeld: () => keyboard.spaceDown.current,
-    ...selection, notes, allNotes: store.notes, positions, draftPositions, setDraftPositions, canMoveInto: movable,
+    ...selection, notes, allNotes: store.notes, positions, draftPositions: dragPositions, setDraftPositions: setDragPositions, canMoveInto: movable,
     onCardsMoved: fan.hush, onMovePositions: commands.commitPositions, onMoveInto: commands.moveInto,
     onConnectEmpty: (from, at) => branch('child', { seed: from, at }),
     onConnect: (from, to) => { const source = noteById.get(from); if (source && !source.canvas.next.includes(to)) commands.link(source, to); },

@@ -9,6 +9,8 @@ const ASSET_ID = /^[0-9a-f]{64}$/;
 const COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'purple']);
 // 메모 창은 openNote 경로로만 연다.
 const WINDOW_KINDS = new Set(Object.keys(require('./window_kinds.json')).filter((kind) => kind !== 'note'));
+// 캔버스 좌표 범위의 단일 출처(렌더러·엔진 테스트도 같은 파일을 읽는다).
+const { limit: CANVAS_LIMIT } = require('./canvas_bounds.json');
 const MAX_TEXT = 28 * 1024 * 1024;
 const MAX_ASSET_BYTES = 20 * 1024 * 1024;
 
@@ -104,7 +106,7 @@ function canvas(value) {
   if (value.parent !== undefined && value.parent !== null && !isId(value.parent)) throw bad('Invalid parent id');
 }
 
-function position(value) { return Array.isArray(value) && value.length === 2 && value.every((n) => Number.isFinite(n) && n >= 0 && n <= 20000); }
+function position(value) { return Array.isArray(value) && value.length === 2 && value.every((n) => Number.isFinite(n) && n >= -CANVAS_LIMIT && n <= CANVAS_LIMIT); }
 function optionalText(value, limit, name) { if (value !== undefined && (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > limit)) throw bad(`Invalid ${name}`); }
 function optionalColor(value) { if (value !== undefined && (typeof value !== 'string' || !COLORS.has(value))) throw bad('Invalid color'); }
 function revision(value) { if (!Number.isSafeInteger(value) || value < 0) throw bad('Invalid base revision'); }

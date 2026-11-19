@@ -20,7 +20,7 @@ test('IPC boundary rejects unsafe, stale-shape and invalid preference payloads',
   assert.throws(() => validateRequest('exec', {}), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('delete', { baseRevision: 1, id: noteId, path: '/etc/passwd' }), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('create', { baseRevision: 0, color: '#ffffff' }), { code: 'INVALID_REQUEST' });
-  assert.throws(() => validateRequest('canvas', { baseRevision: 0, changes: [{ id: noteId, canvas: { position: [-1, 0] } }] }), { code: 'INVALID_REQUEST' });
+  assert.throws(() => validateRequest('canvas', { baseRevision: 0, changes: [{ id: noteId, canvas: { position: [-20001, 0] } }] }), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'arbitrary', value: true }), { code: 'INVALID_REQUEST' });
   assert.doesNotThrow(() => validateRequest('preference', { baseRevision: 4, key: 'expandedNotes', value: [noteId] }));
   const pastedImage = Buffer.alloc(128 * 1024, 0x61).toString('base64');

@@ -76,7 +76,7 @@ export function useCanvasPointer(options: {
     /** Esc: 진행 중 상호작용을 취소했으면 true. */
     cancel: () => {
       if (o.mode === 'idle') return false;
-      if (o.mode === 'cards' && drag) o.setDraftPositions((current) => ({ ...current, ...drag.positions }));
+      if (o.mode === 'cards' && drag) o.setDraftPositions({});
       reset();
       return true;
     },
@@ -135,11 +135,12 @@ export function useCanvasPointer(options: {
           } else {
             o.onMovePositions(Object.fromEntries(Object.entries(o.draftPositions).filter(([id, point]) => drag.positions[id] && (point.x !== drag.positions[id].x || point.y !== drag.positions[id].y))));
           }
+          o.setDraftPositions({});
         }
         o.setMode('idle'); setDrag(null); o.setMarquee(null); setDropTarget(null); setGuides([]);
       },
       onPointerCancel: () => {
-        if (o.mode === 'cards' && drag) o.setDraftPositions((current) => ({ ...current, ...drag.positions }));
+        if (o.mode === 'cards' && drag) o.setDraftPositions({});
         reset();
       },
     },

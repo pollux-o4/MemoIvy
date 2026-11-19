@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { alignPositions, CANVAS_LIMIT, canvasSlot, changedPositions, clampCanvasDelta, savedPoint, vacantGroup } from './align';
+import { alignPositions, CANVAS_LIMIT, canvasSlot, changedPositions, clampCanvasDelta, savedPoint, settleDraft, vacantGroup } from './align';
 
 test('aligns selected positions and preserves the other axis', () => {
   const positions = { a: { x: 10, y: 20 }, b: { x: 80, y: 60 }, c: { x: 40, y: 5 } };
@@ -36,9 +36,10 @@ test('matches GTK default card slots and places groups without collisions', () =
   assert.notDeepEqual(moved.a, { x: 64, y: 64 });
 });
 
-test('clamps a selected group as one unit to GTK canvas limits', () => {
+test('clamps a selected group as one unit to canvas limits, open above and left of the origin', () => {
   const group = [{ x: 10, y: 20 }, { x: 500, y: 600 }];
-  assert.deepEqual(clampCanvasDelta(group, -50, -50), { x: -10, y: -20 });
+  assert.deepEqual(clampCanvasDelta(group, -50, -50), { x: -50, y: -50 });
+  assert.deepEqual(clampCanvasDelta(group, -30_000, -30_000), { x: -20_010, y: -20_020 });
   assert.deepEqual(clampCanvasDelta(group, 20_000, 20_000), { x: 19_500, y: 19_400 });
 });
 
@@ -50,7 +51,12 @@ test('changedPositions compares against saved positions, not the drag preview', 
   ]);
 });
 
-test('savedPoint는 저장 범위 밖 좌표를 0..CANVAS_LIMIT로 맞춘다(엔진이 묶음 변경을 거절하지 않게)', () => {
-  assert.deepEqual(savedPoint({ x: -40.6, y: 12.4 }), [0, 12]);
-  assert.deepEqual(savedPoint({ x: 30_000, y: -1 }), [CANVAS_LIMIT, 0]);
+test('savedPoint는 저장 범위 밖 좌표를 ±CANVAS_LIMIT로 맞춘다(엔진이 묶음 변경을 거절하지 않게)', () => {
+  assert.deepEqual(savedPoint({ x: -40.6, y: 12.4 }), [-41, 12]);
+  assert.deepEqual(savedPoint({ x: 30_000, y: -30_000 }), [CANVAS_LIMIT, -CANVAS_LIMIT]);
+});
+
+test('settleDraft는 보낸 미리보기만 걷고 그 뒤 다시 끈 위치는 남긴다', () => {
+  const draft = { a: { x: 1, y: 1 }, b: { x: 5, y: 5 }, c: { x: 9, y: 9 } };
+  assert.deepEqual(settleDraft(draft, { a: draft.a, b: { ...draft.b } }), { b: { x: 5, y: 5 }, c: { x: 9, y: 9 } });
 });

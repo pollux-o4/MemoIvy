@@ -322,7 +322,7 @@ pub(super) fn restore(notes: &mut Notes<'_>, snapshot: &Snapshot) {
 
 pub(super) fn move_nodes(notes: &mut Notes<'_>, moves: &Moves) {
     for (id, p) in moves {
-        notes.set_position(*id, [p[0].clamp(0., LIMIT), p[1].clamp(0., LIMIT)]);
+        notes.set_position(*id, [p[0].clamp(-LIMIT, LIMIT), p[1].clamp(-LIMIT, LIMIT)]);
     }
 }
 

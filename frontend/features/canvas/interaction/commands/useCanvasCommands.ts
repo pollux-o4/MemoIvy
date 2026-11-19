@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Note } from '../../../../shared/engine_contract';
 import type { MemoStore } from '../../../../shared/useMemoivy';
-import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, type Alignment, type CanvasPoint, vacantGroup } from '../../model/align';
+import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, settleDraft, type Alignment, type CanvasPoint, vacantGroup } from '../../model/align';
 import { bounds } from '../../model/motion';
 import { branchRoot, buildGraph, scopeEdges, treeParent } from '../../model/links/graph';
 import { DEFAULT_COLUMN_GAP as BRANCH_GAP_X, DEFAULT_ROW_GAP as BRANCH_GAP_Y, mindmapLayout } from '../../model/links/mindmap_layout';
@@ -18,8 +18,10 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
 }) {
   const persist = (changes: CanvasChange[]) => {
     const moved = Object.fromEntries(changes.flatMap(({ id, canvas }) => canvas.position ? [[id, { x: canvas.position[0], y: canvas.position[1] }]] : []));
-    if (Object.keys(moved).length) setDraftPositions((current) => ({ ...current, ...moved }));
-    void store.mutateCanvas(changes).catch(() => undefined);
+    if (!Object.keys(moved).length) { void store.mutateCanvas(changes).catch(() => undefined); return; }
+    setDraftPositions((current) => ({ ...current, ...moved }));
+    // 저장이 끝나면 미리보기를 걷는다: 실패하면 저장된 위치로 돌아가 화면과 저장소가 어긋나지 않는다.
+    void store.mutateCanvas(changes).catch(() => undefined).finally(() => setDraftPositions((current) => settleDraft(current, moved)));
   };
   const states = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, { ...note.canvas, position: note.canvas.position ?? [positions[note.id].x, positions[note.id].y] }])), [notes, positions]);
   const history = useCanvasHistory(states, persist);

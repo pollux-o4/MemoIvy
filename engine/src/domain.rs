@@ -7,6 +7,7 @@ use std::{
 };
 
 pub(crate) const COLORS: &[&str] = &["yellow", "pink", "blue", "green", "purple"];
+/// 좌표 절댓값 상한. desktop/canvas_bounds.json과 같아야 한다(테스트로 확인).
 const MAX_POSITION: f64 = 20_000.0;
 pub(crate) const MAX_ASSET_BYTES: usize = 20 * 1024 * 1024;
 pub(crate) const MAX_DEPTH: usize = 3;
@@ -133,7 +134,7 @@ pub(crate) fn validate_notes(ns: &[Note]) -> Result<(), String> {
         }
         if n.canvas.position.is_some_and(|p| {
             p.iter()
-                .any(|x| !x.is_finite() || *x < 0.0 || *x > MAX_POSITION)
+                .any(|x| !x.is_finite() || x.abs() > MAX_POSITION)
         }) {
             return Err("invalid canvas position".into());
         }
@@ -179,4 +180,16 @@ pub(crate) fn validate_notes(ns: &[Note]) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod bounds_tests {
+    use super::MAX_POSITION;
+
+    #[test]
+    fn position_limit_matches_shared_bounds_file() {
+        let shared: serde_json::Value =
+            serde_json::from_str(include_str!("../../desktop/canvas_bounds.json")).unwrap();
+        assert_eq!(shared["limit"].as_f64(), Some(MAX_POSITION));
+    }
 }
