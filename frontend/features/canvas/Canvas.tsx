@@ -17,14 +17,13 @@ import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasLinks } from './parts/CanvasLinks';
 import { CanvasNavigator } from './parts/CanvasNavigator';
 import { SnapGuides } from './parts/SnapGuides';
-import { branchRoot, branchSet, buildGraph, outline, scopeEdges } from './model/links/graph';
-import { indentRow, outdentRow, type NextChange } from './model/links/outline_edit';
 import { readLinkStyle } from '../../shared/link_style';
 import { gridStyle } from './model/grid';
 import { canvasTitle } from './model/labels';
 import { bounds, fitting } from './model/motion';
 import { canMoveInto } from './model/scope_model';
 import { useCardMenu } from './interaction/useCardMenu';
+import { useBranchFocus } from './interaction/useBranchFocus';
 import { useStableHandlers } from './interaction/useStableHandlers';
 import { useSelectionActions } from './interaction/useSelectionActions';
 import { useCanvasClipboard } from './interaction/useCanvasClipboard';
@@ -72,26 +71,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const selectAndReveal = (ids: string[]) => { setSelected(ids); reveal(); };
   const cardMenu = useCardMenu(host, setSelected);
 
-  // 가지 초점: 카드 하나를 고르면 그 카드와 이어진 가지만 또렷하게, 나머지는 흐리게 둔다.
-  const graph = useMemo(() => buildGraph(scopeEdges(store.notes, activeScope)), [store.notes, activeScope]);
-  // 제자리 펼치기: 프로젝트 하나의 하위 메모를 엿보는 동안에는 그 카드만 또렷하게 둔다.
-  const [peek, setPeek] = useState<string | undefined>(undefined);
-  if (peek && !noteById.has(peek)) setPeek(undefined);
-  const focus = useMemo(() => {
-    if (peek) return new Set([peek]);
-    if (selected.length !== 1) return undefined;
-    const branch = branchSet(graph, selected[0]);
-    return branch.size > 1 ? branch : undefined;
-  }, [graph, selected, peek]);
-  // 가지 개요: 이 화면 단계에서 선택 카드의 가지 뿌리부터. 프로젝트는 접힌 항목(안쪽은 그 단계에서 따로 보인다).
-  const outlineRows = useMemo(() => selected.length === 1 && noteById.has(selected[0])
-    ? outline(graph, branchRoot(graph, selected[0]), (id) => Boolean(noteById.get(id)?.canvas.project)) : [], [graph, selected, noteById]);
-  const editOutline = (edit: typeof indentRow) => (id: string) => {
-    const changes: NextChange[] = edit(outlineRows, id, (item) => noteById.get(item)?.canvas.next ?? []);
-    if (!changes.length) return false;
-    commands.commit(changes.map(({ id: owner, next }) => ({ id: owner, canvas: { next } })));
-    return true;
-  };
+  const { focus, outlineRows, peek, setPeek, indent, outdent } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
   const selectedNotes = notes.filter((note) => selected.includes(note.id));
@@ -161,8 +141,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     remove: () => { if (selectedNote) setDeleteTarget([selectedNote.id]); },
     select: (id: string) => selectAndReveal([id]),
     toggleLink: commands.link,
-    indent: (id: string) => editOutline(indentRow)(id),
-    outdent: (id: string) => editOutline(outdentRow)(id),
+    indent: (id: string) => indent(id),
+    outdent: (id: string) => outdent(id),
   });
   const moveTargets = useMemo(() => selectedNote ? store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && canMoveInto(note.id, [selectedNote.id], store.notes)) : [], [store.notes, activeScope, selectedNote]);
   const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent }), [outlineRows, inspectorActions]);
