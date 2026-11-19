@@ -528,7 +528,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await search.focus();
       expect(await search.evaluate((input) => getComputedStyle(input).outlineStyle)).toBe('none');
       expect(await help.locator('.help-search:focus-within').count()).toBe(1);
-      await search.fill('Ctrl + Enter');
+      await search.fill('Ｃｔｒｌ ＋ Ｅｎｔｅｒ');
       const results = help.getByRole('region', { name: '검색 결과' });
       expect(await results.locator('li').count()).toBe(2);
       expect(await results.locator('.help-result-topic').allTextContents()).toEqual(['메모', '캔버스']);

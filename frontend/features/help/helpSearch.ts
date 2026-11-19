@@ -8,7 +8,7 @@ export const TOPICS: Record<HelpTopic, Topic> = {
 };
 export const TOPIC_OPTIONS = (Object.keys(TOPICS) as HelpTopic[]).map((value) => ({ value, label: TOPICS[value].label }));
 
-const normalize = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+const normalize = (text: string) => text.normalize('NFKC').toLowerCase();
 
 const entries = TOPIC_OPTIONS.flatMap(({ value: topic, label }) => {
   const { sections, essentials } = TOPICS[topic];
@@ -25,11 +25,11 @@ const entries = TOPIC_OPTIONS.flatMap(({ value: topic, label }) => {
   }
   return [...rows.values()].map(({ section, row: [meaning, syntax, keys] }) => ({
     topic, label, meaning, syntax, keys,
-    match: [label, section, meaning, syntax, ...keys].map(normalize),
+    match: [label, section, meaning, syntax, ...keys].map((field) => normalize(field).replace(/\s+/g, '')),
   }));
 });
 
 export function searchHelp(query: string) {
-  const terms = query.trim().toLowerCase().replace(/\s*\+\s*/g, '+').split(/\s+/).filter(Boolean).map(normalize);
+  const terms = normalize(query).trim().replace(/\s*\+\s*/g, '+').split(/\s+/).filter(Boolean);
   return terms.length ? entries.filter(({ match }) => terms.every((term) => match.some((field) => field.includes(term)))) : [];
 }
