@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deleteImageLine, displayImageSize, imageMarkup, moveImageLine, resizeImageWidth } from './commands';
+import { deleteImageLine, displayImageSize, imageMarkup, moveImageLine, parseImageLine, resizeImageWidth } from './commands';
 
 describe('inline image commands', () => {
   it('keeps the original aspect ratio and clamps resize to available text width', () => {
@@ -8,8 +8,13 @@ describe('inline image commands', () => {
     expect(resizeImageWidth(100, -200, 0, 0.5, 240)).toBe(64);
   });
 
-  it('writes the existing asset reference syntax', () => {
-    expect(imageMarkup('설명', 120, 'a'.repeat(64))).toBe(`![설명|120](asset:${'a'.repeat(64)})`);
+  it('round-trips standalone asset references without interpreting inline text as an attachment', () => {
+    const hash = 'a'.repeat(64);
+    const markup = imageMarkup('설명', 120, hash);
+    expect(markup).toBe(`![설명|120](asset:${hash})`);
+    expect(parseImageLine(`  ${markup}  `)).toEqual({ description: '설명', width: 120, hash });
+    expect(parseImageLine(imageMarkup('', undefined, hash))).toEqual({ description: '', width: undefined, hash });
+    expect(parseImageLine(`${markup} 본문`)).toBeUndefined();
   });
 
   it('removes an image line without leaving an extra newline', () => {

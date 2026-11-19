@@ -17,6 +17,13 @@ export function resizeImageWidth(start: number, dx: number, dy: number, ratio: n
   return Math.max(min, Math.min(Math.round(start + delta), Math.max(min, available)));
 }
 
+export function parseImageLine(text: string) {
+  const match = /^!\[([^\]|]*)(?:\|(\d+))?\]\(asset:([a-f\d]{64})\)$/i.exec(text.trim());
+  if (!match) return;
+  const [, description, width, hash] = match;
+  return { description, width: Number(width) || undefined, hash };
+}
+
 export function imageMarkup(description: string, width: number | undefined, hash: string) {
   return `![${description}${width ? `|${width}` : ''}](asset:${hash})`;
 }
