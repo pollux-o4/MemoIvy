@@ -1,0 +1,48 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "prototypes",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "6020",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "prototypes"
+      ],
+      "port": 6020
+    },
+    {
+      "name": "storybook",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "storybook",
+        "dev",
+        "-p",
+        "6016",
+        "--host",
+        "127.0.0.1",
+        "--no-open",
+        "--ci"
+      ],
+      "port": 6016
+    },
+    {
+      "name": "storybook-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "6021",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "storybook-static"
+      ],
+      "port": 6021
+    }
+  ]
+}

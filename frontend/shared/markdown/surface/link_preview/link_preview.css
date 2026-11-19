@@ -1,0 +1,44 @@
+.link-preview-card {
+  position: absolute;
+  z-index: 50;
+  box-sizing: border-box;
+  --link-preview-width: min(360px, calc(100% - 16px));
+  width: var(--link-preview-width);
+  left: clamp(8px, var(--link-preview-anchor, 8px), calc(100% - 8px - var(--link-preview-width)));
+  padding: 12px;
+  border: 1px solid var(--memoivy-hairline);
+  border-radius: 10px;
+  color: var(--memoivy-text);
+  background: var(--memoivy-raised);
+  box-shadow: 0 8px 24px var(--memoivy-shadow-deep);
+  font: inherit;
+}
+.link-preview-card [hidden],
+.link-preview-card[hidden] { display: none; }
+.link-preview-heading { display: flex; align-items: center; gap: 10px; }
+.link-preview-badge { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 8px; color: var(--memoivy-accent); background: var(--memoivy-hover); font-weight: 600; }
+.link-preview-copy { min-width: 0; flex: 1; }
+.link-preview-title { display: block; overflow: hidden; font-size: var(--font-title); text-overflow: ellipsis; white-space: nowrap; }
+.link-preview-address { display: -webkit-box; overflow: hidden; margin-top: 2px; color: var(--memoivy-muted); font-size: var(--font-meta); overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.link-preview-warning { margin: 9px 0 0; color: var(--memoivy-danger); font-size: var(--font-meta); }
+.link-preview-warning[hidden] { display: none; }
+.link-preview-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.link-preview-action { padding: 5px 9px; border: 0; border-radius: 6px; color: var(--memoivy-text); background: transparent; cursor: pointer; font: inherit; font-size: var(--font-meta); }
+.link-preview-action:hover { background: var(--memoivy-hover); }
+.link-preview-action.primary { color: var(--memoivy-on-accent); background: var(--memoivy-accent); }
+.link-preview-action.confirmed { color: var(--memoivy-success-text); }
+
+.link-preview-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--memoivy-hairline);
+  border-radius: 6px;
+  color: inherit;
+  background: var(--memoivy-hover);
+  font: inherit;
+  font-size: var(--font-meta);
+}
+.link-preview-input:focus { outline: 1px solid var(--memoivy-accent); outline-offset: 1px; }

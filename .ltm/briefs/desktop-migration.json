@@ -1,0 +1,663 @@
+{
+  "id": "desktop-migration",
+  "title": "MemoIvy 데스크톱 전환과 화면 검수 개선",
+  "revision": 85,
+  "updatedAt": "2026-11-13T15:51:34.751Z",
+  "sections": {
+    "purpose": [
+      {
+        "id": "i1-0",
+        "text": "세 운영체제에서 같은 메모 기능을 제공한다",
+        "detail": "- Windows와 macOS와 Linux에서 사용합니다\n- [Electron과 Rust 엔진을 단일 설치 패키지에 동봉한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i2-0",
+        "text": "화면 상태를 즉시 재현해 검수한다",
+        "detail": "- 저장 실패와 긴 본문도 앱 전체 실행 없이 확인합니다\n- [React·TypeScript·Vite와 Storybook으로 실제 화면을 개발한다]",
+        "by": "ai",
+        "confirmed": true
+      }
+    ],
+    "scopeIn": [
+      {
+        "id": "i3-0",
+        "text": "기능별 모듈과 얇은 계층으로 전환한다",
+        "detail": "- 함께 바꾸는 기능을 가까이 두고 외부 경계만 분리합니다\n- [frontend는 app·features·shared, desktop은 창과 OS, engine은 domain·application·storage·transport를 맡는다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i4-0",
+        "text": "기존 도메인 규칙을 화면과 분리해 재사용한다",
+        "detail": "- 저장 기술이 바뀌어도 메모의 동작과 데이터 의미를 보존합니다\n- [persistence의 domain·Notebook 규칙을 재사용하고 JSON 큐·직접 파일 저장은 SQLite adapter로 교체한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i5-0",
+        "text": "실제 화면과 같은 이야기 화면을 만든다",
+        "detail": "- 빈 상태와 긴 본문과 중첩 프로젝트와 저장 실패를 바로 봅니다\n- [같은 React 컴포넌트에 실제 adapter 또는 mock adapter를 주입한다]\n- [UI-001·ADR-0012의 공통 disclosure, 다크 모드·좁은 창·키보드 접근성을 이관한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i6-0",
+        "text": "메모 한 개의 저장과 복원을 먼저 연결한다",
+        "detail": "- 열기부터 재실행 복원까지 작은 기능으로 구조를 검증합니다\n- [목록과 편집을 Electron preload·main 및 Rust transport에 연결한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i7-0",
+        "text": "목록과 편집기와 캔버스를 순차 이관한다",
+        "detail": "- 기능을 옮길 때 해당 책임과 중복을 정리합니다\n- [목록·프로젝트 이후 편집기·첨부, 마지막으로 캔버스·history를 이관한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i49-0",
+        "text": "저장을 검증된 내장 데이터베이스로 옮긴다",
+        "detail": "- 트랜잭션과 복구는 검증된 저장 기술에 맡기고 메모 규칙은 유지합니다\n- [SQLite를 Rust 저장 adapter에 도입하고 schema version·트랜잭션·foreign_keys를 관리한다]\n- [기존 JSON은 읽기 전용으로 백업 후 원자적으로 가져오고 재실행 중복·실패 rollback을 검증한다]\n- [메모·연결·프로젝트 변경은 단일 트랜잭션으로 커밋하며 첨부 파일 정리는 커밋 후 수행한다]",
+        "by": "ai",
+        "confirmed": true
+      }
+    ],
+    "scopeOut": [
+      {
+        "id": "i9-0",
+        "text": "원격 서비스 분리와 일괄 추상화는 제외한다",
+        "detail": "- 제품은 하나로 배포하고 실제 필요한 경계만 둡니다\n- [실제 교체 요구 없는 Repository·Service·UseCase 계층은 추가하지 않는다]",
+        "by": "ai",
+        "confirmed": true
+      }
+    ],
+    "constraints": [
+      {
+        "id": "i10-0",
+        "text": "원본 데이터와 저장 정책은 엔진이 소유한다",
+        "detail": "- 화면 초안과 저장 완료를 구분하고 실패해도 입력을 보존합니다\n- [단일 writer와 디바운스를 유지하고 SQLite commit 성공 뒤 생성·삭제 결과를 게시한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i11-0",
+        "text": "여러 창이 하나의 엔진을 공유한다",
+        "detail": "- 같은 메모의 충돌과 오래된 응답을 감지합니다\n- [request ID·protocol version·base revision·saved revision과 snapshot 구독 순서를 정의한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i12-0",
+        "text": "자동저장은 실패했을 때만 사용자를 방해한다",
+        "detail": "- 정상 편집과 닫기에는 저장 버튼이나 확인창을 요구하지 않습니다\n- [백그라운드 자동저장과 종료 flush를 유지하며 durable 확인은 앱 내부에서 처리한다]\n- [일반 창 닫기는 조용히 처리하고 앱 종료 때 미저장 데이터가 있으면 저장 완료 후 종료한다]\n- [저장 실패·시간 초과 때만 오류와 재시도를 제공하며 초안을 보존하고 조용히 버리지 않는다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i13-0",
+        "text": "합의한 방향 안에서 계약 변경을 진행한다",
+        "detail": "- 이 전환의 공개 계약 변경은 재확인 없이 구현하고 변경 근거를 남깁니다\n- [요청·응답·이벤트 계약과 호출부·테스트를 같은 변경으로 갱신하고 Rust·TypeScript 불일치를 차단한다]\n- [사용자가 승인한 이번 전환 범위에 적용하며 파괴적 데이터 삭제나 외부 배포로 확대하지 않는다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i14-0",
+        "text": "기존 데이터와 외부 입력을 보호한다",
+        "detail": "- 기존 앱과 새 앱의 동시 쓰기를 막고 원본 백업을 유지합니다\n- [합성 데이터 사용, OS별 경로·Snap 가져오기·파일 잠금·복구 검증을 포함한다]\n- [nodeIntegration 비활성화, contextIsolation·sandbox·CSP, IPC sender·payload와 HTML·경로·링크를 검증한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i20-0",
+        "text": "엔진 통신과 장애 복구를 명시한다",
+        "detail": "- 연결이 끊기면 초안을 보존하고 작업 결과를 다시 확인합니다\n- [Electron main이 Rust 자식 프로세스를 관리하며 프레임 단위 JSON은 stdio, 로그는 stderr를 사용한다]\n- [요청 시간 초과·잘못된 메시지·종료를 처리하고 비멱등 작업을 무조건 재전송하지 않는다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i53-0",
+        "text": "역할을 이름 검색으로 찾을 수 있게 한다",
+        "detail": "- 폴더와 주요 타입 이름만으로 책임과 경계를 알 수 있게 합니다\n- [기능은 library·editor·canvas로, 저장은 sqlite_store로, 통신은 engine_transport로 명명한다]\n- [범용 utils·manager 이름을 피하고 책임에 맞게 코드를 배치한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i82-0",
+        "text": "기존 화면의 외형을 유지하며 이관한다",
+        "detail": "- 배치와 크기와 색과 조작 위치를 원본에 맞춥니다\n- [UI-REF-001의 GTK 원본과 같은 fixture·테마·실제 치수로 Storybook에서 비교한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "acceptance": [
+      {
+        "id": "i15-0",
+        "text": "화면 상태와 키보드 조작을 단독 검수한다",
+        "detail": "- 앱과 저장 엔진 없이 같은 화면을 확인합니다\n- [Storybook 빌드·타입 검사와 펼침·포커스·저장 실패 상호작용 검증을 통과한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i16-0",
+        "text": "현재 가능한 환경부터 동작을 확인한다",
+        "detail": "- 현재는 Linux에서 실행해 확인하고 다른 운영체제는 환경 확보 후 확인합니다\n- [Mac이 없는 상태에서 macOS 직접 검수를 완료 조건으로 걸지 않는다]\n- [운영체제별 자동 검사 체계와 서명 작업을 이번 변경의 필수 과업으로 추가하지 않는다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i17-0",
+        "text": "저장 실패와 창 충돌에서도 초안을 보존한다",
+        "detail": "- 저장 실패를 성공으로 표시하거나 무조건 재전송하지 않습니다\n- [엔진 중단·응답 역전·종료 flush·생성 삭제 실패·백업 복원을 검증한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i18-0",
+        "text": "편집기와 캔버스의 기존 조작을 보존한다",
+        "detail": "- 한글 입력과 선택과 되돌리기가 실제 사용에서 유지됩니다\n- [IME·커서·Markdown·붙여넣기·첨부와 팬·줌·다중 선택·연결·history를 검증한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i19-0",
+        "text": "영향 범위 검증 후 기존 화면을 제거한다",
+        "detail": "- 동등 기능과 데이터 복구 확인 후 기존 구현을 정리합니다\n- [mise run test:storage·test:arch 등 변경 영역만 검증하고 전체 테스트는 요청 시 실행한다]\n- [GTK 제거 후 ADR·C4·운영 명령을 갱신하며 사용자 변경과 미요청 커밋·배포를 보존한다]",
+        "by": "ai",
+        "confirmed": true
+      },
+      {
+        "id": "i83-0",
+        "text": "원본 화면을 이후 검수의 기준 자산으로 보관한다",
+        "detail": "- 다른 담당자도 원래 화면을 확인하고 차이를 검수할 수 있게 합니다\n- [docs/assets/gtk-reference의 원본 PNG 18개·데이터·manifest와 Storybook 비교 화면을 유지한다]\n- [일반 빌드·테스트에서 기준 이미지를 갱신하지 않고 사용자 요청 시만 재캡처한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ]
+  },
+  "decisions": [],
+  "requests": [
+    {
+      "id": "r36",
+      "target": {
+        "kind": "item",
+        "id": "i12-0"
+      },
+      "text": "스티커메모 앱은 이런 귀찮은 과정 없앤 UX가 장점 아닌가 자동저장? 안됐을 경우에만 방해하는게 나을거 같은데",
+      "taken": true,
+      "acknowledged": true,
+      "reply": "정상 편집과 닫기는 조용한 자동저장으로 처리하고 실패나 시간 초과 때만 알리도록 바꿨습니다."
+    },
+    {
+      "id": "r39",
+      "target": {
+        "kind": "item",
+        "id": "i13-0"
+      },
+      "text": "방향은 잘 잡혀있으니 허락 안받고 해도 돼",
+      "taken": true,
+      "acknowledged": true,
+      "reply": "이번 전환의 공개 계약 변경은 재허락 없이 진행하고 호출부와 테스트 및 기록을 함께 갱신하도록 반영했습니다."
+    },
+    {
+      "id": "r43",
+      "target": {
+        "kind": "item",
+        "id": "i16-0"
+      },
+      "text": "현 상황에서 리눅스밖에 안되지 않나 윈도우는 뭐 켜볼수있다지만 맥은 어떻게 할건데?",
+      "taken": true,
+      "acknowledged": true,
+      "reply": "리눅스 직접 검수와 다른 운영체제 자동 검증을 구분하고 맥 화면 검수는 장비 확보 후 완료하도록 바꿨습니다."
+    }
+  ],
+  "changes": [
+    {
+      "revision": 85,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-13T15:51:34.751Z"
+    },
+    {
+      "revision": 84,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-13T15:51:34.719Z"
+    },
+    {
+      "revision": 83,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "원본 화면을 이후 검수의 기준 자산으로 보관한다"
+      },
+      "at": "2026-11-13T15:51:34.687Z"
+    },
+    {
+      "revision": 82,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "기존 화면의 외형을 유지하며 이관한다"
+      },
+      "at": "2026-11-13T15:51:34.656Z"
+    },
+    {
+      "revision": 81,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "현재 가능한 환경부터 동작을 확인한다"
+      },
+      "at": "2026-11-13T14:38:41.964Z"
+    },
+    {
+      "revision": 80,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "원격 서비스 분리와 일괄 추상화는 제외한다"
+      },
+      "at": "2026-11-13T14:38:28.185Z"
+    },
+    {
+      "revision": 79,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "역할을 이름 검색으로 찾을 수 있게 한다"
+      },
+      "at": "2026-11-13T14:38:07.469Z"
+    },
+    {
+      "revision": 78,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "합의한 방향 안에서 계약 변경을 진행한다"
+      },
+      "at": "2026-11-13T14:37:56.007Z"
+    },
+    {
+      "revision": 77,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "자동저장은 실패했을 때만 사용자를 방해한다"
+      },
+      "at": "2026-11-13T14:37:52.697Z"
+    },
+    {
+      "revision": 76,
+      "by": "me",
+      "event": {
+        "kind": "requestAcknowledged",
+        "text": "방향은 잘 잡혀있으니 허락 안받고 해도 돼"
+      },
+      "at": "2026-11-13T14:37:44.167Z"
+    },
+    {
+      "revision": 75,
+      "by": "me",
+      "event": {
+        "kind": "requestAcknowledged",
+        "text": "스티커메모 앱은 이런 귀찮은 과정 없앤 UX가 장점 아닌가 자동저장? 안됐을 경우에만 방해하는게 나을거 같은데"
+      },
+      "at": "2026-11-13T14:37:38.284Z"
+    },
+    {
+      "revision": 74,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-13T14:35:52.401Z"
+    },
+    {
+      "revision": 73,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-13T14:35:52.337Z"
+    },
+    {
+      "revision": 72,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "현재 가능한 환경부터 동작을 확인한다"
+      },
+      "at": "2026-11-13T14:35:45.588Z"
+    },
+    {
+      "revision": 71,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "역할을 이름 검색으로 찾을 수 있게 한다"
+      },
+      "at": "2026-11-13T14:35:45.525Z"
+    },
+    {
+      "revision": 70,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "원본 데이터와 저장 정책은 엔진이 소유한다"
+      },
+      "at": "2026-11-13T14:35:28.205Z"
+    },
+    {
+      "revision": 69,
+      "by": "me",
+      "event": {
+        "kind": "requestRemoved",
+        "text": "단, 구분은 잘 돼야 해 이름검색으로도 여기가 뭐하는 경계구나를 확실히 알아야 유지보수가 쉽지"
+      },
+      "at": "2026-11-13T14:35:14.932Z"
+    },
+    {
+      "revision": 68,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "저장을 검증된 내장 데이터베이스로 옮긴다"
+      },
+      "at": "2026-11-13T14:34:51.905Z"
+    },
+    {
+      "revision": 67,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "기존 도메인 규칙을 화면과 분리해 재사용한다"
+      },
+      "at": "2026-11-13T14:34:43.445Z"
+    },
+    {
+      "revision": 66,
+      "by": "me",
+      "event": {
+        "kind": "requestRemoved",
+        "text": "트랜잭션 등 장기데이터 면에서는 우리가 개발 안해도 되니까 지금 sqlite쓰는게 낫지 않나"
+      },
+      "at": "2026-11-13T14:34:28.435Z"
+    },
+    {
+      "revision": 65,
+      "by": "me",
+      "event": {
+        "kind": "requestAcknowledged",
+        "text": "현 상황에서 리눅스밖에 안되지 않나 윈도우는 뭐 켜볼수있다지만 맥은 어떻게 할건데?"
+      },
+      "at": "2026-11-13T14:34:15.507Z"
+    },
+    {
+      "revision": 64,
+      "by": "me",
+      "event": {
+        "kind": "requestAcknowledged",
+        "text": "트랜잭션 등 장기데이터 면에서는 우리가 개발 안해도 되니까 지금 sqlite쓰는게 낫지 않나"
+      },
+      "at": "2026-11-13T14:33:55.444Z"
+    },
+    {
+      "revision": 63,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-13T14:33:43.795Z"
+    },
+    {
+      "revision": 62,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-13T14:33:43.723Z"
+    },
+    {
+      "revision": 61,
+      "by": "ai",
+      "event": {
+        "kind": "requestResolved",
+        "text": "현 상황에서 리눅스밖에 안되지 않나 윈도우는 뭐 켜볼수있다지만 맥은 어떻게 할건데?"
+      },
+      "at": "2026-11-13T14:33:43.413Z"
+    },
+    {
+      "revision": 60,
+      "by": "ai",
+      "event": {
+        "kind": "requestResolved",
+        "text": "방향은 잘 잡혀있으니 허락 안받고 해도 돼"
+      },
+      "at": "2026-11-13T14:33:43.343Z"
+    },
+    {
+      "revision": 59,
+      "by": "ai",
+      "event": {
+        "kind": "requestResolved",
+        "text": "스티커메모 앱은 이런 귀찮은 과정 없앤 UX가 장점 아닌가 자동저장? 안됐을 경우에만 방해하는게 나을거 같은데"
+      },
+      "at": "2026-11-13T14:33:43.292Z"
+    },
+    {
+      "revision": 58,
+      "by": "ai",
+      "event": {
+        "kind": "requestResolved",
+        "text": "단, 구분은 잘 돼야 해 이름검색으로도 여기가 뭐하는 경계구나를 확실히 알아야 유지보수가 쉽지"
+      },
+      "at": "2026-11-13T14:33:43.229Z"
+    },
+    {
+      "revision": 57,
+      "by": "ai",
+      "event": {
+        "kind": "requestResolved",
+        "text": "트랜잭션 등 장기데이터 면에서는 우리가 개발 안해도 되니까 지금 sqlite쓰는게 낫지 않나"
+      },
+      "at": "2026-11-13T14:33:43.166Z"
+    },
+    {
+      "revision": 56,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "운영체제별 검증 수준을 구분해 기록한다"
+      },
+      "at": "2026-11-13T14:33:27.485Z"
+    },
+    {
+      "revision": 55,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "합의한 방향 안에서 계약 변경을 진행한다"
+      },
+      "at": "2026-11-13T14:33:27.426Z"
+    },
+    {
+      "revision": 54,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "자동저장은 실패했을 때만 사용자를 방해한다"
+      },
+      "at": "2026-11-13T14:33:27.359Z"
+    },
+    {
+      "revision": 53,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "역할을 이름 검색으로 찾을 수 있게 한다"
+      },
+      "at": "2026-11-13T14:33:27.291Z"
+    },
+    {
+      "revision": 52,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "원격 서비스 분리와 일괄 추상화는 제외한다"
+      },
+      "at": "2026-11-13T14:32:58.749Z"
+    },
+    {
+      "revision": 51,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "원본 데이터와 저장 정책은 엔진이 소유한다"
+      },
+      "at": "2026-11-13T14:32:58.688Z"
+    },
+    {
+      "revision": 50,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "기존 도메인 규칙을 화면과 분리해 재사용한다"
+      },
+      "at": "2026-11-13T14:32:58.627Z"
+    },
+    {
+      "revision": 49,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "저장을 검증된 내장 데이터베이스로 옮긴다"
+      },
+      "at": "2026-11-13T14:32:58.564Z"
+    },
+    {
+      "revision": 48,
+      "by": "ai",
+      "event": {
+        "kind": "removeItem",
+        "text": "저장 형식과 데이터베이스 교체는 제외한다"
+      },
+      "at": "2026-11-13T14:32:58.503Z"
+    },
+    {
+      "revision": 47,
+      "by": "ai",
+      "event": {
+        "kind": "requestsTaken",
+        "count": 5
+      },
+      "at": "2026-11-13T14:32:12.407Z"
+    },
+    {
+      "revision": 46,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "영향 범위 검증 후 기존 화면을 제거한다"
+      },
+      "at": "2026-11-13T14:31:58.752Z"
+    },
+    {
+      "revision": 45,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "편집기와 캔버스의 기존 조작을 보존한다"
+      },
+      "at": "2026-11-13T14:31:55.468Z"
+    },
+    {
+      "revision": 44,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "저장 실패와 창 충돌에서도 초안을 보존한다"
+      },
+      "at": "2026-11-13T14:31:54.198Z"
+    },
+    {
+      "revision": 43,
+      "by": "me",
+      "event": {
+        "kind": "requestAdded",
+        "text": "현 상황에서 리눅스밖에 안되지 않나 윈도우는 뭐 켜볼수있다지만 맥은 어떻게 할건데?"
+      },
+      "at": "2026-11-13T14:31:47.032Z"
+    },
+    {
+      "revision": 42,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "화면 상태와 키보드 조작을 단독 검수한다"
+      },
+      "at": "2026-11-13T14:31:21.684Z"
+    },
+    {
+      "revision": 41,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "엔진 통신과 장애 복구를 명시한다"
+      },
+      "at": "2026-11-13T14:30:56.737Z"
+    },
+    {
+      "revision": 40,
+      "by": "me",
+      "event": {
+        "kind": "confirmItem",
+        "text": "기존 데이터와 외부 입력을 보호한다"
+      },
+      "at": "2026-11-13T14:30:50.989Z"
+    },
+    {
+      "revision": 39,
+      "by": "me",
+      "event": {
+        "kind": "requestAdded",
+        "text": "방향은 잘 잡혀있으니 허락 안받고 해도 돼"
+      },
+      "at": "2026-11-13T14:30:23.835Z"
+    },
+    {
+      "revision": 38,
+      "by": "me",
+      "event": {
+        "kind": "requestRemoved",
+        "text": "알아서 해 방향은 잘 잡혀있어서"
+      },
+      "at": "2026-11-13T14:30:12.885Z"
+    },
+    {
+      "revision": 37,
+      "by": "me",
+      "event": {
+        "kind": "requestAdded",
+        "text": "알아서 해 방향은 잘 잡혀있어서"
+      },
+      "at": "2026-11-13T14:30:05.143Z"
+    },
+    {
+      "revision": 36,
+      "by": "me",
+      "event": {
+        "kind": "requestAdded",
+        "text": "스티커메모 앱은 이런 귀찮은 과정 없앤 UX가 장점 아닌가 자동저장? 안됐을 경우에만 방해하는게 나을거 같은데"
+      },
+      "at": "2026-11-13T14:29:55.312Z"
+    }
+  ],
+  "analyzedRevision": 85,
+  "reviewedRevision": 84
+}

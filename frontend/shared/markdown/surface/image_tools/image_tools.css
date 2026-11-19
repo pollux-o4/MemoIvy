@@ -1,0 +1,61 @@
+.cm-asset-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  --image-block-gap: 6px;
+  vertical-align: top;
+  padding-block: var(--image-block-gap);
+}
+
+.cm-asset-preview img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+.cm-asset-preview [role="img"] { min-width: 160px; min-height: 72px; display: grid; place-items: center; }
+.cm-image-tools, .cm-image-resize {
+  position: absolute;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.cm-asset-preview:is(:hover, :focus-within) :is(.cm-image-tools, .cm-image-resize) { opacity: 1; }
+.cm-image-tools { inset-block-start: calc(var(--image-block-gap) + 4px); inset-inline-end: 4px; display: flex; gap: 4px; }
+.cm-image-tool, .cm-image-resize {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--note-text);
+  background: var(--memoivy-surface);
+  box-shadow: 0 1px 4px var(--memoivy-shadow-deep);
+}
+.cm-image-tool { cursor: pointer; }
+.cm-image-tool svg { width: 14px; height: 14px; pointer-events: none; }
+.cm-image-tool:disabled { opacity: .5; cursor: default; }
+.cm-image-tool:enabled:hover, .cm-image-resize:hover { color: var(--memoivy-accent); }
+.cm-image-tool:focus-visible, .cm-image-resize:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: 1px; }
+.cm-image-resize { inset-inline-end: 4px; inset-block-end: calc(var(--image-block-gap) + 4px); cursor: se-resize; touch-action: none; }
+.cm-image-resize::after { content: ''; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+@media (hover: none) {
+  .cm-image-tools, .cm-image-resize { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-image-tools, .cm-image-resize { transition: none; }
+}
+.cm-asset-preview[draggable="true"] { cursor: grab; }
+
+.cm-asset-preview[data-image-dragging] { opacity: .5; }
+.markdown-surface .cm-line[data-image-drop] { position: relative; }
+.markdown-surface .cm-line[data-image-drop]::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--image-drop-inset, 0px) 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--memoivy-accent);
+  pointer-events: none;
+  z-index: 2;
+}
+.markdown-surface .cm-line[data-image-drop="before"]::after { inset-block-start: 0; }
+.markdown-surface .cm-line[data-image-drop="after"]::after { inset-block-end: 0; }

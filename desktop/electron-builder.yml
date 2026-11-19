@@ -1,0 +1,63 @@
+appId: io.github.pollux_o4.MemoIvy
+productName: MemoIvy
+asar: true
+directories:
+  output: artifacts/installers
+files:
+  - desktop/**/*.cjs
+  - desktop/window_kinds.json
+  - desktop/canvas_bounds.json
+  - desktop/icon.png
+  - desktop/icon.ico
+  - desktop/icon.icns
+  - frontend/dist/**
+  - package.json
+  - '!desktop/**/*.test.cjs'
+mac:
+  extraResources: &unixEngine
+    - from: engine/target/release/memoivy-engine
+      to: engine/memoivy-engine
+  icon: desktop/icon.icns
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  extraResources:
+    - from: engine/target/release/memoivy-engine.exe
+      to: engine/memoivy-engine.exe
+  icon: desktop/icon.ico
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+linux:
+  extraResources: *unixEngine
+  icon: desktop/icon.png
+  category: Utility
+  desktop:
+    entry:
+      StartupWMClass: io.github.pollux_o4.MemoIvy
+  target:
+    - AppImage
+    - deb
+snapcraft:
+  base: core24
+  core24:
+    confinement: strict
+    useLXD: true
+    plugs:
+      - browser-support
+      - desktop
+      - desktop-legacy
+      - gsettings
+      - home
+      - network
+      - opengl
+      - wayland
+      - x11
+    stagePackages:
+      - default
+      - libasound2t64

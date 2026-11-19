@@ -1,0 +1,30 @@
+.asset-viewer {
+  position: fixed;
+  z-index: 35;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+}
+.asset-viewer-stage { position: relative; display: grid; place-items: center; min-width: 240px; min-height: 160px; max-width: 85vw; max-height: 85vh; overflow: auto; border-radius: 12px; background: #111113; opacity: 1; transform: none; transition: opacity 200ms cubic-bezier(.2, .8, .2, 1), transform 200ms cubic-bezier(.2, .8, .2, 1); }
+.asset-viewer-stage img { display: block; width: auto; height: auto; max-width: 85vw; max-height: 85vh; object-fit: contain; cursor: zoom-in; transition: opacity 200ms cubic-bezier(.2, .8, .2, 1), transform 200ms cubic-bezier(.2, .8, .2, 1); }
+.asset-viewer-stage img.original-size { max-width: none; max-height: none; cursor: zoom-out; }
+@starting-style { .asset-viewer-stage { opacity: 0; transform: scale(.96); } }
+.asset-viewer.leaving .asset-viewer-stage { opacity: 0; transform: scale(.98); transition: opacity 120ms ease-in, transform 120ms ease-in; }
+.asset-viewer button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: rgb(44 44 46 / 78%);
+  cursor: pointer;
+}
+.asset-viewer button:hover { background: rgb(72 72 74 / 90%); }

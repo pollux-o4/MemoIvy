@@ -1,0 +1,64 @@
+/* 공통 진입 모션은 @starting-style, 축소 모션은 도착 상태만 적용한다. */
+:root { --ease-out-expo: cubic-bezier(.22, 1, .36, 1); --ease-settle: cubic-bezier(.2, .8, .2, 1); }
+/* 펼침·접힘(목록 미리보기·프로젝트 영역·캔버스 카드)은 한 속도·곡선으로 움직인다. */
+:root { --disclosure-duration: 300ms; --disclosure-ease: cubic-bezier(.333, 1, .667, 1); }
+
+/* 메뉴 · menus.css popover.memoivy-menu */
+.menu-popover, .palette-popover { transform: none; opacity: 1; transition: transform 140ms ease-out, opacity 140ms ease-out, display 140ms allow-discrete; }
+@starting-style { .menu-popover, .palette-popover { transform: scale(.96) translateY(-4px); opacity: 0; } }
+
+/* 메모 배경·창 헤더 · base.css .header, memo.css .memo */
+.editor-screen, .editor-topbar, .files-header, .canvas-header { transition: background-color 180ms ease-out; }
+
+/* 파일 · files.css */
+.files-screen .asset-tile { transition: box-shadow 160ms ease-out, background-color 140ms ease-out; }
+.files-screen .asset-detail { opacity: 1; transition: opacity 200ms var(--ease-settle); }
+@starting-style { .files-screen .asset-detail { opacity: 0; } }
+.files-screen .asset-viewer img { opacity: 1; transform: none; transition: opacity 200ms var(--ease-settle), transform 200ms var(--ease-settle); }
+@starting-style { .files-screen .asset-viewer img { opacity: 0; transform: scale(.96); } }
+.files-screen .asset-viewer { opacity: 1; transition: opacity 200ms var(--ease-settle); }
+@starting-style { .files-screen .asset-viewer { opacity: 0; } }
+.markdown-surface img { transition: box-shadow 160ms ease-out, opacity 120ms ease-out; }
+.markdown-surface img.dragging { opacity: .35; }
+
+/* 캔버스 · canvas.css */
+.canvas-dock { transition: box-shadow 200ms ease-out; }
+.canvas-note { opacity: 1; scale: 1; transition: box-shadow .15s ease, outline-color .15s ease, opacity 200ms var(--ease-out-expo), scale 280ms var(--ease-out-expo); }
+@starting-style { .canvas-note { opacity: 0; scale: .92; } }
+.canvas-note p { transition: opacity 180ms ease-out; }
+
+/* 할 일 완료 · 칠하기 → 체크 긋기 → 글자 흐려짐 순서로 이어진다. 처음 그릴 때는 전이가 없어 열 때 움직이지 않는다. */
+.md-checkbox { transition: background-color 140ms ease-out, border-color 140ms ease-out, transform 140ms cubic-bezier(.2,.9,.3,1.3); }
+.md-checkbox::after { transition: clip-path 180ms var(--ease-settle) 60ms; }
+.md-checkbox:not(.is-checked)::after { transition-delay: 0ms; transition-duration: 100ms; }
+.markdown-surface .md-list { transition: color 200ms ease-out 80ms; }
+.canvas-checklist-preview .preview-check, .inspector-preview .preview-check { transition: background-color 140ms ease-out, border-color 140ms ease-out; }
+.canvas-checklist-preview small, .inspector-preview small { transition: color 200ms ease-out; }
+
+/* 확인 대화상자 */
+.modal-backdrop { opacity: 1; transition: opacity 160ms ease-out; }
+@starting-style { .modal-backdrop { opacity: 0; } }
+
+
+/* 저장 표시 교차 페이드 · 키가 바뀔 때만 다시 나타난다 */
+.save-label { opacity: 1; transition: opacity 220ms ease-out; }
+@starting-style { .save-label { opacity: 0; } }
+
+/* 입력 커서 · GTK4처럼 1.4초 주기로 서서히 사라졌다 나타난다 (브라우저 기본은 켜짐/꺼짐 깜빡임) */
+@keyframes caret-fade { 0%, 35% { caret-color: var(--caret, currentColor); } 50%, 85% { caret-color: transparent; } 100% { caret-color: var(--caret, currentColor); } }
+input, textarea, .markdown-surface .cm-content { caret-animation: manual; animation: caret-fade 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) :is(input, textarea, .markdown-surface .cm-content) { caret-animation: auto; animation: none; }
+}
+:root[data-motion="reduce"] :is(input, textarea, .markdown-surface .cm-content) { caret-animation: auto; animation: none; }
+
+/* 모션 줄이기: 운영체제 설정(앱이 끄기로 고르지 않은 경우) 또는 앱 설정 */
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) *,:root:not([data-motion="full"]) *::before,:root:not([data-motion="full"]) *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+:root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+
+/* 접힘 펼침 공통 모션: 내용은 늘 DOM에 두고(닫힘은 inert) 높이 0fr↔1fr와 투명도로 연다. 자식 하나를 .reveal > * 로 감싼다. */
+.reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 240ms var(--ease-out-expo), opacity 180ms var(--ease-settle); }
+.reveal > * { min-height: 0; overflow: hidden; }
+.reveal.is-open { grid-template-rows: 1fr; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) .reveal { transition: none; } }
+:root[data-motion="reduce"] .reveal { transition: none; }

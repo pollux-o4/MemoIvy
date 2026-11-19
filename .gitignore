@@ -1,4 +1,9 @@
 /target/
+/node_modules/
+/frontend/dist/
+/storybook-static/
+/release/
+/artifacts/installers/
 **/target/
 *.snap
 /artifacts/ui-review/*.png
@@ -9,3 +14,5 @@
 *.key
 __pycache__/
 *.py[cod]
+/.dev-data/
+/frontend/node_modules/

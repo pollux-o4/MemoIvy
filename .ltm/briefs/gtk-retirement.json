@@ -1,0 +1,311 @@
+{
+  "id": "gtk-retirement",
+  "title": "데스크톱 이관 후 GTK 잔여 경로 정리",
+  "revision": 23,
+  "updatedAt": "2026-11-19T19:37:50.239Z",
+  "sections": {
+    "purpose": [
+      {
+        "id": "i1-0",
+        "text": "Electron을 유일한 기본 실행 경로로 삼는다",
+        "detail": "- 이관 머지 뒤에도 기본 작업에 섞인 이전 실행 경로를 걷어낸다.\n- [origin/dev의 73cf78a를 기준으로 현재 진입점과 의존성을 조사한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "scopeIn": [
+      {
+        "id": "i2-0",
+        "text": "현재 화면과 검증에 필요한 자산을 옮긴다",
+        "detail": "- 아이콘과 빈 목록 일러스트, 현재 검증에서 쓰는 표본 이미지를 보존한다.\n- [GTK 자료 폴더를 삭제하기 전에 현재 스토리·테스트의 자산 참조를 분리한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i3-0",
+        "text": "이전 실행 코드와 전용 작업을 정리한다",
+        "detail": "- 이전 앱의 실행과 검사를 기본 개발 절차에서 뺀다.\n- [루트 Rust 패키지와 GTK 전용 도구의 참조를 확인한 뒤 단계별로 제거한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i4-0",
+        "text": "설치와 검증 문서를 현재 기준으로 고친다",
+        "detail": "- 기존 배포본과 현재 개발판의 설치 방법을 구분한다.\n- [README와 OPS-001·003·004의 명령을 맞추고 코드 지도와 규칙을 점검한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i18-0",
+        "text": "이전 기준 이미지와 비교 화면을 제거한다",
+        "detail": "- 이관 비교용 캡처와 재캡처 작업을 정리한다.\n- [GTK Fidelity 스토리와 UI-REF-001의 현행 참조를 제거한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "scopeOut": [
+      {
+        "id": "i5-0",
+        "text": "기존 메모 가져오기와 원본을 보존한다",
+        "detail": "- 설치 방식이 달라도 사용자가 기존 메모를 가져올 수 있어야 한다.\n- [자동 탐색·수동 가져오기·원본 백업·첨부 참조 경로를 유지한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i7-0",
+        "text": "스토어 배포와 운영 데이터는 건드리지 않는다",
+        "detail": "- 기존 설치 사용자의 업데이트 경로를 바꾸지 않는다.\n- [Snap 게시·채널 변경·사용자 폴더 수정·원격 푸시는 별도 과업으로 둔다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "constraints": [
+      {
+        "id": "i8-0",
+        "text": "이전 배포 재현 경로를 기록한다",
+        "detail": "- 필요 시 기존 배포본을 만들 수 있는 이전 커밋을 안내한다.\n- [Snap 빌드의 기준 커밋과 실행 방법을 기록한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i9-0",
+        "text": "단계마다 되돌릴 수 있게 나눈다",
+        "detail": "- 공유 자산, 이전 실행 경로, 안내 문서를 점검하기 쉬운 단위로 나눈다.\n- [삭제 전 참조를 검색하고 미이관 기능이 나오면 보존한 뒤 정리한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "acceptance": [
+      {
+        "id": "i10-0",
+        "text": "기본 개발에 이전 앱의 빌드 도구가 필요 없다",
+        "detail": "- 이전 앱 전용 개발 패키지와 운영체제의 런타임 의존성을 구분한다.\n- [libgtk-4-dev 없이 웹·스토리북 빌드와 현재 개발 작업을 확인한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i11-0",
+        "text": "기존 메모 가져오기와 저장을 검증한다",
+        "detail": "- 표본 메모와 첨부를 가져오고 다시 열어 같은 내용이 보여야 한다.\n- [격리한 Electron과 엔진 테스트에서 자동·수동 가져오기 및 원본 보존을 확인한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i12-0",
+        "text": "현재 화면과 검증이 이전 자산에 의존하지 않는다",
+        "detail": "- 현행 안내에 이전 화면 비교나 삭제된 명령이 남지 않는다.\n- [경로 검색과 Storybook 빌드 및 첨부 이미지 테스트로 확인한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ]
+  },
+  "decisions": [],
+  "requests": [],
+  "changes": [
+    {
+      "revision": 23,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T19:37:50.239Z"
+    },
+    {
+      "revision": 22,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-19T19:37:50.210Z"
+    },
+    {
+      "revision": 21,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "현재 화면과 검증이 이전 자산에 의존하지 않는다"
+      },
+      "at": "2026-11-19T19:37:50.180Z"
+    },
+    {
+      "revision": 20,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "이전 배포 재현 경로를 기록한다"
+      },
+      "at": "2026-11-19T19:37:50.151Z"
+    },
+    {
+      "revision": 19,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "현재 화면과 검증에 필요한 자산을 옮긴다"
+      },
+      "at": "2026-11-19T19:37:50.122Z"
+    },
+    {
+      "revision": 18,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "이전 기준 이미지와 비교 화면을 제거한다"
+      },
+      "at": "2026-11-19T19:37:50.091Z"
+    },
+    {
+      "revision": 17,
+      "by": "ai",
+      "event": {
+        "kind": "removeItem",
+        "text": "기존 화면 기준 자료를 보존한다"
+      },
+      "at": "2026-11-19T19:37:50.057Z"
+    },
+    {
+      "revision": 16,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T19:27:59.384Z"
+    },
+    {
+      "revision": 15,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-19T19:27:59.351Z"
+    },
+    {
+      "revision": 14,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "이전 배포 재현 경로를 먼저 확인한다"
+      },
+      "at": "2026-11-19T19:27:59.316Z"
+    },
+    {
+      "revision": 13,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "기본 개발에 이전 앱의 빌드 도구가 필요 없다"
+      },
+      "at": "2026-11-19T19:27:52.660Z"
+    },
+    {
+      "revision": 12,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "남은 이전 참조마다 용도가 분명하다"
+      },
+      "at": "2026-11-19T19:27:39.867Z"
+    },
+    {
+      "revision": 11,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "기존 메모 가져오기와 저장을 검증한다"
+      },
+      "at": "2026-11-19T19:27:39.805Z"
+    },
+    {
+      "revision": 10,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "기본 개발 경로가 이전 도구 없이 실행된다"
+      },
+      "at": "2026-11-19T19:27:39.749Z"
+    },
+    {
+      "revision": 9,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "단계마다 되돌릴 수 있게 나눈다"
+      },
+      "at": "2026-11-19T19:27:39.705Z"
+    },
+    {
+      "revision": 8,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "이전 배포 재현 경로를 먼저 확인한다"
+      },
+      "at": "2026-11-19T19:27:39.659Z"
+    },
+    {
+      "revision": 7,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "스토어 배포와 운영 데이터는 건드리지 않는다"
+      },
+      "at": "2026-11-19T19:27:39.611Z"
+    },
+    {
+      "revision": 6,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "기존 화면 기준 자료를 보존한다"
+      },
+      "at": "2026-11-19T19:27:39.563Z"
+    },
+    {
+      "revision": 5,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "기존 메모 가져오기와 원본을 보존한다"
+      },
+      "at": "2026-11-19T19:27:39.520Z"
+    },
+    {
+      "revision": 4,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "설치와 검증 문서를 현재 기준으로 고친다"
+      },
+      "at": "2026-11-19T19:27:39.479Z"
+    },
+    {
+      "revision": 3,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "이전 실행 코드와 전용 작업을 정리한다"
+      },
+      "at": "2026-11-19T19:27:39.435Z"
+    },
+    {
+      "revision": 2,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "공유 자산을 현재 화면 쪽으로 옮긴다"
+      },
+      "at": "2026-11-19T19:27:39.382Z"
+    },
+    {
+      "revision": 1,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "Electron을 유일한 기본 실행 경로로 삼는다"
+      },
+      "at": "2026-11-19T19:27:39.329Z"
+    }
+  ],
+  "analyzedRevision": 23,
+  "reviewedRevision": 22
+}

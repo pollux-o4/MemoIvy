@@ -1,0 +1,29 @@
+.preview-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.preview-list > li { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding-inline-start: calc(var(--depth, 0) * var(--preview-gutter, 20px)); }
+.preview-list > li > small { min-width: 0; overflow-wrap: anywhere; }
+.preview-list .preview-heading > small { font-weight: 650; }
+.preview-list .preview-marker { flex: 0 0 14px; text-align: center; color: inherit; font-variant-numeric: tabular-nums; }
+.preview-list .preview-check { flex: 0 0 auto; }
+.preview-list .preview-check::before { content: ""; position: absolute; inset: -2px; }
+.preview-list small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+
+.preview-frame { position: relative; --preview-control-space: 28px; }
+.preview-frame.has-disclosure {
+  padding-block-end: var(--preview-control-space);
+  transition: padding-block-start var(--disclosure-duration) var(--disclosure-ease), padding-block-end var(--disclosure-duration) var(--disclosure-ease);
+}
+.preview-frame.has-disclosure.is-open { padding-block-start: var(--preview-control-space); padding-block-end: 0; }
+.preview-disclosure {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: var(--preview-trigger-offset, 0px);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: inset-block-start var(--disclosure-duration) var(--disclosure-ease);
+}
+.preview-frame.is-open > .preview-disclosure { inset-block-start: 0; }
+.preview-disclosure > .disclosure { position: relative; flex: none; pointer-events: auto; }
+/* 버튼 크기와 본문 배치는 그대로 두고 공통 포인터 영역을 제공한다. */
+.preview-disclosure > .disclosure::before { content: ""; position: absolute; top: 50%; left: 50%; width: 36px; height: 36px; transform: translate(-50%, -50%); }

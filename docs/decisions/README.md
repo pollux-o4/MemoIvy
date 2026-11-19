@@ -1,6 +1,6 @@
 # 결정 탐색
 
-- ui: GTK·앱 전용 외관·SVG.
+- ui: 앱 외관·SVG·조작.
 - persistence: 로컬 저장·원자 교체·비동기 writer·첨부 파일.
 - structure: 책임 분리·공유 정책.
 
