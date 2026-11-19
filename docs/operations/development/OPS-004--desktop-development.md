@@ -17,7 +17,7 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 | 데스크톱 통신 관련 검증 | `mise run test:desktop` |
 | 화면 순수 로직 단위 테스트 | `mise run test:web` |
 | 스토리 상호작용·접근성(axe) | `mise run test:stories` (현재 코드로 정적 빌드 후 검사. 띄워 둔 dev 서버로는 `npm run test:stories:live`) |
-| 캔버스 조작 부드러움(휠·휠클릭 이동·확대·카드 끌기·가지 초점) | `mise run test:perf` (카드 200장·간선 400개 스토리, 프레임 평균 ≤10ms·p95 ≤16ms·이동 튐 ≤2.5배·선택 클릭 프레임 ≤33ms. 캔버스 렌더·CSS 변경 시) |
+| 캔버스 조작 부드러움(휠·휠클릭 이동·확대·고속 확대 반전·카드 끌기·가지 초점) | `mise run test:perf` (카드 200장·간선 400개 스토리, 프레임 평균 ≤10ms·p95 ≤16ms·이동 튐 ≤2.5배·선택 클릭 프레임 ≤33ms. 캔버스 렌더·CSS 변경 시) |
 | 캔버스 메모리 회복 | `mise run test:memory` (화면 전환·본문 펼침·끌기 50회 뒤 GC 힙 변화 ≤10%. 리스너·캐시·관찰자 변경 시) |
 | 실제 창 작성·동기화·재시작 복원 | `mise run test:e2e` (합성 데이터 폴더, xvfb) |
 | 린트·미사용 코드·모듈 경계·중복·미사용 crate | `mise run check:web` |

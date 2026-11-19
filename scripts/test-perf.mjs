@@ -1,6 +1,6 @@
 // 캔버스 조작 부드러움 검사: 카드 200장·간선 400개 스토리에서 휠 이동·휠클릭 이동·Ctrl+휠 확대·카드 끌기를
 // 헤드리스 브라우저로 재현하고 프레임당 작업 시간과 화면 이동 연속성을 예산과 비교한다.
-// 사용: node scripts/test-perf.mjs [--no-build]
+// 사용: node scripts/test-perf.mjs [--no-build] [--scenario=zoom-burst]
 import { chromium } from 'playwright';
 import { serveStorybook } from './lib/storybook-static.mjs';
 
@@ -11,6 +11,11 @@ const BUDGET = { avg: 10, p95: 16, click: 33 };
 const JUMP_RATIO = 2.5;
 const RUNS = 3;
 const FRAMES = 120;
+
+const scenes = [['휠 위아래 이동', 'wheel'], ['휠클릭 끌어 이동', 'pan'], ['Ctrl+휠 확대·축소', 'zoom'], ['고속 확대·축소 반전', 'zoom-burst'], ['카드 끌기', 'drag'], ['카드 선택·가지 초점 전환', 'focus']];
+const requestedScenario = process.argv.find((arg) => arg.startsWith('--scenario='))?.slice('--scenario='.length);
+const selectedScenes = scenes.filter(([, setup]) => !requestedScenario || requestedScenario === setup);
+if (!selectedScenes.length) throw new Error(`Unknown scenario: ${requestedScenario}`);
 
 const storybook = await serveStorybook({ build: !process.argv.includes('--no-build') });
 const browser = await chromium.launch({ headless: true });
@@ -32,9 +37,15 @@ const scenario = (name, setup) => page.evaluate(async ({ name, setup, FRAMES }) 
   const pointer = { bubbles: true, pointerId: 1, isPrimary: true, pointerType: 'mouse' };
   const card = document.querySelector('[data-note-id$="000000000021"]');
   const offset = () => { const m = new DOMMatrixReadOnly(getComputedStyle(world).transform); return [m.e, m.f, m.a]; };
+  const burstZoom = (deltaY) => board.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, clientX: at.x, clientY: at.y, deltaY, deltaMode: 0 }));
   const inputs = {
     wheel: { start() {}, frame(i) { if (i % 3 === 0 && i < FRAMES - 40) board.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, deltaY: i % 60 < 30 ? 100 : -100, deltaMode: 0 })); }, end() {} },
     zoom: { start() {}, frame(i) { if (i % 2 === 0) board.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, clientX: at.x, clientY: at.y, deltaY: i % 60 < 30 ? -20 : 20, deltaMode: 0 })); }, end() {} },
+    'zoom-burst': {
+      start() {},
+      frame(i) { for (let j = 0; j < 4; j++) burstZoom(i % 16 < 8 ? -32 : 32); },
+      end() {},
+    },
     pan: {
       start() { this.x = at.x; this.y = at.y; board.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, button: 1, buttons: 4, clientX: this.x, clientY: this.y })); },
       // 고빈도 마우스처럼 한 프레임에 이동 이벤트를 세 번 보낸다.
@@ -82,9 +93,8 @@ const scenario = (name, setup) => page.evaluate(async ({ name, setup, FRAMES }) 
   return { name, avg: work.reduce((a, b) => a + b, 0) / work.length, p95: sorted[Math.floor(sorted.length * 0.95)], max: sorted.at(-1), jump, moved: steps.filter((step) => step > 0.01).length };
 }, { name, setup, FRAMES });
 
-const scenes = [['휠 위아래 이동', 'wheel'], ['휠클릭 끌어 이동', 'pan'], ['Ctrl+휠 확대·축소', 'zoom'], ['카드 끌기', 'drag'], ['카드 선택·가지 초점 전환', 'focus']];
 let failed = false;
-for (const [name, setup] of scenes) {
+for (const [name, setup] of selectedScenes) {
   const runs = [];
   for (let k = 0; k < RUNS; k++) runs.push(await scenario(name, setup));
   // 부하에 흔들리는 측정이라 세 번 중 중앙값으로 판정한다.

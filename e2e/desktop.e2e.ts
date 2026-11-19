@@ -194,6 +194,24 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(world, { timeout: 3_000 }).not.toBe(before);
       await canvas.getByRole('button', { name: '확대', exact: true }).click();
       await expect.poll(() => canvas.locator('.zoom-value').textContent(), { timeout: 3_000 }).not.toBe('100%');
+      await settle(canvas);
+      const anchor = async () => canvas.locator('.canvas-board').evaluate((board) => {
+        const world = board.querySelector<HTMLElement>('.canvas-world');
+        const transform = new DOMMatrixReadOnly(world?.style.transform);
+        return { zoom: transform.a, x: (140 - transform.e) / transform.a, y: (160 - transform.f) / transform.a };
+      });
+      const initial = await anchor();
+      const delta = initial.zoom > 1 ? 6 : -6;
+      await canvas.locator('.canvas-board').evaluate((board, deltaY) => {
+        const rect = board.getBoundingClientRect();
+        for (let i = 0; i < 6; i += 1) board.dispatchEvent(new WheelEvent('wheel', {
+          bubbles: true, cancelable: true, ctrlKey: true, deltaY, clientX: rect.left + 140, clientY: rect.top + 160,
+        }));
+      }, delta);
+      await expect.poll(async () => (await anchor()).zoom).toBeCloseTo(initial.zoom * Math.exp(-delta * .012 * 6), 4);
+      const after = await anchor();
+      expect(after.x).toBeCloseTo(initial.x, 2);
+      expect(after.y).toBeCloseTo(initial.y, 2);
     } finally { await browser.close(); }
   });
   test('캔버스 손잡이 누르기: 고르기 상태에서 카드를 누르면 연결만 는다', async () => {

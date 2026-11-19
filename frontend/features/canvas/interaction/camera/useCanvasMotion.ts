@@ -27,7 +27,9 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
   const latestLayout = useRef({ cards, selectedCards });
   latestLayout.current = { cards, selectedCards };
 
+  const pendingZoom = useRef(false);
   const publish = useCallback((next: Camera) => {
+    pendingZoom.current = false;
     cameraRef.current = next;
     if (motionRef.current) motionRef.current.current = next;
     setCameraState(next);
@@ -39,6 +41,7 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
 
   const frame = useCallback((now: number) => {
     raf.current = null;
+    if (pendingZoom.current) publish(cameraRef.current);
     const elapsed = lastFrame.current === null ? 0 : Math.min((now - lastFrame.current) / 1000, 0.05);
     lastFrame.current = now;
     const currentMotion = motionRef.current;
@@ -86,9 +89,10 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
     setLinkSamples({});
     const current = cameraRef.current;
     motionRef.current?.to(current, false);
+    if (pendingZoom.current) publish(current);
     if (raf.current !== null) cancelAnimationFrame(raf.current);
     raf.current = null;
-  }, [animated]);
+  }, [animated, publish]);
 
   useLayoutEffect(() => {
     const board = host.current;
@@ -132,6 +136,7 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
     if (raf.current !== null) cancelAnimationFrame(raf.current);
     raf.current = null;
     lastFrame.current = null;
+    pendingZoom.current = false;
   }, []);
 
   const setCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
@@ -158,8 +163,14 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
   const zoomAtScreen = useCallback((point: [number, number], factor: number) => {
     coastRef.current = null;
     const current = cameraRef.current;
-    setCamera(zoomAt(current, point, current.zoom * factor));
-  }, [setCamera]);
+    const next = zoomAt(current, point, current.zoom * factor);
+    motionRef.current?.to(next, false);
+    if (next === current) return;
+    // 포인터 기준 좌표는 입력마다 계산하고 화면에는 프레임당 한 번만 반영한다.
+    cameraRef.current = next;
+    pendingZoom.current = true;
+    schedule();
+  }, [schedule]);
   /** 화면 거리만큼 이동. animated면 진행 중인 이동 목표에 이어 붙인다(GTK wheel_pan). */
   const panBy = useCallback((delta: [number, number], smooth: boolean) => {
     coastRef.current = null;

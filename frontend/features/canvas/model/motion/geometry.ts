@@ -71,6 +71,7 @@ export function limitLead(current: Camera, target: Camera, maxLead: number): Cam
 
 export function zoomAt(camera: Camera, screen: [number, number], zoom: number): Camera {
   const clamped = Math.max(MIN_ZOOM, Math.min(zoom, MAX_ZOOM));
+  if (clamped === camera.zoom) return camera;
   const worldX = screen[0] / camera.zoom + camera.x;
   const worldY = screen[1] / camera.zoom + camera.y;
   return { x: worldX - screen[0] / clamped, y: worldY - screen[1] / clamped, zoom: clamped };
