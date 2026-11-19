@@ -1,5 +1,5 @@
 {
-  "revision": 8,
+  "revision": 10,
   "items": [
     {
       "id": "p1",
@@ -60,9 +60,57 @@
       "confirmed": true,
       "retired": false,
       "updatedAt": "2026-11-13T14:35:52.277Z"
+    },
+    {
+      "id": "p9",
+      "topic": "구조",
+      "statement": "직접 고안하기 전에 업계에서 검증된 알고리즘과 패턴을 찾아 따른다",
+      "evidence": [
+        "간선 경로를 임의 규칙으로 제안하자 업계 표준 방식을 반영하라고 함"
+      ],
+      "sources": [
+        "canvas-link-anchors"
+      ],
+      "by": "ai",
+      "confirmed": false,
+      "retired": false,
+      "updatedAt": "2026-11-19T05:12:18.156Z"
+    },
+    {
+      "id": "p10",
+      "topic": "결정",
+      "statement": "원래 목표에 속한 기능은 범위에서 빼지 말고 마일스톤으로 나눠 담는다",
+      "evidence": [
+        "마인드맵 기능을 제외 범위로 뺐다가 차수로 나눠 포함하라는 지적을 받음"
+      ],
+      "sources": [
+        "canvas-link-anchors"
+      ],
+      "by": "ai",
+      "confirmed": false,
+      "retired": false,
+      "updatedAt": "2026-11-19T05:17:13.406Z"
     }
   ],
   "changes": [
+    {
+      "revision": 10,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "원래 목표에 속한 기능은 범위에서 빼지 말고 마일스톤으로 나눠 담는다"
+      },
+      "at": "2026-11-19T05:17:13.406Z"
+    },
+    {
+      "revision": 9,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "직접 고안하기 전에 업계에서 검증된 알고리즘과 패턴을 찾아 따른다"
+      },
+      "at": "2026-11-19T05:12:18.156Z"
+    },
     {
       "revision": 8,
       "by": "me",
