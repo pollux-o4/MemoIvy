@@ -54,11 +54,19 @@ describe('paths', () => {
     expect(y1).toBe(100);
   });
 
-  it('curvePath는 짧은 거리에서도 제어점 오프셋 k 하한 40을 유지한다', () => {
-    const anchors = makeAnchors(makeAnchor('right', 100, 100), makeAnchor('left', 128, 100));
-    const d = curvePath(anchors);
-    const match = d.match(/^M [^ ]+ [^ ]+ C (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?),/);
-    expect(Number(match?.[1])).toBe(140);
+  it('curvePath 손잡이는 가로 간격에 맞춰 좁은 간격·큰 세로 차에서도 서로를 지나치지 않는다', () => {
+    // 가로 60, 세로 200: 대각선 거리로 손잡이를 잡으면 c1.x > c2.x가 되어 꼬부랑 모양이 된다.
+    const anchors = makeAnchors(makeAnchor('right', 100, 100), makeAnchor('left', 168, 300));
+    const nums = curvePath(anchors).match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    const [c1x, , c2x] = nums.slice(2, 6);
+    expect(c1x).toBeLessThanOrEqual(c2x);
+  });
+
+  it('curvePath는 상대가 뒤쪽이어도 바깥으로 돌아 나온다', () => {
+    const anchors = makeAnchors(makeAnchor('right', 300, 100), makeAnchor('left', 108, 300));
+    const nums = curvePath(anchors).match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    expect(nums[2]).toBeGreaterThan(300);
+    expect(nums[4]).toBeLessThan(100);
   });
 
   it('straightPath는 bend가 0이면 직선, 0이 아니면 2차 곡선(Q)을 만든다', () => {

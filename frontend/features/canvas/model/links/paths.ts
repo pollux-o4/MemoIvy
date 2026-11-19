@@ -33,19 +33,27 @@ export function trimEnd(anchor: Anchor, length = ARROW_LENGTH): CanvasPoint {
   };
 }
 
+/** 바깥 방향으로 남은 거리(뒤쪽이면 음수)에 맞는 베지어 손잡이 길이. 앞쪽은 절반, 뒤쪽은 돌아 나올 만큼만 완만하게 늘린다. */
+export function controlOffset(ahead: number): number {
+  return ahead >= 0 ? Math.max(ahead * 0.5, 12) : Math.max(6.25 * Math.sqrt(-ahead), 12);
+}
+
 /** 3차 베지어 곡선 SVG path를 만든다(React Flow getBezierPath 방식). */
 export const curvePath: PathStrategy = ({ from, to, bend }: EdgeAnchors): string => {
   const start = from.point;
   const end = trimEnd(to);
-  const { dist, perp } = segmentGeometry(start, end);
-  const k = Math.max(40, dist * 0.4);
+  const { perp } = segmentGeometry(start, end);
+  // 손잡이 길이는 각 연결점의 바깥 방향으로 상대까지 남은 거리에 맞춘다. 거리 전체(대각선)로 잡으면
+  // 가로 간격이 좁고 세로로 멀 때 두 손잡이가 서로를 지나쳐 꼬부랑(~) 모양이 된다.
+  const k1 = controlOffset((end.x - start.x) * from.normal.x + (end.y - start.y) * from.normal.y);
+  const k2 = controlOffset((start.x - end.x) * to.normal.x + (start.y - end.y) * to.normal.y);
   const c1: CanvasPoint = {
-    x: start.x + from.normal.x * k + perp.x * bend,
-    y: start.y + from.normal.y * k + perp.y * bend,
+    x: start.x + from.normal.x * k1 + perp.x * bend,
+    y: start.y + from.normal.y * k1 + perp.y * bend,
   };
   const c2: CanvasPoint = {
-    x: end.x + to.normal.x * k + perp.x * bend,
-    y: end.y + to.normal.y * k + perp.y * bend,
+    x: end.x + to.normal.x * k2 + perp.x * bend,
+    y: end.y + to.normal.y * k2 + perp.y * bend,
   };
   return `M ${fmt(start)} C ${fmt(c1)}, ${fmt(c2)}, ${fmt(end)}`;
 };
