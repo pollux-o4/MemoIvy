@@ -86,8 +86,7 @@ const isCollinearBetween = (a: CanvasPoint, b: CanvasPoint, c: CanvasPoint): boo
   return false;
 };
 
-/** 직교 경로의 꺾임 꼭짓점 목록을 계산한다. */
-// shortcut: 가로·세로 포트 분기는 축 대칭이지만 조건별 꺾임이 달라 명시적으로 유지, 포트 규칙 변경 시 중복 축소 검토.
+/** 직교 경로의 꺾임 꼭짓점 목록을 계산한다. 세로 출발점은 좌표축을 바꿔 가로 규칙을 재사용한다. */
 function orthogonalWaypoints(
   start: CanvasPoint,
   end: CanvasPoint,
@@ -95,69 +94,41 @@ function orthogonalWaypoints(
   to: Anchor,
   bend: number,
 ): CanvasPoint[] {
-  const p1: CanvasPoint = {
-    x: start.x + from.normal.x * ORTHOGONAL_OFFSET,
-    y: start.y + from.normal.y * ORTHOGONAL_OFFSET,
-  };
-  const p2: CanvasPoint = {
-    x: end.x + to.normal.x * ORTHOGONAL_OFFSET,
-    y: end.y + to.normal.y * ORTHOGONAL_OFFSET,
-  };
+  const transpose = from.normal.x === 0;
+  const orient = (point: CanvasPoint): CanvasPoint => transpose ? { x: point.y, y: point.x } : point;
+  const origin = orient(start);
+  const destination = orient(end);
+  const fromNormal = orient(from.normal);
+  const toNormal = orient(to.normal);
+  const p1 = { x: origin.x + fromNormal.x * ORTHOGONAL_OFFSET, y: origin.y + fromNormal.y * ORTHOGONAL_OFFSET };
+  const p2 = { x: destination.x + toNormal.x * ORTHOGONAL_OFFSET, y: destination.y + toNormal.y * ORTHOGONAL_OFFSET };
+  const toHoriz = toNormal.x !== 0;
+  let points: CanvasPoint[];
 
-  const fromHoriz = from.normal.x !== 0;
-  const toHoriz = to.normal.x !== 0;
-
-  if (fromHoriz && toHoriz) {
-    if (from.normal.x === to.normal.x) {
-      const outerX = (from.normal.x > 0 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x)) + bend;
-      return [start, p1, { x: outerX, y: p1.y }, { x: outerX, y: p2.y }, p2, end];
-    }
-    if ((p2.x - p1.x) * from.normal.x >= 0) {
+  if (toHoriz) {
+    if (fromNormal.x === toNormal.x) {
+      const outerX = (fromNormal.x > 0 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x)) + bend;
+      points = [origin, p1, { x: outerX, y: p1.y }, { x: outerX, y: p2.y }, p2, destination];
+    } else if ((p2.x - p1.x) * fromNormal.x >= 0) {
       const midX = (p1.x + p2.x) / 2 + bend;
-      return [start, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, end];
-    }
-    const midY = (p1.y + p2.y) / 2 + bend;
-    return [start, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, end];
-  }
-
-  if (!fromHoriz && !toHoriz) {
-    if (from.normal.y === to.normal.y) {
-      const outerY = (from.normal.y > 0 ? Math.max(p1.y, p2.y) : Math.min(p1.y, p2.y)) + bend;
-      return [start, p1, { x: p1.x, y: outerY }, { x: p2.x, y: outerY }, p2, end];
-    }
-    if ((p2.y - p1.y) * from.normal.y >= 0) {
+      points = [origin, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, destination];
+    } else {
       const midY = (p1.y + p2.y) / 2 + bend;
-      return [start, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, end];
+      points = [origin, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, destination];
     }
-    const midX = (p1.x + p2.x) / 2 + bend;
-    return [start, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, end];
-  }
-
-  if (fromHoriz) {
-    const forwardX = (p2.x - p1.x) * from.normal.x >= 0;
-    const forwardY = (p1.y - p2.y) * to.normal.y >= 0;
-    if (forwardX && forwardY && bend === 0) {
-      return [start, p1, { x: p2.x, y: p1.y }, p2, end];
-    }
-    if (!forwardX && forwardY) {
+  } else {
+    const forwardX = (p2.x - p1.x) * fromNormal.x >= 0;
+    const forwardY = (p1.y - p2.y) * toNormal.y >= 0;
+    if (forwardX && forwardY && bend === 0) points = [origin, p1, { x: p2.x, y: p1.y }, p2, destination];
+    else if (!forwardX && forwardY) {
       const midY = (p1.y + p2.y) / 2 + bend;
-      return [start, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, end];
+      points = [origin, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, destination];
+    } else {
+      const midX = (p1.x + p2.x) / 2 + bend;
+      points = [origin, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, destination];
     }
-    const midX = (p1.x + p2.x) / 2 + bend;
-    return [start, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, end];
   }
-
-  const forwardY = (p2.y - p1.y) * from.normal.y >= 0;
-  const forwardX = (p1.x - p2.x) * to.normal.x >= 0;
-  if (forwardY && forwardX && bend === 0) {
-    return [start, p1, { x: p1.x, y: p2.y }, p2, end];
-  }
-  if (!forwardY && forwardX) {
-    const midX = (p1.x + p2.x) / 2 + bend;
-    return [start, p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2, end];
-  }
-  const midY = (p1.y + p2.y) / 2 + bend;
-  return [start, p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2, end];
+  return transpose ? points.map(({ x, y }) => ({ x: y, y: x })) : points;
 }
 
 /** 중복·일직선 중간점을 제거한 꼭짓점 목록을 만든다. */
