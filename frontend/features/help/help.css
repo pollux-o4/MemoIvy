@@ -1,8 +1,8 @@
 /* 단축키와 서식: 주제 → 기본 → 전체(펼침). 읽는 폭을 좁혀 한 줄 시선 이동을 줄인다. */
 .help-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--memoivy-raised); }
 .help-screen .help-bar { background: var(--memoivy-raised); padding: 6px 10px 0; }
-.help-sheet { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 24px; width: 100%; max-width: 600px; margin: 0 auto; padding: 8px 24px 28px; box-sizing: border-box; }
-.help-topics { justify-self: center; }
+.help-sheet { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; width: 100%; max-width: 600px; margin: 0 auto; padding: 8px 24px 0; box-sizing: border-box; }
+.help-topics { align-self: center; flex: none; margin-bottom: 12px; }
 .help-topics button { min-width: 88px; min-height: 28px; font-size: 12px; }
 .help-section { margin: 0 0 10px; color: var(--memoivy-muted); font-size: 12px; font-weight: 500; }
 .help-basics-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -37,14 +37,14 @@
 .demo-pan .demo-pointer { transform: translate(54px, 46px); } .demo-pan .demo-board { transform: translateX(-30px); }
 .demo-open .demo-ripple { opacity: .9; }
 @media (hover: hover) {
-  .help-basic:hover .demo-drag .demo-pointer { animation: demo-drag-pointer 3s ease-in-out infinite; }
-  .help-basic:hover .demo-drag .demo-moving { animation: demo-drag-card 3s ease-in-out infinite; }
-  .help-basic:hover .demo-connect .demo-pointer { animation: demo-connect-pointer 3s ease-in-out infinite; }
-  .help-basic:hover .demo-connect .demo-line { animation: demo-connect-line 3s ease-in-out infinite; }
-  .help-basic:hover .demo-pan .demo-pointer { animation: demo-pan-pointer 3s ease-in-out infinite; }
-  .help-basic:hover .demo-pan .demo-board { animation: demo-pan-board 3s ease-in-out infinite; }
-  .help-basic:hover .demo-open .demo-pointer { transform: translate(60px, 32px); }
-  .help-basic:hover .demo-open .demo-ripple { animation: demo-open-ripple 3s ease-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-drag .demo-pointer { animation: demo-drag-pointer 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-drag .demo-moving { animation: demo-drag-card 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-connect .demo-pointer { animation: demo-connect-pointer 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-connect .demo-line { animation: demo-connect-line 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-pan .demo-pointer { animation: demo-pan-pointer 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-pan .demo-board { animation: demo-pan-board 3s ease-in-out infinite; }
+  .is-demo-ready .help-basic:hover .demo-open .demo-pointer { transform: translate(60px, 32px); }
+  .is-demo-ready .help-basic:hover .demo-open .demo-ripple { animation: demo-open-ripple 3s ease-out infinite; }
 }
 @keyframes demo-drag-pointer { 0%, 15% { transform: translate(29px, 32px); } 65%, 85% { transform: translate(91px, 32px); } 100% { transform: translate(29px, 32px); } }
 @keyframes demo-drag-card { 0%, 15% { transform: translateX(0); } 65%, 85% { transform: translateX(62px); } 100% { transform: translateX(0); } }
@@ -57,11 +57,26 @@
 :root[data-motion="reduce"] .help-demo * { animation: none !important; }
 :root[data-motion="reduce"] :is(.help-demo-hint, .help-demo-play) { display: none; }
 
-.help-dialog { box-sizing: border-box; width: min(520px, calc(100% - 24px)); max-width: none; max-height: min(560px, calc(100% - 24px)); padding: 0; border: 1px solid var(--memoivy-hairline); border-radius: 12px; color: var(--memoivy-text); background: var(--memoivy-raised); overflow: hidden; }
+.help-dialog { box-sizing: border-box; width: min(520px, calc(100% - 24px)); max-width: none; height: min(560px, calc(100% - 24px)); max-height: none; padding: 0; border: 1px solid var(--memoivy-hairline); border-radius: 12px; color: var(--memoivy-text); background: var(--memoivy-raised); overflow: hidden; }
 .help-dialog::backdrop { background: rgb(0 0 0 / .35); }
-.help-dialog .help-screen { max-height: min(558px, calc(100dvh - 26px)); }
+.help-dialog .help-screen { height: 100%; }
 .help-dialog-header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 10px 6px 16px; border-bottom: 1px solid var(--memoivy-hairline); }
 .help-dialog-header h2 { margin: 0; font-size: 14px; }
-.help-dialog .help-sheet { gap: 14px; padding: 10px 16px 16px; }
+.help-dialog .help-sheet { padding: 10px 16px 0; }
 .help-dialog .help-basic { padding: 8px; }
 .help-dialog .help-demo { max-width: 100%; height: 44px; }
+
+/* 검색창과 창 크기를 고정하고, 전환할 때 본문만 짧게 나타낸다. */
+.help-search { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px; min-height: 36px; margin-bottom: 12px; border: 1px solid var(--memoivy-hairline); border-radius: 8px; color: var(--memoivy-muted); }
+.help-search:focus-within { border-color: var(--memoivy-accent); }
+.help-search input { flex: 1; min-width: 0; border: 0; padding: 6px 0; outline: none; background: transparent; color: var(--memoivy-text); font: inherit; }
+.help-search input::placeholder { color: var(--memoivy-muted); }
+.help-search .icon-button { width: 26px; height: 26px; }
+.help-content { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding-bottom: 16px; }
+.help-topic-content:not([hidden]) { display: grid; gap: 14px; }
+.help-results ul { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.help-result { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 0; border-bottom: 1px solid var(--memoivy-hairline); }
+.help-result-topic { color: var(--memoivy-muted); font-size: 11px; }
+.help-result .shortcut-keys { margin-inline-start: auto; }
+.help-appear { animation: help-appear 180ms var(--ease-settle) both; }
+@keyframes help-appear { from { opacity: .4; } to { opacity: 1; } }

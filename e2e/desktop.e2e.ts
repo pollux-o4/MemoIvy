@@ -449,10 +449,31 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       // 캔버스에서 열면 캔버스 주제로 시작하고, 전체 목록은 묶음별로 접혀 있다가 펼친다.
       await expect.poll(() => help.getByRole('radio', { name: '캔버스' }).getAttribute('aria-checked')).toBe('true');
       const canvasTopic = help.getByRole('radio', { name: '캔버스' });
+      const search = help.getByRole('textbox', { name: '도움말 검색' });
+      const initialHelpSize = await help.boundingBox();
+      const searchPosition = await search.boundingBox();
       await canvasTopic.press('ArrowLeft');
       expect(await help.getByRole('radio', { name: '메모' }).getAttribute('aria-checked')).toBe('true');
+      expect(await help.boundingBox()).toEqual(initialHelpSize);
+      expect(await search.boundingBox()).toEqual(searchPosition);
       await canvas.keyboard.press('ArrowRight');
       expect(await canvasTopic.getAttribute('aria-checked')).toBe('true');
+      await search.fill('Ctrl + Enter');
+      const results = help.getByRole('region', { name: '검색 결과' });
+      expect(await results.locator('li').count()).toBe(2);
+      expect(await results.locator('.help-result-topic').allTextContents()).toEqual(['메모', '캔버스']);
+      await search.fill('**글자**');
+      expect(await results.locator('li').allTextContents()).toEqual(['메모굵게**글자**Ctrl+B']);
+      await search.fill('Ctrl+L');
+      expect(await results.locator('li').count()).toBe(1);
+      expect(await results.locator('li').textContent()).toContain('다음 메모 잇기');
+      await search.fill('일치하지 않는 검색어');
+      await expect.poll(() => results.getByRole('status').textContent()).toBe('검색 결과가 없어요');
+      await search.press('Escape');
+      expect(await search.inputValue()).toBe('');
+      expect(await canvasTopic.getAttribute('aria-checked')).toBe('true');
+      expect(await help.boundingBox()).toEqual(initialHelpSize);
+      expect(await search.boundingBox()).toEqual(searchPosition);
       expect(await help.locator('.help-basic').count()).toBe(4);
       expect(await help.locator('.help-reveal.is-open').count()).toBe(0);
       const animatedCards = () => help.locator('.help-basic').evaluateAll((cards) => cards.flatMap((card, index) =>
@@ -465,6 +486,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(animatedCards).toEqual([1]);
       await help.locator('.help-basic').nth(2).hover();
       await expect.poll(animatedCards).toEqual([2]);
+      await canvasTopic.press('ArrowLeft');
+      await canvas.keyboard.press('ArrowRight');
+      await expect.poll(animatedCards).toEqual([]);
       await help.getByRole('heading', { name: '단축키와 서식' }).hover();
       await expect.poll(animatedCards).toEqual([]);
       await canvas.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
