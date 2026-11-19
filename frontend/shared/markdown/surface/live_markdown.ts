@@ -1,8 +1,10 @@
 import { syntaxTree } from '@codemirror/language';
+import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { createListScanner } from './list_markers';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
 
+const refreshAfterComposition = StateEffect.define<void>();
 const inlineCode = Decoration.mark({ class: 'md-inline-code' });
 const codeBlock = Decoration.line({ class: 'md-code-block' });
 const hiddenFenceLine = Decoration.line({ class: 'md-hidden-fence-line' });
@@ -18,8 +20,21 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       this.removeDropHandlers = installImageDropHandlers(view);
     }
     removeDropHandlers: () => void;
-    destroy() { this.removeDropHandlers(); }
-    update(update: ViewUpdate) { if (!update.view.composing && (update.docChanged || update.selectionSet || update.focusChanged || update.viewportChanged)) this.decorations = this.build(update.view); }
+    compositionRefresh?: number;
+    destroy() {
+      window.clearTimeout(this.compositionRefresh);
+      this.removeDropHandlers();
+    }
+    update(update: ViewUpdate) {
+      if (update.view.composing) {
+        if (update.docChanged) this.decorations = this.decorations.map(update.changes);
+        return;
+      }
+      if (update.docChanged || update.selectionSet || update.focusChanged || update.viewportChanged
+        || update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(refreshAfterComposition)))) {
+        this.decorations = this.build(update.view);
+      }
+    }
     build(view: EditorView) {
       const touchesSelection = (from: number, to: number) => view.hasFocus && view.state.selection.ranges.some((range) =>
         range.empty ? range.head >= from && range.head <= to : range.from < to && range.to > from);
@@ -79,5 +94,13 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       } });
       return Decoration.set(ranges.sort((a, b) => a.from - b.from || a.to - b.to).map((item) => item.value.range(item.from, item.to)), true);
     }
-  }, { decorations: (plugin) => plugin.decorations });
+  }, {
+    decorations: (plugin) => plugin.decorations,
+    eventObservers: {
+      compositionend(_event, view) {
+        window.clearTimeout(this.compositionRefresh);
+        this.compositionRefresh = window.setTimeout(() => view.dispatch({ effects: refreshAfterComposition.of(undefined) }), 0);
+      },
+    },
+  });
 }

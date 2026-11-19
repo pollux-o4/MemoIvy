@@ -455,6 +455,42 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('이미지 줄에서 한글 조합을 확정한 뒤에도 본문을 계속 작성한다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    const image = `![첨부](asset:${'a'.repeat(64)})`;
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: `입력 확인\n${image}`, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '입력 확인', exact: true }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      const content = editor.locator('.cm-content');
+      const preview = content.locator('.cm-asset-preview');
+      await preview.waitFor();
+      await editor.keyboard.press('Control+End');
+      const input = await app.context().newCDPSession(editor);
+      try {
+        for (const text of ['ㅎ', '하', '한']) {
+          await input.send('Input.imeSetComposition', { text, selectionStart: 1, selectionEnd: 1 });
+        }
+        await input.send('Input.insertText', { text: '한' });
+      } finally {
+        await input.detach();
+      }
+      await expect.poll(() => preview.count()).toBe(0);
+      await editor.keyboard.press('End');
+      await editor.keyboard.press('Enter');
+      await editor.keyboard.insertText('이어서 작성');
+      await expect.poll(() => content.textContent()).toContain('이어서 작성');
+      await editor.keyboard.press('Control+Shift+m');
+      await expect.poll(() => content.locator('.cm-line').allTextContents()).toEqual(['입력 확인', `${image}한`, '이어서 작성']);
+      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('목록 본문은 목록 표식을 유지하고 프로젝트를 펼치면 소개의 할 일을 보여준다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-markdown-preview-'));
     const project = 'd0000000-0000-4000-8000-000000000001';
