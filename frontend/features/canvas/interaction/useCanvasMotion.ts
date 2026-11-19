@@ -127,7 +127,12 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
     publish(initial);
   }, [cards, selectedCards, publish]);
 
-  useEffect(() => () => { if (raf.current !== null) cancelAnimationFrame(raf.current); }, []);
+  // 취소한 예약은 ref도 비운다: StrictMode 재마운트처럼 ref가 살아남으면 schedule()이 영영 막힌다.
+  useEffect(() => () => {
+    if (raf.current !== null) cancelAnimationFrame(raf.current);
+    raf.current = null;
+    lastFrame.current = null;
+  }, []);
 
   const setCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
     const value = typeof next === 'function' ? next(cameraRef.current) : next;

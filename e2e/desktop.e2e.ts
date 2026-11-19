@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
+import { _electron as electron, chromium, type ElectronApplication, type Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -106,6 +106,23 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const reopened = await launch();
     await expect.poll(() => reopened.library.evaluate(() => document.documentElement.classList.contains('theme-dark'))).toBe(true);
     await quit(reopened.app);
+  });
+  // 미리보기 창은 메모가 마운트 때 바로 있어 연결 신호 rAF가 StrictMode 재마운트 정리 중에 취소된다(Wayland 실기에서 발견).
+  test('캔버스 휠·확대 버튼: 마운트 직후 예약한 프레임이 취소돼도 화면이 움직인다', async () => {
+    const browser = await chromium.launch();
+    try {
+      const canvas = await browser.newPage({ viewport: { width: 900, height: 600 } });
+      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.locator('.canvas-link').first().waitFor();
+      const world = () => canvas.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
+      const before = await world();
+      const box = await canvas.locator('.canvas-board').boundingBox();
+      await canvas.mouse.move((box?.x ?? 0) + 40, (box?.y ?? 0) + 40);
+      await canvas.mouse.wheel(0, 120);
+      await expect.poll(world, { timeout: 3_000 }).not.toBe(before);
+      await canvas.getByRole('button', { name: '확대', exact: true }).click();
+      await expect.poll(() => canvas.locator('.zoom-value').textContent(), { timeout: 3_000 }).not.toBe('100%');
+    } finally { await browser.close(); }
   });
   test('캔버스 마우스 가지: 손잡이 누르기·빈 곳에 놓기·카드에 놓기', async () => {
     const { app, library } = await launch();
