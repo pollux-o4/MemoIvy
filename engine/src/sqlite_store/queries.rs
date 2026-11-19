@@ -104,7 +104,9 @@ pub(crate) fn notes_referencing_asset<'a>(
     id: &str,
 ) -> impl Iterator<Item = &'a Note> {
     let reference = format!("asset:{id}");
-    notes.iter().filter(move |note| note.text.contains(&reference))
+    notes
+        .iter()
+        .filter(move |note| note.text.contains(&reference))
 }
 
 pub(super) fn response_snapshot(engine: &Engine) -> ApiResult {

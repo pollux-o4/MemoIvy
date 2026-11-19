@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
 
 /**
- * GTK shared/menus/dialogs.rs: 폭 340, 왼쪽 정렬 질문·대상·설명, 같은 폭의 [취소][확정],
+ * 공통 확인 대화상자: 폭 340, 왼쪽 정렬 질문·대상·설명, 같은 폭의 [취소][확정],
  * 기본 포커스는 취소, Esc·바깥 클릭은 취소.
  */
 export function ConfirmDialog({ question, subject, detail, acceptLabel, onCancel, onAccept }: {

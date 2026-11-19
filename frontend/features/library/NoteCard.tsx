@@ -26,11 +26,13 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
   return <article className={`note-card card ${note.color}${note.canvas.project ? ' project' : ''}${nested ? ' nested' : ''}`}>
     <div className="card-row"><div className="card-stripe"/><div className="card-content">
       {path.length > 0 && <div className="card-location">{path.join(' / ')}</div>}
-      <button type="button" className="card-open card-title-row" aria-label={label} onClick={onOpen}>
-        {note.canvas.project && <span className="project-folder" aria-hidden="true"><Icon name="project" size={16}/></span>}
-        <strong className="card-title">{label}</strong>
+      <div className="card-title-row">
+        <button type="button" className="card-open" onClick={onOpen}>
+          {note.canvas.project && <span className="project-folder" aria-hidden="true"><Icon name="project" size={16}/></span>}
+          <strong className="card-title">{label}</strong>
+        </button>
         {task.total > 0 && <TaskCountLabel progress={task} title={taskText.title} className="task-chip">{taskText.short}</TaskCountLabel>}
-      </button>
+      </div>
       {note.canvas.project && <span className="preview">{childCountLabel(progress.children(note.id).length)}</span>}
       {rows.length > 0 && <PreviewFrame label={label} targetId={id} preview={preview}>
         <PreviewList ref={preview.ref} className={`preview ${preview.className}`} id={id} rows={rows}

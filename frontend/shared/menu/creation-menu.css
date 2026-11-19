@@ -1,4 +1,4 @@
-/* GTK shared/creation surface.rs·base.css: 버튼 크기(origin)에서 190px 표면으로 280ms ease-out-cubic 펼침, 강조색→raised, 반경 9→14 */
+/* 새 항목 메뉴: 버튼 크기(origin)에서 190px 표면으로 280ms ease-out-cubic 펼침, 강조색→raised, 반경 9→14 */
 .creation { --creation-ease: cubic-bezier(.33, 1, .68, 1); position: relative; -webkit-app-region: no-drag; }
 /* 열 때는 표면이 같은 색으로 이어받으므로 배경을 즉시 비우고, 닫을 때는 표면이 접히는 동안 버튼이 위에서 같은 시간에 차오른다.
    (표면이 사라지는 순간 배경을 바꾸면 '띡' 하고 채워진다.) */

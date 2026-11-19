@@ -6,10 +6,7 @@ rust = "1.99.1"
 [bootstrap.packages]
 "apt:build-essential" = "latest"
 "apt:pkg-config" = "latest"
-"apt:libgtk-4-dev" = "latest"
-"apt:librsvg2-common" = "latest"
 "apt:zenity" = "latest"
-"apt:dbus-x11" = "latest"
 "apt:xvfb" = "latest"
 
 [tasks.dev]
@@ -24,10 +21,6 @@ run = "node tools/dev-data/seed.cjs && MEMOIVY_DATA_DIR=\"$PWD/.dev-data\" npm r
 description = "표본 데이터(.dev-data)를 처음 상태로 다시 만든다"
 run = "node tools/dev-data/seed.cjs --reset"
 
-[tasks."dev:legacy"]
-description = "이관 비교용 GTK 앱"
-run = "cargo run --locked"
-
 [tasks.storybook]
 description = "화면별 상태 검수"
 run = "npm run storybook"
@@ -35,10 +28,6 @@ run = "npm run storybook"
 [tasks.build]
 description = "릴리스 실행파일 빌드"
 run = "npm run build"
-
-[tasks."build:legacy"]
-description = "이관 비교용 GTK 릴리스 빌드"
-run = "cargo build --release --locked"
 
 [tasks."package:dir"]
 description = "현재 운영체제 배포 폴더 생성"
@@ -49,19 +38,6 @@ description = "빌드 후 앱 메뉴·바탕화면 설치본 갱신"
 depends = ["package:dir"]
 run = "./integration/install.sh"
 
-[tasks.package]
-description = "Snap 패키지 빌드"
-run = "mise run package:snap"
-
-[tasks."package:snap"]
-description = "Snap 패키지 빌드 (버전은 Cargo.toml에서 읽음)"
-# 파일 이동·삭제 후 Snapcraft 증분 소스에 이전 모듈이 남지 않게 한다.
-run = ["snapcraft clean memoivy", "snapcraft pack --output ."]
-
-[tasks."deploy:snap"]
-description = "Snap Store stable 채널에 빌드 후 배포"
-run = "bash tools/deploy-snap.sh"
-
 [tasks."check:secrets"]
 description = "Git 전체 이력의 비밀정보 검사 (출력 마스킹)"
 run = "gitleaks git --redact --no-banner"
@@ -70,50 +46,12 @@ run = "gitleaks git --redact --no-banner"
 description = "커밋·푸시 전 Gitleaks 검사 활성화"
 run = "git config --local core.hooksPath .githooks"
 
-# 테스트는 모두 가상 화면(Xvfb)에서 돈다. 뒤에 붙인 인자는 cargo test로 넘어간다.
-# 예: mise run test fmt_003, mise run test:editor -- --nocapture
-[tasks.test]
-description = "전체 테스트 (인자로 이름 거르기)"
-run = "dbus-run-session -- xvfb-run -a cargo test --locked"
-
-[tasks."test:unit"]
-description = "GTK 창 없는 테스트만"
-run = "cargo test --locked -- --skip app::gtk_tests:: --skip presentation::icons::tests::"
-
-[tasks."test:gtk"]
-description = "GTK 위젯 테스트 전체"
-run = "dbus-run-session -- xvfb-run -a cargo test --locked gtk_tests"
-
-[tasks."test:editor"]
-description = "편집기·마크다운 (fmt_*, editor, markdown)"
-run = "dbus-run-session -- xvfb-run -a cargo test --locked -- fmt_ app::editor presentation::markdown"
-
-[tasks."test:canvas"]
-description = "캔버스·프로젝트 (canvas_*, project_*, nav_*, app::canvas)"
-run = "dbus-run-session -- xvfb-run -a cargo test --locked -- canvas project_ nav_"
-
-[tasks."test:files"]
-description = "첨부·파일 화면 (data_003, fmt_004, file_001)"
-run = "dbus-run-session -- xvfb-run -a cargo test --locked -- data_003 fmt_004 file_001"
-
-[tasks."test:storage"]
-description = "저장소·노트북"
-run = "cargo test --locked persistence"
-
-[tasks."test:snap-gtk"]
-description = "Snap 런타임 GTK로 테스트 (배포 전 필수, 인자로 이름 거르기)"
-run = "tools/quality/test-snap-gtk.sh"
-
-[tasks."test:arch"]
-description = "아키텍처 경계 (ADR-0010)"
-run = "cargo test --locked architecture_tests"
-
 [tasks.check]
-description = "Rust 포맷·테스트·정적 검사"
+description = "SQLite 엔진 포맷·테스트·정적 검사"
 run = [
-    "cargo fmt --check",
-    "mise run test",
-    "cargo clippy --locked -- -D warnings",
+    "cargo fmt --manifest-path engine/Cargo.toml --check",
+    "mise run test:engine",
+    "cargo clippy --manifest-path engine/Cargo.toml --locked -- -D warnings",
 ]
 
 [tasks."test:engine"]
@@ -123,10 +61,6 @@ run = "cargo test --manifest-path engine/Cargo.toml --locked"
 [tasks."test:desktop"]
 description = "Electron 통신과 종료"
 run = "node --test desktop/*.test.cjs"
-
-[tasks."test:gtk-reference"]
-description = "명시적으로 GTK 원본 비교 자산 캡처"
-run = 'GDK_BACKEND=x11 GTK_THEME=Adwaita GSK_RENDERER=cairo MEMOIVY_GTK_REFERENCE_DIR="$PWD/docs/assets/gtk-reference" dbus-run-session -- xvfb-run -a -s "-screen 0 2400x1800x24" cargo test --locked capture_gtk_reference_assets'
 
 [tasks."test:web"]
 description = "화면 순수 로직 단위 테스트 (Vitest)"
@@ -146,7 +80,7 @@ run = "npm run test:memory"
 
 [tasks."test:e2e"]
 description = "Electron 정합 작동: 합성 데이터로 작성·동기화·재시작 복원 (가상 X 화면, 사용자 화면에 창을 띄우지 않음)"
-run = "env -u WAYLAND_DISPLAY MEMOIVY_HEADLESS=1 xvfb-run -a npm run test:e2e"
+run = "env -u WAYLAND_DISPLAY MEMOIVY_HEADLESS=1 xvfb-run -a npm run test:e2e --"
 
 [tasks."check:web"]
 description = "웹·데스크톱 정적 점검: 린트, 미사용 코드, 모듈 경계, 중복"

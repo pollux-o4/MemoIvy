@@ -1,22 +1,14 @@
 # OPS-001 · 설치·업데이트
 
-- Snap 설치·업데이트: snapd가 있는 Linux 데스크톱에서 `sudo snap install memoivy`, 수동 갱신은 앱을 정상 종료한 뒤 `sudo snap refresh memoivy`. 실행은 `snap run memoivy`. Snap은 자동 갱신도 지원한다. 배포 채널은 latest/stable이며 배포본은 Snap Store에서 확인한다.
-- 로컬 `.snap` 설치본에서 “스토어에서 알 수 없음” 오류가 나면 앱 종료 후 `sudo snap refresh memoivy --amend --channel=stable`로 한 번 전환한다. 이후 일반 refresh·자동 갱신을 사용한다.
-- 일반 설치 → Snap 전환은 데이터가 자동 이전되지 않는다. 변경 전 OPS-002에 따라 백업한다.
-- 소스 빌드 전제: Linux 데스크톱, mise, GTK 4.10 이상.
-  - Rust 선택은 `.mise.toml`, 크레이트·GTK 기능은 Cargo manifest가 원본이다.
-- 환경 준비: `mise bootstrap` — 선언된 apt 패키지와 Rust를 설치한다. apt 패키지 설치에는 sudo 권한이 필요하다.
-  - GTK 버전은 배포판 패키지를 따른다. `pkg-config --modversion gtk4`로 확인한다.
-- 실행
-  - 개발 실행: `mise run dev`.
-  - 빌드: `mise run build` (`cargo build --release --locked`).
-  - 직접 실행: `./target/release/memoivy`
-  - 설치·업데이트: `mise run install` — 릴리스 빌드 완료 후 `integration/install.sh` 실행. 스크립트 직접 실행은 기존 릴리스 빌드만 설치한다.
-  - 설치기는 현재 HOME과 `바탕화면/서비스 실행 파일` 폴더를 사용한다. 폴더가 없으면 먼저 만든다.
-- 아이콘 확인: UI-002. 메뉴는 설치된 SVG 절대 경로를 사용한다.
-  - 확인: MemoIvy 앱 메뉴에서 목록·편집 창을 연다. 기존 프로세스가 열려 있으면 정상 종료 후 다시 실행한다.
-- 실패 대응
-  - 실행 로그: `~/.local/share/memoivy-launch.log`.
-  - SVG 로더·GTK 버전·설치 대상은 `launcher`, `install` 검색으로 확인한다.
-- Snap 설치 파일: `mise run package` 또는 `mise run package:snap`. Snap 버전은 Cargo manifest에서 읽는다. 패키징 전에 MemoIvy 파트를 정리해 이동·삭제된 소스가 이전 빌드에 남지 않게 한다.
-- 제거: 설치기의 출력 대상인 앱·실행기·메뉴·아이콘·폴더 링크를 제거한다. 메모 데이터의 보관·복원은 OPS-002를 따른다.
+## 기존 Snap 배포본
+
+- Linux에서 `sudo snap install memoivy`로 설치하고 `snap run memoivy`로 실행한다. 수동 갱신 전 앱을 종료하고 `sudo snap refresh memoivy`를 실행한다.
+- 로컬 `.snap` 설치본의 “스토어에서 알 수 없음” 오류는 앱을 닫고 `sudo snap refresh memoivy --amend --channel=stable`로 배포 채널을 전환한다.
+- 이전 데이터 저장 위치와 가져오기는 OPS-002를 따른다.
+- 기존 GTK Snap을 재현할 때는 별도 체크아웃에서 `git worktree add --detach ../memoivy-gtk-snap 599324e`를 실행한다. 그곳에서 당시 README와 Snapcraft 빌드 환경을 사용해 `mise run package:snap`으로 패키지를 만든다.
+
+## Electron 개발판
+
+- Linux 데스크톱에서 mise로 Node·Rust와 선언된 시스템 도구를 준비하고 `npm ci`를 실행한다. Electron 실행에는 배포판의 그래픽·오디오 런타임을 사용한다. 개발 실행은 OPS-004를 따른다.
+- 앱을 종료한 뒤 `mise run install`을 실행하면 Linux 배포 폴더를 빌드해 사용자 홈의 앱 메뉴와 바탕화면 실행기를 갱신한다. 설치 후 앱 메뉴에서 목록·편집 창을 열어 확인한다.
+- 실패 시 `~/.local/share/memoivy-launch.log`와 설치기 출력을 확인한다. 앱·실행기 제거와 별개로 데이터를 보관하려면 OPS-002를 따른다.

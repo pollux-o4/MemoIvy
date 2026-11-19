@@ -132,10 +132,10 @@ pub(crate) fn validate_notes(ns: &[Note]) -> Result<(), String> {
         if !COLORS.contains(&n.color.as_str()) {
             return Err("unknown note color".into());
         }
-        if n.canvas.position.is_some_and(|p| {
-            p.iter()
-                .any(|x| !x.is_finite() || x.abs() > MAX_POSITION)
-        }) {
+        if n.canvas
+            .position
+            .is_some_and(|p| p.iter().any(|x| !x.is_finite() || x.abs() > MAX_POSITION))
+        {
             return Err("invalid canvas position".into());
         }
     }

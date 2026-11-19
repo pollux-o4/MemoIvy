@@ -24,7 +24,6 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 | 화면 상태 번들 | `npm run build:storybook` |
 | 현재 운영체제 설치 패키지 빌드 | `npm run desktop:build` |
 | 설치 없이 배포 디렉터리 생성 | `npm run desktop:dir` |
-| 기존 GTK 화면 비교 | `mise run dev:legacy` |
 
 검증은 변경 영역만 실행한다. 모듈 경계 규칙(shared는 features를 모르고 기능끼리는 shared로만 공유)은 `.dependency-cruiser.cjs`가 정한다. 브라우저 미리보기의 가짜 데이터는 실제 메모 저장소와 다르며 화면에 표시한다. 실제 저장은 Electron에서 확인한다. Storybook은 6006, Vite는 5173을 사용한다.
 
@@ -34,10 +33,8 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 - `MEMOIVY_DATA_DIR`에 절대 경로를 주면 합성 데이터 전용 폴더를 사용할 수 있다. 개발·검수는 사용자 원본과 분리한다.
 - SQLite 원본은 `memoivy.sqlite3`다. 실행 중인 데이터베이스 파일만 복사하지 말고 앱을 완전히 종료한 뒤 데이터 폴더를 백업한다.
 - 이전 `notes.json`은 원본과 백업을 남겨 가져온다. 자동으로 찾지 못한 Snap 데이터는 화면의 이전 데이터 가져오기로 JSON을 선택한다.
-- 기존 GTK 앱과 엔진은 `.memoivy.lock`을 공유한다. SQLite로 가져온 폴더를 기존 GTK 앱으로 다시 편집하지 않는다.
+- 기존 설치본과 현재 엔진은 `.memoivy.lock`을 공유한다. SQLite로 가져온 폴더를 기존 설치본으로 다시 편집하지 않는다.
 
 ## 관찰 범위
-
-화면 이관은 UI-REF-001의 GTK 외형을 유지한다. Storybook의 `Reference/GTK Fidelity`에서 원본 PNG와 같은 데이터·테마·치수의 이관 화면을 비교한다. 원본 자산 재캡처는 사용자가 명시적으로 요청했을 때만 `mise run test:gtk-reference`로 실행한다.
 
 Linux에서 실행 화면과 저장 복원을 확인한다. Windows·macOS는 해당 환경에서 실제 확인한 범위만 기록한다. Mac이 없다는 이유로 Linux 개발 완료를 막거나 운영체제별 자동 검사 체계를 새 필수 과업으로 만들지 않는다.

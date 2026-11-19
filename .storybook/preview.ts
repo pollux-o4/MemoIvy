@@ -14,7 +14,6 @@ const preview: Preview = {
           ['Start Here', 'Foundations', ['Tokens']],
           'Screens',
           'Interactions',
-          'Reference',
         ],
       },
     },

@@ -180,7 +180,10 @@ pub(super) fn validate_preference(k: &str, v: &Value) -> Result<(), ApiError> {
         }
         "canvasLinkStyle" => {
             if !matches!(v.as_str(), Some("curve" | "straight" | "orthogonal")) {
-                return Err(err("INVALID_PARAMS", "canvasLinkStyle must be curve, straight or orthogonal"));
+                return Err(err(
+                    "INVALID_PARAMS",
+                    "canvasLinkStyle must be curve, straight or orthogonal",
+                ));
             }
         }
         "autoPrune" => {

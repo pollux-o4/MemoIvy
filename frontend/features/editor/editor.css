@@ -1,4 +1,4 @@
-/* 메모 편집 화면 · GTK views/memo.css. 편집 표면 자체는 shared/markdown/surface. */
+/* 메모 편집 화면. 편집 표면은 shared/markdown/surface가 맡는다. */
 .palette-popover { position: absolute; z-index: 30; top: calc(100% + 5px); right: 0; }
 .palette-popover { min-width: 0; }
 .palette-popover .swatch { width: 26px; height: 26px; border-radius: 50%; }
