@@ -36,7 +36,7 @@
 }
 .markdown-surface .md-inline-code {
   border-radius: 4px;
-  padding-inline: .2em;
+  padding-inline: .4em;
   box-decoration-break: clone;
 }
 .markdown-surface .cm-line.md-code-block {
