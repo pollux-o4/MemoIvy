@@ -40,13 +40,15 @@
   box-decoration-break: clone;
 }
 .markdown-surface .cm-line.md-code-block {
-  padding-inline: 8px;
+  padding-inline: 12px;
 }
-.markdown-surface .md-code-block:not(.md-code-block + .md-code-block) {
+.markdown-surface .cm-line.md-code-block:not(.md-code-block + .md-code-block) {
+  padding-block-start: 6px;
   border-start-start-radius: 6px;
   border-start-end-radius: 6px;
 }
-.markdown-surface .md-code-block:not(:has(+ .md-code-block)) {
+.markdown-surface .cm-line.md-code-block:not(:has(+ .md-code-block)) {
+  padding-block-end: 6px;
   border-end-start-radius: 6px;
   border-end-end-radius: 6px;
 }

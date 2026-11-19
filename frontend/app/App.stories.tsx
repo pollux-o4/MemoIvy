@@ -36,7 +36,7 @@ function storyBridge(snapshot?: Snapshot): DesktopBridge {
     },
   };
 }
-function previewApp(screen: 'library' | 'note' | 'canvas' | 'files' | 'settings', id?: string, snapshot?: Snapshot, customSize?: number[]) {
+function previewApp(screen: 'library' | 'note' | 'canvas' | 'files' | 'settings', id?: string, snapshot?: Snapshot, customSize?: [number | string, number]) {
   const kind = windowKinds[screen];
   const size = customSize ?? [kind.width, kind.height];
   return <div className="theme-light" style={{ width: size[0], height: size[1], margin: '0 auto', background: 'var(--memoivy-bg)' }}><App bridge={storyBridge(snapshot)} preview={false} initialScreen={screen} initialId={id}/></div>;
@@ -162,9 +162,9 @@ export const CanvasBranches: Story = { render: () => previewApp('canvas', undefi
 export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
 export const CanvasMindmap: Story = { render: () => previewApp('canvas', undefined, canvasMindmapSnapshot(), [1100, 900]) };
 export const CanvasBranchesStraight: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('straight'), [1100, 900]) };
-export const MarkdownHeadings: Story = { name: 'Markdown / Editor', render: () => previewApp('note', markdownNoteId, markdownSnapshot(), [400, 740]) };
-export const MarkdownLibrary: Story = { name: 'Markdown / Library', render: () => previewApp('library', undefined, markdownSnapshot(), [440, 740]) };
-export const MarkdownCanvas: Story = { name: 'Markdown / Canvas', render: () => previewApp('canvas', undefined, markdownSnapshot(), [800, 740]) };
+export const MarkdownHeadings: Story = { name: 'Markdown / Editor', render: () => previewApp('note', markdownNoteId, markdownSnapshot(), ['min(100%, 400px)', 740]) };
+export const MarkdownLibrary: Story = { name: 'Markdown / Library', render: () => previewApp('library', undefined, markdownSnapshot(), ['min(100%, 440px)', 740]) };
+export const MarkdownCanvas: Story = { name: 'Markdown / Canvas', render: () => previewApp('canvas', undefined, markdownSnapshot(), ['min(100%, 800px)', 740]) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {
   render: () => previewApp('library', undefined, undefined, [360, 600]),
