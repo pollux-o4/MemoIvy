@@ -75,11 +75,20 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  background-color: var(--canvas-bg);
+  cursor: grab;
+  touch-action: none;
+}
+.canvas-screen .canvas-board.panning { cursor: grabbing; }
+/* 격자 변수는 이 층에만 둔다: 보드에 두면 화면 이동마다 상속 변수가 바뀌어 카드 전체 스타일을 다시 계산한다. */
+.canvas-screen .canvas-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   /* 점 격자: 타일 안쪽 반 칸 위치에 점을 찍어 타일 경계에서 잘리지 않게 한다(GTK draw_grid와 같은 배치). */
   --canvas-grid-dot: light-dark(rgba(26, 27, 30, .16), rgba(255, 255, 255, .13));
   --grid-minor-dot: color-mix(in srgb, var(--canvas-grid-dot) var(--grid-minor-opacity), transparent);
   --grid-half: calc(var(--grid-gap) / 2);
-  background-color: var(--canvas-bg);
   background-image:
     radial-gradient(circle at var(--grid-half) var(--grid-half), var(--canvas-grid-dot) .9px, transparent 1.2px),
     radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px),
@@ -91,11 +100,8 @@
     calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) - var(--grid-half)),
     calc(var(--grid-x) - var(--grid-half)) calc(var(--grid-y) + var(--grid-half)),
     calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) + var(--grid-half));
-  cursor: grab;
-  touch-action: none;
 }
-.canvas-screen .canvas-board.panning { cursor: grabbing; }
-.canvas-screen .canvas-world { position: absolute; top: 0; left: 0; width: 1px; height: 1px; transform-origin: 0 0; }
+.canvas-screen .canvas-world { position: absolute; top: 0; left: 0; width: 1px; height: 1px; transform-origin: 0 0; will-change: transform; }
 .canvas-screen .canvas-links { position: absolute; top: 0; left: 0; width: 20000px; height: 20000px; overflow: visible; color: var(--canvas-muted); pointer-events: none; }
 .canvas-screen .canvas-guides { position: absolute; top: 0; left: 0; z-index: 2; width: 1px; height: 1px; overflow: visible; pointer-events: none; stroke: color-mix(in srgb, var(--canvas-danger) 90%, transparent); shape-rendering: crispEdges; }
 .canvas-screen .canvas-links path { fill: none; stroke: currentColor; stroke-width: 1.5; }

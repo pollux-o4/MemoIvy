@@ -190,9 +190,10 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
-    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}`} role="application" aria-label="캔버스" style={gridStyle(camera) as React.CSSProperties}
+    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}`} role="application" aria-label="캔버스"
       {...pointer.board}
 >
+      <div className="canvas-grid" aria-hidden="true" style={gridStyle(camera) as React.CSSProperties}/>
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
         {notes.map((note) => <CanvasCard key={note.id} note={note} position={positions[note.id]} selected={selected.includes(note.id)} dropTarget={pointer.dropTarget === note.id}
