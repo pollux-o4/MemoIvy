@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -455,18 +455,25 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  test('이미지 줄에서 한글 조합을 확정한 뒤에도 본문을 계속 작성한다', async () => {
+  test('이미지 옆 한글 조합과 후속 입력이 첨부를 보존한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
     const id = 'd0000000-0000-4000-8000-000000000001';
-    const image = `![첨부](asset:${'a'.repeat(64)})`;
+    const hash = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
+    const image = `![첨부](asset:${hash})`;
+    const data = readFileSync(path.join(root, 'docs/assets/gtk-reference/fixtures/image-used/assets', `${hash}.png`)).toString('base64');
     writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: `입력 확인\n${image}`, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
     const { app, library } = await launch(dir);
     try {
+      await library.evaluate(async (data) => {
+        const { snapshot } = await window.memoivy.request('snapshot');
+        await window.memoivy.request('importAsset', { name: '첨부.png', mime: 'image/png', data, baseRevision: snapshot?.revision });
+      }, data);
       await library.getByRole('button', { name: '입력 확인', exact: true }).click();
       const editor = await windowWith(app, '.editor-screen');
       const content = editor.locator('.cm-content');
-      const preview = content.locator('.cm-asset-preview');
-      await preview.waitFor();
+      const preview = content.locator('.cm-asset-preview img');
+      await preview.waitFor({ timeout: 8_000 });
+      await expect.poll(() => preview.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
       await editor.keyboard.press('Control+End');
       const input = await app.context().newCDPSession(editor);
       try {
@@ -477,14 +484,17 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       } finally {
         await input.detach();
       }
-      await expect.poll(() => preview.count()).toBe(0);
-      await editor.keyboard.press('End');
-      await editor.keyboard.press('Enter');
-      await editor.keyboard.insertText('이어서 작성');
-      await expect.poll(() => content.textContent()).toContain('이어서 작성');
-      await editor.keyboard.press('Control+Shift+m');
-      await expect.poll(() => content.locator('.cm-line').allTextContents()).toEqual(['입력 확인', `${image}한`, '이어서 작성']);
-      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+      await expect.poll(() => content.locator('.cm-line').last().textContent()).toBe('한');
+      await editor.keyboard.insertText(' 이어서 작성');
+      await expect.poll(() => content.locator('.cm-line').last().textContent()).toBe('한 이어서 작성');
+      await expect.poll(() => preview.count()).toBe(1);
+      await expect.poll(async () => {
+        const result = await library.evaluate(() => window.memoivy.request('snapshot'));
+        return result.snapshot?.notes.find((note) => note.id === id)?.text;
+      }, { timeout: 8_000 }).toBe(`입력 확인\n${image}\n한 이어서 작성`);
+      await editor.reload({ timeout: 8_000 });
+      await expect.poll(() => content.locator('.cm-line').allTextContents()).toContain('한 이어서 작성');
+      await expect.poll(() => preview.count()).toBe(1);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

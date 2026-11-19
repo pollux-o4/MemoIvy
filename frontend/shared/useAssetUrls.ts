@@ -16,24 +16,31 @@ function blobUrl(data: string, mime: string): string {
 export function useAssetUrls(store: MemoStore): Record<string, string> {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const requested = useRef(new Set<string>());
+  const mounted = useRef(false);
   const created = useRef<string[]>([]);
-  const read = useEffectEvent((id: string) => store.request('readAsset', { id }));
+  // 첨부 바이트는 읽기 전용이라 편집 창의 쓰기 큐 교체와 독립적으로 읽는다.
+  const read = useEffectEvent((id: string) => store.bridge.request('readAsset', { id }));
 
   useEffect(() => {
-    let alive = true;
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      for (const url of created.current) URL.revokeObjectURL(url);
+    };
+  }, []);
+
+  useEffect(() => {
     for (const asset of store.assets) {
       if (requested.current.has(asset.id)) continue;
       requested.current.add(asset.id);
       void read(asset.id).then((result) => {
-        if (!alive || !result.data) { requested.current.delete(asset.id); return; }
+        if (!mounted.current || !result.data) { requested.current.delete(asset.id); return; }
         const url = blobUrl(result.data, result.mime ?? asset.mime);
         created.current.push(url);
         setUrls((current) => ({ ...current, [asset.id]: url }));
       }).catch(() => { requested.current.delete(asset.id); });
     }
-    return () => { alive = false; };
   }, [store.assets]);
 
-  useEffect(() => () => { for (const url of created.current) URL.revokeObjectURL(url); }, []);
   return urls;
 }
