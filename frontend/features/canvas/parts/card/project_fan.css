@@ -21,7 +21,7 @@
   & .far { transform: translate(-8px, -82px) rotate(-3.5deg); }
   & :is(.canvas-fan-title, .canvas-fan-more) { opacity: 1; transition-delay: 370ms; }
 }
-/* 제자리 펼치기는 누른 즉시 펼친다(머무름 지연 없음). 주변 카드는 Canvas가 is-dimmed로 흐린다. */
+/* 제자리 펼치기는 누른 즉시 펼친다(머무름 지연 없음). 주변 카드는 Canvas의 has-focus·in-focus가 흐린다. */
 .canvas-screen .canvas-note.project.is-peeking + .canvas-fan :is(.canvas-fan-sheet, .canvas-fan-title, .canvas-fan-more) { transition-delay: 0ms; }
 .canvas-screen .canvas-note.project.is-peeking + .canvas-fan .canvas-fan-title { transition-delay: 120ms; }
 .canvas-screen .canvas-peek { display: inline-flex; margin: -4px 0 -4px -6px; }

@@ -184,6 +184,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   );
   const deleteSubject = deleteTarget.length === 1 ? store.notes.find((note) => note.id === deleteTarget[0]) : undefined;
   const hasProjects = store.notes.some((note) => note.canvas.project);
+  // 가지 초점: 흐림은 world의 has-focus가 정하고 카드·선은 가지 안인지만 받는다. 초점이 바뀌어도 가지 밖 카드 200장은 다시 그리지 않는다.
   // 단축키는 화면 루트가 포커스를 받아 처리한다. application 역할은 보드에만 둬 제목 줄·도구 막대가 랜드마크로 남게 한다.
   // biome-ignore lint/a11y/noNoninteractiveTabindex: 캔버스 단축키를 받으려면 화면 자체가 포커스를 받아야 한다.
   // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
@@ -195,10 +196,10 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       {...pointer.board}
 >
       <div className="canvas-grid" aria-hidden="true" style={gridStyle(camera) as React.CSSProperties}/>
-      <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
+      <div className={`canvas-world${focus ? ' has-focus' : ''}`} style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
         {notes.map((note) => <CanvasCard key={note.id} note={note} position={positions[note.id]} selected={selected.includes(note.id)} dropTarget={pointer.dropTarget === note.id}
-          fanQuiet={fan.quiet.includes(note.id)} dimmed={Boolean(focus && !focus.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
+          fanQuiet={fan.quiet.includes(note.id)} focused={Boolean(focus?.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
       </div>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}

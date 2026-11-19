@@ -24,8 +24,8 @@ export interface CardActions {
  * 캔버스 카드 조립: 상태 클래스·포인터 연결만 맡고 내용은 card/ 부품이 그린다. 프로젝트면 뒤에 부채를 함께 둔다.
  * memo: 끌기 중에는 위치가 바뀐 카드만 다시 그린다(props는 값·고정 참조만 받는다).
  */
-export const CanvasCard = memo(function CanvasCard({ note, position, selected, dropTarget, fanQuiet = false, dimmed = false, peeking, actions }: {
-  note: Note; position: CanvasPoint; selected: boolean; dropTarget?: boolean; fanQuiet?: boolean; dimmed?: boolean;
+export const CanvasCard = memo(function CanvasCard({ note, position, selected, dropTarget, fanQuiet = false, focused = false, peeking, actions }: {
+  note: Note; position: CanvasPoint; selected: boolean; dropTarget?: boolean; fanQuiet?: boolean; /** 가지 초점 안. 흐림 여부는 .canvas-world.has-focus와 함께 CSS가 정한다. */ focused?: boolean;
   /** 프로젝트 제자리 펼치기 상태. 프로젝트 카드에만 넘긴다(있으면 하위 메모 수 옆에 펼침 단추). */
   peeking?: boolean; actions: CardActions;
 }) {
@@ -38,7 +38,7 @@ export const CanvasCard = memo(function CanvasCard({ note, position, selected, d
   const children = progress.children(note.id);
   const tasks = progress.of(note);
   const taskText = progressLabel(note, progress);
-  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${grow > 0 ? ' is-expanded' : ''}${dimmed ? ' is-dimmed' : ''}${peeking ? ' is-peeking' : ''}`;
+  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${grow > 0 ? ' is-expanded' : ''}${focused ? ' in-focus' : ''}${peeking ? ' is-peeking' : ''}`;
   return <>
     <article className={`canvas-note${state}`} style={{ left: position.x, top: position.y, '--card-tone': tone, '--preview-extra': `${grow}px` } as CSSProperties}
       // biome-ignore lint/a11y/noNoninteractiveTabindex: 카드는 키보드로 선택·열기(Enter)·삭제하는 캔버스 항목이라 포커스를 받아야 한다.

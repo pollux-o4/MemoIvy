@@ -86,7 +86,7 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
       const sample = isDirect ? sampleForLink(item.key) : RESTING;
       const target = isDirect && sample.pulsing && !sample.creating && sample.travel >= 1 ? positions[toId] : undefined;
       return <LinkItem key={item.key} d={paths.get(item.key)?.d ?? ''} isDirect={isDirect} sample={sample} width={width} zoom={zoom}
-        highlighted={selected.includes(fromId) || selected.includes(toId)} dimmed={focus ? !(focus.has(fromId) && focus.has(toId)) : false}
+        highlighted={selected.includes(fromId) || selected.includes(toId)} focused={Boolean(focus?.has(fromId) && focus.has(toId))}
         arrive={target} arriveDone={target ? doneIds.has(toId) : false}/>;
     })}
   </svg>;
@@ -96,10 +96,10 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
 const anchorSignature = ({ from, to, bend }: EdgeAnchors) => `${from.side}${from.point.x},${from.point.y}${to.side}${to.point.x},${to.point.y}/${bend}`;
 
 /** 간선 하나. 값만 받아 memo로 바뀐 간선만 다시 그린다. */
-const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, highlighted, dimmed, arrive, arriveDone }: {
-  d: string; isDirect: boolean; sample: LinkSample; width: number; zoom: number; highlighted: boolean; dimmed: boolean; arrive?: CanvasPoint; arriveDone: boolean;
+const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, highlighted, focused, arrive, arriveDone }: {
+  d: string; isDirect: boolean; sample: LinkSample; width: number; zoom: number; highlighted: boolean; focused: boolean; arrive?: CanvasPoint; arriveDone: boolean;
 }) {
-  return <g className={`canvas-link${highlighted ? ' is-highlighted' : ''}${dimmed ? ' is-dimmed' : ''}`}>
+  return <g className={`canvas-link${highlighted ? ' is-highlighted' : ''}${focused ? ' in-focus' : ''}`}>
     <path d={d} markerEnd="url(#arrow)" pathLength={isDirect ? 1 : undefined} strokeWidth={highlighted ? width * 1.35 : width}
       strokeDasharray={!isDirect ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
       strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}

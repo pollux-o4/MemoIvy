@@ -153,7 +153,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const project = canvas.locator('.canvas-note.project').filter({ has: canvas.locator('.canvas-peek') }).last();
     await project.locator('.canvas-peek button').click();
     await expect.poll(() => project.getAttribute('class')).toContain('is-peeking');
-    await expect.poll(() => canvas.locator('.canvas-note.is-dimmed').count()).toBeGreaterThan(0);
+    await expect.poll(() => canvas.locator('.canvas-world.has-focus > .canvas-note:not(.in-focus)').count()).toBeGreaterThan(0);
     await canvas.locator('.canvas-screen').press('Escape');
     await expect.poll(() => project.getAttribute('class')).not.toContain('is-peeking');
     // 보이는 입구: 인스펙터의 하위 가지 버튼도 Tab과 같이 가지를 만든다(화면이 새 가지로 옮겨 가므로 마지막에 둔다).

@@ -108,11 +108,12 @@
 /* 연결선 상태: 색은 g의 color 하나로 정해 선과 화살촉이 함께 바뀐다. 초점 전환은 펼침과 같은 시간·곡선. */
 .canvas-screen .canvas-link { color: color-mix(in srgb, var(--canvas-muted) 62%, transparent); transition: color var(--disclosure-duration) var(--disclosure-ease), opacity var(--disclosure-duration) var(--disclosure-ease); }
 .canvas-screen .canvas-link.is-highlighted { color: var(--canvas-accent); }
-.canvas-screen .canvas-link.is-dimmed { opacity: .18; }
+.canvas-screen .has-focus .canvas-link:not(.in-focus) { opacity: .18; }
 .canvas-screen .canvas-link .link-arrive { stroke: var(--canvas-accent); }
 .canvas-screen .canvas-link .link-arrive.is-done { stroke: var(--canvas-success); }
-.canvas-screen .canvas-note.is-dimmed { opacity: .38; filter: saturate(.6); }
-.canvas-screen .canvas-note.is-dimmed:hover { opacity: .8; }
+/* filter는 카드마다 다시 칠해 200장 초점 전환이 프레임 예산을 넘는다. 흐림은 opacity만. */
+.canvas-screen .has-focus > .canvas-note:not(.in-focus) { opacity: .38; }
+.canvas-screen .has-focus > .canvas-note:not(.in-focus):hover { opacity: .8; }
 @media (prefers-reduced-motion: reduce) { .canvas-screen .canvas-link { transition: none; } }
 :root[data-motion="reduce"] .canvas-screen .canvas-link { transition: none; }
 
