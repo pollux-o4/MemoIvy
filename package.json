@@ -17,6 +17,7 @@
     "test:unit": "vitest run --project unit",
     "test:e2e": "vitest run --project e2e",
     "test:stories": "node scripts/test-stories.mjs",
+    "test:perf": "node scripts/test-perf.mjs",
     "test:stories:live": "test-storybook --url http://127.0.0.1:6006",
     "lint": "biome lint .",
     "check:unused": "knip",
