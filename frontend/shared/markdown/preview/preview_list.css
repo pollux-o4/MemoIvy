@@ -1,0 +1,8 @@
+.preview-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.preview-list > li { display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding-inline-start: calc(var(--depth, 0) * var(--preview-gutter, 20px)); }
+.preview-list > li > small { min-width: 0; overflow-wrap: anywhere; }
+.preview-list .preview-heading > small { font-weight: 650; }
+.preview-list .preview-marker { flex: 0 0 14px; text-align: center; color: inherit; font-variant-numeric: tabular-nums; }
+.preview-list .preview-check { flex: 0 0 auto; }
+.preview-list .preview-check::before { content: ""; position: absolute; inset: -2px; }
+.preview-list small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }

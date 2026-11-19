@@ -6,7 +6,7 @@ import { progressLabel } from '../../../shared/progress';
 import { useProgress } from '../../../shared/ProgressProvider';
 import type { CanvasPoint } from '../model/align';
 import { canvasTitle } from '../model/labels';
-import { canvasPreview } from '../model/preview';
+import { markdownPreview } from '../../../shared/markdown/preview/model';
 import { projectFan } from '../model/project_fan';
 import { BranchHandle } from './card/BranchHandle';
 import { CardHeader } from './card/CardHeader';
@@ -32,7 +32,7 @@ export const CanvasCard = memo(function CanvasCard({ note, position, selected, d
   actions: CardActions;
 }) {
   const project = Boolean(note.canvas.project);
-  const preview = useMemo(() => canvasPreview(note.text), [note.text]);
+  const preview = useMemo(() => markdownPreview(note.text), [note.text]);
   const title = preview.title.text || canvasTitle(note);
   const tone = noteColor(note.color).tone;
   const [grow, setGrow] = useState(0);

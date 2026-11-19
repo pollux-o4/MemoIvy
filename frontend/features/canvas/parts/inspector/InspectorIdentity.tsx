@@ -3,10 +3,10 @@ import type { Note } from '../../../../shared/engine_contract';
 import { Icon } from '../../../../shared/Icon';
 import { NOTE_COLORS, noteColor } from '../../../../shared/model';
 import { canvasTitle } from '../../model/labels';
-import { canvasPreview } from '../../model/preview';
+import { markdownPreview } from '../../../../shared/markdown/preview/model';
 import { MarkdownField } from '../../../../shared/markdown/surface/MarkdownField';
 import { bindInput } from '../../../../shared/draft/inputBinding';
-import { PreviewList } from '../PreviewList';
+import { PreviewList } from '../../../../shared/markdown/preview/PreviewList';
 import { useTitledText } from './useTitledText';
 
 /**
@@ -23,7 +23,7 @@ export function InspectorIdentity({ note, revision, titleRef, onSaveText, onTogg
   const project = Boolean(note.canvas.project);
   const { title, body: intro } = useTitledText(note.text, onSaveText, { version: revision, fallbackTitle: canvasTitle(note) });
   const [palette, setPalette] = useState(false);
-  const rows = project ? [] : canvasPreview(note.text, 4).rows;
+  const rows = project ? [] : markdownPreview(note.text, 4).rows;
   return <section className="inspector-identity" aria-label={project ? '프로젝트 정보' : '메모 정보'}>
     <div className="inspector-title-row">
       <button className="inspector-color" style={{ background: noteColor(note.color).accent }} aria-label={`색 바꾸기 · 지금 ${noteColor(note.color).label}`} aria-expanded={palette} title="색 바꾸기" onClick={() => setPalette(!palette)}/>

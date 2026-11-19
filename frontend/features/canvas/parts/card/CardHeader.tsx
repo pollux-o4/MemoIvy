@@ -1,6 +1,6 @@
 import type { PointerEvent } from 'react';
 import { Icon } from '../../../../shared/Icon';
-import type { PreviewItem } from '../../model/preview';
+import type { PreviewItem } from '../../../../shared/markdown/preview/model';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 

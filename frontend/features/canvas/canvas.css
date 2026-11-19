@@ -165,14 +165,11 @@
 .canvas-screen .canvas-note:hover .card-done, .canvas-screen .canvas-note.selected .card-done, .canvas-screen .canvas-note.done .card-done { opacity: 1; }
 .canvas-screen .canvas-note .card-done:hover { border-color: var(--canvas-success); color: var(--canvas-success-text); transform: scale(1.08); }
 .canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
-.canvas-screen .canvas-note .canvas-checklist-preview { --preview-gutter: 20px; display: grid; gap: 3px; margin: 11px 0 0; padding: 0; list-style: none; }
-.canvas-screen .canvas-note .canvas-checklist-preview li { min-width: 0; display: flex; align-items: flex-start; gap: 6px; min-height: 19px; color: var(--note-muted); }
-.canvas-screen .preview-check::before { content: ""; position: absolute; inset: -2px; }
+.canvas-screen .canvas-note .canvas-checklist-preview { margin: 11px 0 0; }
+.canvas-screen .canvas-note .canvas-checklist-preview li { min-height: 19px; color: var(--note-muted); }
 .canvas-screen .canvas-note .canvas-checklist-preview .preview-check { flex: 0 0 12px; width: 12px; height: 12px; margin: 1px 1px 0; border-radius: 3px; }
-.canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { flex: 0 0 14px; width: 14px; color: var(--note-muted); text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
+.canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { font-size: 10px; }
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-/* 들여쓰기는 편집기와 같은 규칙: 깊이마다 표식 칸 + 간격 한 칸. */
-.canvas-screen .canvas-note .canvas-checklist-preview li { padding-left: calc(var(--depth, 0) * var(--preview-gutter)); }
 .canvas-screen .canvas-note .canvas-preview-reveal { display: grid; place-items: center; margin-top: 1px; }
 .canvas-screen .canvas-note .canvas-preview-reveal .disclosure { position: relative; z-index: 1; flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
 /* 화살표와 배치 크기는 그대로 두고 포인터 영역만 36×36px로 넓힌다. */
@@ -182,7 +179,6 @@
 /* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */
 .canvas-screen .canvas-note.is-expanded { z-index: 3; }
 .canvas-screen .canvas-note { height: calc(var(--card-height, 156px) + var(--preview-extra, 0px)); }
-.canvas-screen .canvas-note .canvas-checklist-preview small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
 .canvas-screen .canvas-project-folder { display: inline-grid; flex: none; color: var(--note-text); opacity: .8; }
 /* 가지 손잡이: 카드 오른쪽 가운데. 올리거나 고르거나 키보드로 들어오면 보인다. 누르면 하위 가지, 끌면 잇기. */
 /* 버튼의 판정 영역은 고정하고, 안쪽 그림만 확대한다. */

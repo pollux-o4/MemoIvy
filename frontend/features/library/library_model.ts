@@ -1,17 +1,11 @@
 import type { Note } from '../../shared/engine_contract';
-import { plainText, projectPath, titleOf } from '../../shared/model';
+import { projectPath, titleOf } from '../../shared/model';
 
 export function libraryTitle(note: Note): string {
   if (!note.text.split('\n').some((line) => line.trim())) {
     return note.canvas.project ? '이름 없는 프로젝트' : '빈 메모';
   }
   return titleOf(note);
-}
-
-export function libraryBody(markdown: string): string {
-  const lines = markdown.split(/\r?\n/);
-  const title = lines.findIndex((line) => line.trim().length > 0);
-  return title < 0 ? '' : plainText(lines.slice(title + 1).join('\n')).trim();
 }
 
 export function libraryPath(note: Note, notes: Note[]): string[] {

@@ -1,15 +1,16 @@
-import { createListItemReader, type ListItem, taskBoxOffset, type TaskState } from '../../../shared/markdown/list_item';
-import { plainText } from '../../../shared/model';
+import { createListItemReader, type ListItem, taskBoxOffset, type TaskState } from '../list_item';
+import { plainText } from '../../model';
 
 /** depth는 편집기 목록 들여쓰기(list_item.depth)와 같은 값이다. 일반 줄은 0. */
 export type PreviewItem = { text: string; depth: number } & (
   | { kind: 'task'; task: TaskState; sourceLine?: number }
   | { kind: 'number'; mark: string }
+  | { kind: 'heading' }
   | { kind: 'bullet' | 'text' }
 );
 
 /** `budget`을 빼면 모든 줄을 돌려준다(카드는 가림을 화면에서 처리한다). */
-export function canvasPreview(markdown: string, budget = Number.POSITIVE_INFINITY): { title: PreviewItem; rows: PreviewItem[]; remaining: number } {
+export function markdownPreview(markdown: string, budget = Number.POSITIVE_INFINITY): { title: PreviewItem; rows: PreviewItem[]; remaining: number } {
   const source = markdown.split('\n');
   const titleLine = source.findIndex((line) => line.trim());
   const readItem = createListItemReader();
@@ -23,7 +24,7 @@ export function canvasPreview(markdown: string, budget = Number.POSITIVE_INFINIT
 
 function previewLine(line: string, item: ListItem | null | undefined, sourceLine?: number): PreviewItem {
   const text = plainText(item ? line.slice(item.contentIndent) : line);
-  if (!item) return { kind: 'text', text, depth: 0 };
+  if (!item) return { kind: item === null && /^\s{0,3}#{1,6}\s+/.test(line) ? 'heading' : 'text', text, depth: 0 };
   const { depth } = item;
   if (item.task) return { kind: 'task', text, depth, task: item.task, sourceLine };
   if (item.ordered) return { kind: 'number', text, depth, mark: `${item.number}${item.delimiter}` };

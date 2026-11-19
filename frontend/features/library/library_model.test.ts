@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Note } from '../../shared/engine_contract';
-import { libraryBody, libraryPath, libraryTitle, orderedLibraryChildren, searchLibraryNotes } from './library_model';
+import { libraryPath, libraryTitle, orderedLibraryChildren, searchLibraryNotes } from './library_model';
 
 function note(id: string, text: string, modified: number, project = false, parent: string | null = null): Note {
   return { id, text, modified, color: 'yellow', canvas: { position: null, next: [], done: false, project, parent } };
 }
 
 describe('library model', () => {
-  it('uses the first non-empty line as the title and excludes it from the preview', () => {
+  it('uses the first non-empty line as the title', () => {
     const item = note('n', '\n  # 제목  \n본문 **강조**', 1);
     expect(libraryTitle(item)).toBe('제목');
-    expect(libraryBody(item.text)).toBe('본문 강조');
   });
 
   it('matches GTK case-insensitive search and puts title matches before newer body matches', () => {

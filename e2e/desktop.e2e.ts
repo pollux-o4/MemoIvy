@@ -389,6 +389,56 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await quit(app);
   });
 
+  test('목록 본문은 목록 표식을 유지하고 프로젝트를 펼치면 소개의 할 일을 보여준다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-markdown-preview-'));
+    const project = 'd0000000-0000-4000-8000-000000000001';
+    const note = 'd0000000-0000-4000-8000-000000000002';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id: project, text: '작업 프로젝트\n- [ ] 소개 할 일', color: 'yellow', modified: 100, canvas: { project: true } },
+      { id: note, text: '작업 메모\n- [ ] 본문 할 일\n## 작은 제목\n  - 하위 글머리\n1. 번호 항목', color: 'blue', modified: 100, canvas: { parent: project } },
+    ]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '작업 프로젝트 펼치기' }).click();
+      const intro = library.locator('.project-intro-preview');
+      const task = intro.getByRole('checkbox', { name: '소개 할 일' });
+      await task.click();
+      await expect.poll(() => task.getAttribute('aria-checked')).toBe('true');
+
+      const card = library.locator('.note-card').filter({ has: library.getByRole('button', { name: '작업 메모', exact: true }) });
+      const preview = card.locator('.preview-list');
+      const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
+      await noteTask.click();
+      await expect.poll(() => noteTask.getAttribute('aria-checked')).toBe('true');
+      await card.getByRole('button', { name: '작업 메모 본문 펼치기' }).click();
+      expect(await preview.locator('.preview-heading').textContent()).toBe('작은 제목');
+      expect(await preview.locator('.preview-bullet .preview-marker').textContent()).toBe('•');
+      expect(await preview.locator('.preview-number .preview-marker').textContent()).toBe('1.');
+      expect(await preview.locator('.preview-bullet').evaluate((row) => parseFloat(getComputedStyle(row).paddingInlineStart))).toBeGreaterThan(0);
+      await expect.poll(() => card.locator('.task-chip').textContent()).toBe('1/1');
+      await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('2/2');
+      expect(app.windows()).toHaveLength(1);
+      // 본문 영역의 포인터는 열기 버튼의 클릭 영역으로 전달된다.
+      const heading = preview.locator('.preview-heading');
+      const center = (item: Element) => {
+        const { x, y, width, height } = item.getBoundingClientRect();
+        const point = { x: x + width / 2, y: y + height / 2 };
+        const button = document.elementFromPoint(point.x, point.y)?.closest('.card-open');
+        return button && item.closest('.note-card')?.contains(button) ? point : null;
+      };
+      await heading.scrollIntoViewIfNeeded();
+      await expect.poll(() => heading.evaluate(center)).not.toBeNull();
+      const point = await heading.evaluate(center);
+      if (!point) throw new Error('목록 본문이 보이지 않음');
+      await library.mouse.click(point.x, point.y);
+      const editor = await windowWith(app, '.editor-screen');
+      await expect.poll(() => editor.locator('.md-checkbox.is-checked').count()).toBe(1);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('캔버스 연결선: 표본 데이터의 화살촉이 카드·프로젝트 종이 더미에 가리지 않는다', async () => {
     // 개발 표본(펼친 미리보기·프로젝트·순환·여럿→한)으로 연결선 끝을 화면에서 직접 검사한다.
     const { sampleNotes } = createRequire(import.meta.url)('../tools/dev-data/sample_notes.cjs') as { sampleNotes: (names?: string[]) => unknown[] };
