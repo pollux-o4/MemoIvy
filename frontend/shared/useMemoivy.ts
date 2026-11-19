@@ -2,66 +2,77 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesktopBridge, EngineEvent, EngineResult, Note, Snapshot } from './engine_contract';
 import { createMockBridge } from './mock_bridge';
 
+type RequestQueue = { bridge: DesktopBridge; pending: Promise<unknown>; writes: number };
+const WRITE_OPS = new Set(['create', 'update', 'delete', 'canvas', 'importAsset', 'deleteAsset', 'preference']);
+
 export function useMemoivy(injectedBridge?: DesktopBridge) {
   const bridge = useMemo(() => injectedBridge ?? window.memoivy ?? createMockBridge(), [injectedBridge]);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const snapshotRef = useRef<Snapshot | null>(null);
-  const revisionRef = useRef(-1);
-  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const acceptSnapshot = useCallback((next: Snapshot) => {
+    if (next.revision < (snapshotRef.current?.revision ?? -1)) return;
+    snapshotRef.current = next;
+    setSnapshot(next);
+  }, []);
+  const queue = useRef<RequestQueue | null>(null);
+  if (queue.current?.bridge !== bridge) queue.current = { bridge, pending: Promise.resolve(), writes: 0 };
 
   useEffect(() => {
     let alive = true;
-    const accept = (next: Snapshot) => {
-      if (!alive || next.revision < Math.max(revisionRef.current, snapshotRef.current?.revision ?? -1)) return;
-      revisionRef.current = next.revision;
-      snapshotRef.current = next;
-      setSnapshot(next);
-    };
+    const subscribedQueue = queue.current;
     snapshotRef.current = null;
-    revisionRef.current = -1;
     setSnapshot(null);
     const unsubscribe = bridge.subscribe((event: EngineEvent) => {
-      if (event.snapshot) accept(event.snapshot);
+      if (!alive) return;
+      if (event.snapshot) acceptSnapshot(event.snapshot);
       if (event.error) setError(event.error.message);
     });
-    bridge.request('snapshot').then((result) => { if (result.snapshot) accept(result.snapshot); }).catch((reason: unknown) => setError(messageOf(reason)));
-    return () => { alive = false; unsubscribe(); };
-  }, [bridge]);
+    bridge.request('snapshot').then((result) => { if (alive && result.snapshot) acceptSnapshot(result.snapshot); }).catch((reason: unknown) => { if (alive) setError(messageOf(reason)); });
+    if (subscribedQueue?.bridge === bridge && subscribedQueue.writes === 0) setSaving(false);
+    return () => {
+      alive = false;
+      unsubscribe();
+      if (queue.current === subscribedQueue) queue.current = { bridge, pending: Promise.resolve(), writes: 0 };
+    };
+  }, [acceptSnapshot, bridge]);
 
   const enqueue = useCallback((op: string, prepare: (current: Snapshot | null) => Record<string, unknown> | undefined) => {
+    const activeQueue = queue.current;
+    if (!activeQueue || activeQueue.bridge !== bridge) throw new Error('Memoivy bridge changed before the request was queued.');
+    const write = WRITE_OPS.has(op);
     const task = async (): Promise<EngineResult> => {
-      const write = ['create', 'update', 'delete', 'canvas', 'importAsset', 'deleteAsset', 'preference'].includes(op);
       const current = snapshotRef.current;
-      setSaving(write);
       try {
+        if (queue.current !== activeQueue) {
+          if (write) throw new Error('메모 저장 중 창이 바뀌어 대기 중인 쓰기를 취소했어요.');
+          return {};
+        }
         const params = prepare(current);
         if (!params) return {};
         const { baseRevision: explicitBase, ...operationParams } = params;
         const result = await bridge.request(op, { ...operationParams, ...(write && current ? { baseRevision: explicitBase ?? current.revision } : {}) });
-        if (result.snapshot && (!snapshotRef.current || result.snapshot.revision >= snapshotRef.current.revision)) {
-          revisionRef.current = result.snapshot.revision;
-          snapshotRef.current = result.snapshot;
-          setSnapshot(result.snapshot);
-        }
-        if (write) setError(null);
+        if (queue.current === activeQueue && result.snapshot) acceptSnapshot(result.snapshot);
+        if (queue.current === activeQueue && write) setError(null);
         return result;
       } catch (reason) {
         const conflict = reason as { snapshot?: Snapshot; message?: string };
-        if (conflict.snapshot && (!snapshotRef.current || conflict.snapshot.revision >= snapshotRef.current.revision)) {
-          revisionRef.current = conflict.snapshot.revision;
-          snapshotRef.current = conflict.snapshot;
-          setSnapshot(conflict.snapshot);
-        }
-        setError(messageOf(reason));
+        if (queue.current === activeQueue && conflict.snapshot) acceptSnapshot(conflict.snapshot);
+        if (queue.current === activeQueue) setError(messageOf(reason));
         throw reason;
-      } finally { if (write) setSaving(false); }
+      } finally {
+        if (write) {
+          activeQueue.writes -= 1;
+          if (queue.current === activeQueue) setSaving(activeQueue.writes > 0);
+        }
+      }
     };
-    const pending = queue.current.then(task, task);
-    queue.current = pending.then(() => undefined, () => undefined);
+    if (write) { activeQueue.writes += 1; setSaving(true); }
+    const pending = activeQueue.pending.then(task, task);
+    activeQueue.pending = pending.then(() => undefined, () => undefined);
     return pending;
-  }, [bridge]);
+  }, [acceptSnapshot, bridge]);
 
   const request = useCallback((op: string, params: Record<string, unknown> = {}) => enqueue(op, () => params), [enqueue]);
   const editNoteText = useCallback((id: string, apply: (currentText: string) => string | undefined) => enqueue('update', (current) => {

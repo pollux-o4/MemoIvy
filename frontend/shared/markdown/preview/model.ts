@@ -54,15 +54,25 @@ export function rebasePreviewTask(original: string, current: string, sourceLine:
   if (before.length !== after.length) return undefined;
   const readBefore = createListItemReader();
   const readAfter = createListItemReader();
-  const sameLayout = before.every((line, index) => {
+  let targetOffset: number | undefined;
+  let targetTask: TaskState | undefined;
+  for (let index = 0; index < before.length; index += 1) {
+    const line = before[index];
     const nextLine = after[index];
     const oldItem = readBefore(line);
     const newItem = readAfter(nextLine);
-    if (line === nextLine) return true;
-    if (!oldItem?.task || !newItem?.task) return false;
-    const at = taskBoxOffset(oldItem) + 1;
-    return at === taskBoxOffset(newItem) + 1 &&
-      line.slice(0, at) === nextLine.slice(0, at) && line.slice(at + 1) === nextLine.slice(at + 1);
-  });
-  return sameLayout ? togglePreviewTask(current, sourceLine) : undefined;
+    if (line !== nextLine) {
+      if (!oldItem?.task || !newItem?.task) return undefined;
+      const at = taskBoxOffset(oldItem) + 1;
+      if (at !== taskBoxOffset(newItem) + 1 || line.slice(0, at) !== nextLine.slice(0, at) || line.slice(at + 1) !== nextLine.slice(at + 1)) return undefined;
+    }
+    if (index === sourceLine && newItem?.task) {
+      targetOffset = taskBoxOffset(newItem) + 1;
+      targetTask = newItem.task;
+    }
+  }
+  if (targetOffset === undefined || targetTask === undefined) return current;
+  const line = after[sourceLine];
+  after[sourceLine] = line.slice(0, targetOffset) + (targetTask === 'x' ? ' ' : 'x') + line.slice(targetOffset + 1);
+  return after.join('\n');
 }
