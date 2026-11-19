@@ -1,7 +1,7 @@
 import { WidgetType, type EditorView } from '@codemirror/view';
 import expandIcon from '../../../../../src/presentation/icons/actions/media/expand.svg?raw';
 import removeIcon from '../../../../../src/presentation/icons/actions/note/trash.svg?raw';
-import { deleteImageLine, imageMarkup, MAX_IMAGE_WIDTH, moveImageLine, resizeImageWidth } from './commands';
+import { deleteImageLine, imageDropIndent, imageMarkup, MAX_IMAGE_WIDTH, moveImageLine, resizeImageWidth } from './commands';
 
 export interface ImageHandlers {
   view(hash: string): void;
@@ -132,6 +132,7 @@ export function installImageDropHandlers(view: EditorView) {
   let marker: HTMLElement | undefined;
   const clearMarker = () => {
     marker?.removeAttribute('data-image-drop');
+    marker?.style.removeProperty('--image-drop-inset');
     marker = undefined;
   };
   const clearDrag = () => {
@@ -171,10 +172,14 @@ export function installImageDropHandlers(view: EditorView) {
     const sharedBoundary = nextLine instanceof HTMLElement && nextLine.matches('.cm-line');
     const element = sharedBoundary ? nextLine : target.element;
     const edge = target.after && !sharedBoundary ? 'after' : 'before';
-    if (marker === element && marker.dataset.imageDrop === edge) return;
+    const line = view.state.doc.lineAt(target.line);
+    const nested = imageDropIndent(line.text, target.after) > 0;
+    const inset = nested ? getComputedStyle(target.element).paddingInlineStart : '';
+    if (marker === element && marker.dataset.imageDrop === edge && marker.style.getPropertyValue('--image-drop-inset') === inset) return;
     clearMarker();
     marker = element;
     marker.dataset.imageDrop = edge;
+    if (inset) marker.style.setProperty('--image-drop-inset', inset);
   };
   const dragLeave = (event: DragEvent) => {
     if (event.relatedTarget instanceof Node && view.dom.contains(event.relatedTarget)) return;

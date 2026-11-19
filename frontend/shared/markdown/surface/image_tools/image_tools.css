@@ -50,7 +50,7 @@
 .markdown-surface .cm-line[data-image-drop]::after {
   content: '';
   position: absolute;
-  inset-inline: 0;
+  inset-inline: var(--image-drop-inset, 0px) 0;
   height: 2px;
   border-radius: 2px;
   background: var(--memoivy-accent);

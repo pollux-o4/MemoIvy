@@ -29,6 +29,10 @@ export function deleteImageLine(text: string, from: number, to: number) {
   return text.slice(end);
 }
 
+export function imageDropIndent(target: string, after: boolean) {
+  return after ? (parseListItem(target)?.contentIndent ?? 0) : 0;
+}
+
 export function moveImageLine(text: string, sourceFrom: number, targetFrom: number, after = false) {
   const lines = text.split('\n');
   const starts: number[] = [];
@@ -40,9 +44,9 @@ export function moveImageLine(text: string, sourceFrom: number, targetFrom: numb
   const source = starts.indexOf(sourceFrom);
   const target = starts.indexOf(targetFrom);
   if (source < 0 || target < 0 || source === target) return text;
-  const item = after ? parseListItem(lines[target]) : null;
+  const indent = imageDropIndent(lines[target], after);
   const [image] = lines.splice(source, 1);
-  const moved = `${' '.repeat(item?.contentIndent ?? 0)}${image.trimStart()}`;
+  const moved = `${' '.repeat(indent)}${image.trimStart()}`;
   const insertion = target + Number(after) - Number(target > source);
   lines.splice(insertion, 0, moved);
   return lines.join('\n');
