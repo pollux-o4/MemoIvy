@@ -17,12 +17,13 @@ import { InspectorPrimary } from './InspectorPrimary';
  * 자주 쓰는 것일수록 위·크게, 위험한 것은 맨 아래·조용하게 둔다. 각 층은 inspector/ 부품이 그린다.
  */
 /** memo: 끌기 중처럼 선택 메모·목록이 그대로면 다시 그리지 않는다(동작은 Canvas가 고정 참조로 넘긴다). */
-export const CanvasInspector = memo(function CanvasInspector({ note, notes, projects, renameRequest, revision, onClose, onOpen, onOpenAsNote, onSaveText, onColor, onLift, onMoveInto, onToggleDone, onSignal, onDelete, onSelect, onToggleLink, onAddBranch, onExternal, outline }: {
+export const CanvasInspector = memo(function CanvasInspector({ note, notes, projects, renameRequest, revision, onClose, onOpen, onOpenAsNote, onSaveText, onToggleTask, onColor, onLift, onMoveInto, onToggleDone, onSignal, onDelete, onSelect, onToggleLink, onAddBranch, onExternal, outline }: {
   note: Note; notes: Note[]; projects: Note[];
   /** 바뀔 때마다 이름 칸에 포커스(F2·메뉴의 이름 바꾸기). */
   renameRequest: number;
   onClose: () => void; onOpen: (note: Note) => void; onOpenAsNote: (note: Note) => void;
   onSaveText: (note: Note, text: string, baseRevision?: number) => Promise<number | undefined>; revision?: number; onColor: (note: Note, color: string) => void;
+  onToggleTask: (note: Note, sourceLine: number) => void;
   onLift?: () => void; onMoveInto: (projectId: string) => void;
   onToggleDone: () => void; onSignal: () => void; onDelete: () => void;
   onSelect: (id: string) => void; onToggleLink: (note: Note, id: string) => void;
@@ -44,7 +45,7 @@ export const CanvasInspector = memo(function CanvasInspector({ note, notes, proj
   const alsoFrom = showOutline ? notes.filter((item) => item.canvas.next.includes(note.id) && item.id !== treeParent) : [];
   useEffect(() => { if (renameRequest) { titleRef.current?.focus(); titleRef.current?.select(); } }, [renameRequest]);
   return <aside className="canvas-inspector floating" aria-label={project ? '선택한 프로젝트' : '선택한 메모'}>
-    <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal} onOpenAsNote={() => onOpenAsNote(note)}/>
+    <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onToggleTask={(line) => onToggleTask(note, line)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal} onOpenAsNote={() => onOpenAsNote(note)}/>
     <InspectorPrimary note={note} childCount={progress.children(note.id).length} tasks={hasTasks ? tasks : undefined} onOpen={() => onOpen(note)} onToggleDone={onToggleDone}/>
     <InspectorLinks note={note} notes={notes} incomingInOutline={showOutline} childrenInOutline={showOutline ? directChildren(outline.rows, note.id) : undefined} onSelect={onSelect} onToggleLink={onToggleLink} onSignal={onSignal} onAddBranch={onAddBranch}/>
     {showOutline && <InspectorOutline rows={outline.rows} current={note.id} alsoFrom={alsoFrom.map((item) => item.id)} onSelect={onSelect} onUnlink={(id) => onToggleLink(note, id)} onIndent={outline.onIndent} onOutdent={outline.onOutdent} onMove={outline.onMove} onShift={outline.onShift}

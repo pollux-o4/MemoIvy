@@ -167,8 +167,8 @@
 .canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
 .canvas-screen .canvas-note .canvas-checklist-preview { --preview-gutter: 20px; display: grid; gap: 3px; margin: 11px 0 0; padding: 0; list-style: none; }
 .canvas-screen .canvas-note .canvas-checklist-preview li { min-width: 0; display: flex; align-items: flex-start; gap: 6px; min-height: 19px; color: var(--note-muted); }
-.canvas-screen .canvas-note .canvas-checklist-preview li > .preview-check { flex: 0 0 12px; width: 12px; height: 12px; display: grid; place-items: center; margin: 1px 1px 0; border: 1.5px solid color-mix(in srgb, var(--note-text) 46%, transparent); border-radius: 3px; color: #fff; }
-.canvas-screen .canvas-note .canvas-checklist-preview li > .preview-check.checked { border-color: var(--canvas-accent); background: var(--canvas-accent); }
+.canvas-screen .preview-check::before { content: ""; position: absolute; inset: -2px; }
+.canvas-screen .canvas-note .canvas-checklist-preview .preview-check { flex: 0 0 12px; width: 12px; height: 12px; margin: 1px 1px 0; border-radius: 3px; }
 .canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { flex: 0 0 14px; width: 14px; color: var(--note-muted); text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 /* 들여쓰기는 편집기와 같은 규칙: 깊이마다 표식 칸 + 간격 한 칸. */

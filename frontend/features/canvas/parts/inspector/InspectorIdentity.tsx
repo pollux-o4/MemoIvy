@@ -12,9 +12,10 @@ import { useTitledText } from './useTitledText';
 /**
  * 1층 · 정체성: 색·이름·(프로젝트면) 소개를 그 자리에서 고친다. 메모는 본문 미리보기만 보이고 본문 편집은 메모 열기로 한다.
  */
-export function InspectorIdentity({ note, revision, titleRef, onSaveText, onColor, onClose, onExternal, onOpenAsNote }: {
+export function InspectorIdentity({ note, revision, titleRef, onSaveText, onToggleTask, onColor, onClose, onExternal, onOpenAsNote }: {
   note: Note; revision?: number; titleRef: RefObject<HTMLInputElement | null>;
   onSaveText: (text: string, baseRevision?: number) => Promise<number | undefined>; onColor: (color: string) => void; onClose: () => void;
+  onToggleTask: (sourceLine: number) => void;
   onExternal: (url: string) => void;
   /** 프로젝트 설명을 전체 메모 편집기로 연다. */
   onOpenAsNote: () => void;
@@ -35,6 +36,6 @@ export function InspectorIdentity({ note, revision, titleRef, onSaveText, onColo
     </div>}
     {project
       ? <MarkdownField className="inspector-intro" draft={intro} label="프로젝트 소개" onExternal={onExternal} placeholder="이 프로젝트를 한두 줄로 소개해 보세요"/>
-      : rows.length > 0 && <PreviewList className="inspector-preview" rows={rows}/>}
+      : rows.length > 0 && <PreviewList className="inspector-preview" rows={rows} onToggleTask={onToggleTask}/>}
   </section>;
 }

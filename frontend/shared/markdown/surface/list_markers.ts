@@ -1,5 +1,5 @@
 import { Decoration, WidgetType, type EditorView } from '@codemirror/view';
-import { type ListItem as Item, parseListItem, type TaskState } from '../list_item';
+import { createListItemReader, type ListItem as Item, parseListItem, type TaskState, taskBoxOffset } from '../list_item';
 
 /** GTK live_editor: 표식 칸 24px(깊이마다 추가), 표식과 본문 사이 6px, 글머리표 •◦▪. */
 const GUTTER = 24;
@@ -100,21 +100,14 @@ const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-li
  */
 export function createListScanner() {
   let current: Item | null = null;
-  let fence: string | null = null;
+  const readItem = createListItemReader();
   return (line: Line): Range[] => {
-    const fenceStart = /^\s*(`{3,}|~{3,})/.exec(line.text)?.[1];
-    if (fence) {
-      if (fenceStart?.[0] === fence[0] && fenceStart.length >= fence.length) fence = null;
-      current = null;
-      return [];
-    }
-    if (fenceStart) { fence = fenceStart; current = null; return []; }
-    if (/^\s*>/.test(line.text)) { current = null; return []; }
-    const item = parseListItem(line.text);
+    const item = readItem(line.text);
+    if (item === undefined) { current = null; return []; }
     if (item) {
       current = item;
       const widget = item.task !== undefined
-        ? new TaskWidget(item.depth, item.task, line.from + line.text.lastIndexOf('[', item.markerEnd))
+        ? new TaskWidget(item.depth, item.task, line.from + taskBoxOffset(item))
         : new BulletWidget(item.depth, item.ordered ? item.marker.trim() : undefined);
       return [
         { from: line.from, to: line.from, value: lineStyle(item.depth, item.task === 'x' ? ' md-task-done' : '') },

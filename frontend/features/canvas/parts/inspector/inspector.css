@@ -26,8 +26,7 @@
 .canvas-screen .inspector-preview { --preview-gutter: 23px; display: grid; gap: 3px; margin: 0; padding: 0 8px; list-style: none; }
 .canvas-screen .inspector-preview li { padding-left: calc(var(--depth, 0) * var(--preview-gutter)); display: flex; align-items: center; gap: 7px; min-width: 0; height: 20px; color: var(--canvas-muted); }
 .canvas-screen .inspector-preview li > span { flex: 0 0 16px; width: 16px; display: grid; place-items: center; color: var(--canvas-muted); font-size: 11px; }
-.canvas-screen .inspector-preview .preview-check { height: 16px; border: 1px solid var(--canvas-hairline); border-radius: 4px; }
-.canvas-screen .inspector-preview .preview-check.checked { color: white; background: var(--canvas-accent); }
+.canvas-screen .inspector-preview .preview-check { flex: 0 0 14px; width: 14px; height: 14px; }
 .canvas-screen .inspector-preview small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .canvas-screen .inspector-preview small.checked { text-decoration: line-through; }
 

@@ -409,6 +409,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       // 포인터가 움직여도 접힌 카드의 조작 영역은 같은 화면 좌표를 유지한다.
       const branchHandle = checklist.locator('.card-branch');
       const disclosure = checklist.locator('.canvas-preview-reveal .disclosure');
+      const clippedTask = checklist.locator('button[aria-label="펼친 미리보기 줄 4"]');
+      expect(await clippedTask.evaluate((button: HTMLButtonElement) => {
+        button.focus();
+        return document.activeElement !== button && Boolean(button.closest('[inert]'));
+      })).toBe(true);
       const controlBounds = async () => Promise.all([branchHandle.boundingBox(), disclosure.boundingBox()]);
       const restingControls = await controlBounds();
       await disclosure.hover();
@@ -457,6 +462,27 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(async () => { const now = await heightsNow(); const same = now === previous; previous = now; return same; }, { intervals: [150] }).toBe(true);
       expect((await hiddenTips()).hidden).toEqual([]);
       expect(await footerIsSeparated()).toBe(true);
+      const firstTask = checklist.getByRole('checkbox', { name: '펼친 미리보기 줄 1', exact: true });
+      const secondTask = checklist.getByRole('checkbox', { name: '펼친 미리보기 줄 2', exact: true });
+      await firstTask.click();
+      await expect.poll(() => firstTask.getAttribute('aria-checked')).toBe('true');
+      expect(await secondTask.getAttribute('aria-checked')).toBe('false');
+      expect(await checklist.locator('.canvas-card-meta').textContent()).toBe('할 일 1/8');
+      expect(await checklist.getAttribute('class')).not.toContain('selected');
+      await checklist.getByRole('heading').click();
+      const inspectorTask = canvas.locator('.canvas-inspector').getByRole('checkbox', { name: '펼친 미리보기 줄 1', exact: true });
+      await expect.poll(() => inspectorTask.getAttribute('aria-checked')).toBe('true');
+      await inspectorTask.press('Space');
+      await expect.poll(() => firstTask.getAttribute('aria-checked')).toBe('false');
+      await secondTask.click();
+      await expect.poll(() => secondTask.getAttribute('aria-checked')).toBe('true');
+      const savedTask = await library.evaluate(async () => {
+        const result = await window.memoivy?.request('snapshot');
+        return result?.snapshot?.notes.find((note) => note.text.startsWith('펼치면 길어지는 메모'));
+      });
+      expect(savedTask?.text).toContain('- [ ] 펼친 미리보기 줄 1\n- [x] 펼친 미리보기 줄 2');
+      expect(savedTask?.canvas.done).toBe(false);
+      expect(app.windows().filter((page) => page.url().includes('window=note'))).toHaveLength(0);
       // 여러 부모: 가지 개요는 한 갈래 나무 + "다른 곳에서도 이어짐"으로 나머지 부모를 모두 보이고, 연결 칸은 같은 부모를 되풀이하지 않는다.
       await canvas.locator('.canvas-note', { hasText: '여러 곳에서 모이는 메모' }).click();
       const also = canvas.locator('.outline-also .inspector-chip');

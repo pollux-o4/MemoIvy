@@ -18,6 +18,7 @@ import { ProjectSummary } from './card/ProjectSummary';
 /** 카드가 부모에게 알리는 동작. Canvas가 한 번 만든 고정 객체라 카드 memo를 깨지 않는다. */
 export interface CardActions {
   pointerDown: (event: PointerEvent, id: string) => void; pointerLeave: (id: string) => void;
+  toggleTask: (note: Note, sourceLine: number) => void;
   open: (note: Note) => void; connectStart: (id: string, event?: PointerEvent) => void; addBranch: (id: string) => void; toggleDone: (id: string) => void;
   contextMenu: (event: MouseEvent, id: string) => void; togglePeek: (id: string) => void;
 }
@@ -46,7 +47,7 @@ export const CanvasCard = memo(function CanvasCard({ note, position, selected, d
       // biome-ignore lint/a11y/noNoninteractiveTabindex: 카드는 키보드로 선택·열기(Enter)·삭제하는 캔버스 항목이라 포커스를 받아야 한다.
       data-note-id={note.id} onPointerDown={(event) => actions.pointerDown(event, note.id)} onPointerLeave={() => actions.pointerLeave(note.id)} onDoubleClick={() => actions.open(note)} onContextMenu={(event) => actions.contextMenu(event, note.id)} tabIndex={0} aria-label={`${title} 카드`}>
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => actions.open(note)} onToggleDone={() => actions.toggleDone(note.id)}/>
-      <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onGrow={setGrow}/>
+      <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onGrow={setGrow} onToggleTask={(line) => actions.toggleTask(note, line)}/>
       {(project || tasks.total > 0 || note.canvas.next.length > 0) && <footer className="canvas-card-footer">
         {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText} peek={peeking === undefined ? undefined : { open: peeking, onToggle: () => actions.togglePeek(note.id), targetId: `card-fan-${note.id}` }}/>
           : tasks.total > 0 && <div className="canvas-card-meta"><small title={taskText.title}>할 일 {taskText.short}</small></div>}

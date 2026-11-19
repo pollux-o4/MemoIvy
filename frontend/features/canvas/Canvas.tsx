@@ -1,3 +1,4 @@
+import { togglePreviewTask } from './model/preview';
 import { Icon } from '../../shared/Icon';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
@@ -106,6 +107,10 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     open: (note: Note) => openCard(note),
     connectStart: pointer.beginConnection,
     addBranch: (id: string) => branch('child', { seed: id }),
+    toggleTask: (note: Note, line: number) => {
+      const text = togglePreviewTask(note.text, line);
+      if (text !== note.text) void actions.saveText(note, text, store.snapshot?.revision).catch(() => undefined);
+    },
     toggleDone: (id: string) => commands.toggleDone([id]),
     contextMenu: (event: React.MouseEvent, id: string) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); },
     togglePeek: (id: string) => setPeek((current) => current === id ? undefined : id),
@@ -175,7 +180,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
       {!notes.length && <CanvasEmpty onCreate={() => void store.createNote({ parent: activeScope }).then((note) => note && selectAndReveal([note.id])).catch(() => undefined)}/>}
     </div>
     {selectedNote && <CanvasInspector note={selectedNote} notes={notes} renameRequest={renameRequest} revision={store.snapshot?.revision} projects={moveTargets}
-      onExternal={inspectorActions.external} onSaveText={inspectorActions.saveText} onColor={inspectorActions.color}
+      onExternal={inspectorActions.external} onSaveText={inspectorActions.saveText} onToggleTask={cardActions.toggleTask} onColor={inspectorActions.color}
       onClose={inspectorActions.close} onOpen={inspectorActions.open} onOpenAsNote={inspectorActions.openAsNote}
       onLift={scopedProject ? inspectorActions.lift : undefined} onMoveInto={inspectorActions.moveInto}
       onToggleDone={inspectorActions.toggleDone} onSignal={inspectorActions.signal} onDelete={inspectorActions.remove}

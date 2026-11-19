@@ -23,3 +23,21 @@ export function parseListItem(text: string): (ListItem & { markerEnd: number }) 
     task: match[3]?.toLowerCase() as TaskState | undefined,
   };
 }
+
+/** 체크 표식의 여는 대괄호 위치. 본문에 있는 대괄호는 제외한다. */
+export const taskBoxOffset = (item: ListItem): number => item.marker.lastIndexOf('[');
+
+/** 줄 순서대로 읽으며 코드 블록과 인용문 안의 표식은 건너뛴다. */
+export function createListItemReader() {
+  let fence: string | undefined;
+  return (text: string) => {
+    const delimiter = /^\s*(`{3,}|~{3,})/.exec(text)?.[1];
+    if (fence) {
+      if (delimiter?.[0] === fence[0] && delimiter.length >= fence.length) fence = undefined;
+      return undefined;
+    }
+    if (delimiter) { fence = delimiter; return undefined; }
+    if (/^\s*>/.test(text)) return undefined;
+    return parseListItem(text);
+  };
+}

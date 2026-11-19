@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { canvasPreview } from './preview';
+import { canvasPreview, togglePreviewTask } from './preview';
 
 describe('canvas markdown preview', () => {
   test('retains title markers, check state, numbering, and overflow count', () => {
@@ -11,6 +11,22 @@ describe('canvas markdown preview', () => {
 
   test('keeps each line break as its own row', () => {
     expect(canvasPreview('Title\nFirst\nSecond', 3).rows).toEqual([{ kind: 'text', text: 'First', depth: 0 }, { kind: 'text', text: 'Second', depth: 0 }]);
+  });
+
+  test('toggles the exact duplicate task after blank lines without changing its Markdown', () => {
+    const markdown = 'Title\n- [ ] same\n\n  +   [/]   same [label]\r\n- [X] last';
+    const line = canvasPreview(markdown).rows[1].sourceLine;
+    expect(line).toBe(3);
+    const checked = togglePreviewTask(markdown, line ?? -1);
+    expect(checked).toBe(markdown.replace('[/]', '[x]'));
+    expect(togglePreviewTask(checked, 4)).toBe(checked.replace('[X]', '[ ]'));
+    expect(togglePreviewTask(checked, 2)).toBe(checked);
+  });
+
+  test('keeps literal checkbox examples inside fences read-only', () => {
+    const markdown = 'Title\n```markdown\n- [ ] example\n```\n- [ ] actual';
+    expect(canvasPreview(markdown).rows.filter(({ kind }) => kind === 'task').map(({ sourceLine }) => sourceLine)).toEqual([4]);
+    expect(togglePreviewTask(markdown, 2)).toBe(markdown);
   });
 
   test('keeps the editor list depth for nested items', () => {
