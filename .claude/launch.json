@@ -29,6 +29,20 @@
         "--ci"
       ],
       "port": 6016
+    },
+    {
+      "name": "storybook-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "6021",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "storybook-static"
+      ],
+      "port": 6021
     }
   ]
 }

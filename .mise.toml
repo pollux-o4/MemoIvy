@@ -16,6 +16,14 @@ rust = "1.99.1"
 description = "개발 모드로 실행"
 run = "npm run dev"
 
+[tasks."dev:sample"]
+description = "표본 데이터(.dev-data)로 개발 모드 실행: 카드·연결·프로젝트 경우의 수 (실데이터와 분리)"
+run = "node tools/dev-data/seed.cjs && MEMOIVY_DATA_DIR=\"$PWD/.dev-data\" npm run dev"
+
+[tasks."dev:sample:reset"]
+description = "표본 데이터(.dev-data)를 처음 상태로 다시 만든다"
+run = "node tools/dev-data/seed.cjs --reset"
+
 [tasks."dev:legacy"]
 description = "이관 비교용 GTK 앱"
 run = "cargo run --locked"

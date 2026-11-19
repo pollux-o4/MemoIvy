@@ -9,6 +9,7 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 | 작업 | 명령 |
 |---|---|
 | Rust 엔진·React·Electron 함께 개발 | `mise run dev` |
+| 표본 데이터(카드·연결·프로젝트 경우의 수)로 개발 | `mise run dev:sample` (초기화: `mise run dev:sample:reset`, 정의: `tools/dev-data/sample_notes.cjs`) |
 | 화면 상태별 검수 | `mise run storybook` |
 | 브라우저 화면 미리보기 | `npm run dev:web` |
 | 화면 타입·프로덕션 번들 확인 | `npm run typecheck`, `npm run build:web` |
