@@ -10,7 +10,7 @@ import { WindowHeader } from '../../shared/WindowHeader';
 import { AlignmentBar } from './parts/alignment/AlignmentBar';
 import { canvasSlot, CARD_HEIGHT, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
 
-import { CanvasCard } from './parts/CanvasCard';
+import { type CardActions, CanvasCard } from './parts/CanvasCard';
 import { CanvasDock } from './parts/CanvasDock';
 import { CardMenu } from './parts/CardMenu';
 import { CanvasInspector } from './parts/inspector/CanvasInspector';
@@ -25,6 +25,7 @@ import { canvasTitle } from './model/labels';
 import { bounds, fitting } from './model/motion';
 import { canMoveInto } from './model/scope_model';
 import { useCardMenu } from './interaction/useCardMenu';
+import { useStableHandlers } from './interaction/useStableHandlers';
 import { useSelectionActions } from './interaction/useSelectionActions';
 import { useCanvasClipboard } from './interaction/useCanvasClipboard';
 import { useCanvasCommands } from './interaction/useCanvasCommands';
@@ -55,10 +56,10 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const { activeScope, scopedProject } = scopeState;
   const notes = useMemo(() => store.notes.filter((note) => (note.canvas.parent ?? null) === activeScope), [store.notes, activeScope]);
   const noteById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
-  const positions = useMemo(() => Object.fromEntries(notes.map((note, index) => {
-    const saved = note.canvas.position ? { x: note.canvas.position[0], y: note.canvas.position[1] } : canvasSlot(index);
-    return [note.id, draftPositions[note.id] ?? saved];
-  })), [notes, draftPositions]);
+  // 저장 위치 객체는 메모가 바뀔 때만 새로 만든다. 끌기 중에는 움직인 카드의 위치 참조만 바뀐다.
+  const savedPositions = useMemo(() => Object.fromEntries(notes.map((note, index) =>
+    [note.id, note.canvas.position ? { x: note.canvas.position[0], y: note.canvas.position[1] } : canvasSlot(index)])), [notes]);
+  const positions = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, draftPositions[note.id] ?? savedPositions[note.id]])), [notes, draftPositions, savedPositions]);
   const cardRects = useMemo(() => notes.map((note) => cardRect(positions[note.id])), [notes, positions]);
   const selectedRects = useMemo(() => selected.flatMap((id) => positions[id] ? [cardRect(positions[id])] : []), [selected, positions]);
   const motion = useCanvasMotion(host, cardRects, selectedRects);
@@ -136,6 +137,36 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     addSibling: () => { if (!commands.canAddSibling() || store.saving) return false; branch('sibling'); return true; },
   });
 
+  // 카드·인스펙터 동작은 최신 상태를 읽되 참조는 고정한다(끌기 중 카드 200장·인스펙터가 다시 그려지지 않게).
+  const cardActions: CardActions = useStableHandlers({
+    pointerDown: pointer.beginCardDrag,
+    pointerLeave: fan.wake,
+    open: (note: Note) => openCard(note),
+    connectStart: pointer.beginConnection,
+    toggleDone: (id: string) => commands.toggleDone([id]),
+    contextMenu: (event: React.MouseEvent, id: string) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); },
+    togglePeek: (id: string) => setPeek((current) => current === id ? undefined : id),
+  });
+  const inspectorActions = useStableHandlers({
+    external: (url: string) => void store.bridge.openExternal(url),
+    saveText: actions.saveText,
+    color: (note: Note, color: string) => actions.recolor([note.id], color),
+    close: () => setSelected([]),
+    open: (note: Note) => openCard(note),
+    openAsNote: (note: Note) => openCard(note, true),
+    lift: liftSelected,
+    moveInto: (parent: string) => commands.moveInto(selected, parent),
+    toggleDone: () => { if (selectedNote) commands.toggleDone([selectedNote.id]); },
+    signal: () => { if (selectedNote) for (const id of selectedNote.canvas.next) triggerLink(`${selectedNote.id}:${id}`, false); },
+    remove: () => { if (selectedNote) setDeleteTarget([selectedNote.id]); },
+    select: (id: string) => selectAndReveal([id]),
+    toggleLink: commands.link,
+    indent: (id: string) => editOutline(indentRow)(id),
+    outdent: (id: string) => editOutline(outdentRow)(id),
+  });
+  const moveTargets = useMemo(() => selectedNote ? store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && canMoveInto(note.id, [selectedNote.id], store.notes)) : [], [store.notes, activeScope, selectedNote]);
+  const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent }), [outlineRows, inspectorActions]);
+
   const fitScope = useEffectEvent(() => fitView());
   const previousScope = useRef(activeScope);
   useEffect(() => {
@@ -182,9 +213,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} dimmed={Boolean(focus && !focus.has(note.id))} peek={note.canvas.project ? { open: peek === note.id, onToggle: () => setPeek((current) => current === note.id ? undefined : note.id) } : undefined} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
-          onOpen={(item) => openCard(item)} onConnectStart={pointer.beginConnection}
-          onContextMenu={(event, id) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); }}/>)}
+        {notes.map((note) => <CanvasCard key={note.id} note={note} position={positions[note.id]} selected={selected.includes(note.id)} dropTarget={pointer.dropTarget === note.id}
+          fanQuiet={fan.quiet.includes(note.id)} dimmed={Boolean(focus && !focus.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
       </div>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}
@@ -198,15 +228,12 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
         </button>
       </div>}
     </div>
-    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} renameRequest={renameRequest} onExternal={(url) => void store.bridge.openExternal(url)}
-      onSaveText={actions.saveText} revision={store.snapshot?.revision} onColor={(note, color) => actions.recolor([note.id], color)}
-      projects={store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && movable(note.id, [selectedNote.id]))}
-      onClose={() => setSelected([])} onOpen={(note) => openCard(note)} onOpenAsNote={(note) => openCard(note, true)}
-      onLift={scopedProject ? liftSelected : undefined} onMoveInto={(parent) => commands.moveInto(selected, parent)}
-      onToggleDone={() => commands.toggleDone([selectedNote.id])}
-      onSignal={() => { for (const id of selectedNote.canvas.next) triggerLink(`${selectedNote.id}:${id}`, false); }}
-      onDelete={() => setDeleteTarget([selectedNote.id])} onSelect={(id) => selectAndReveal([id])}
-      onToggleLink={commands.link} outline={{ rows: outlineRows, onIndent: editOutline(indentRow), onOutdent: editOutline(outdentRow) }}/>}
+    {selectedNote && <CanvasInspector note={selectedNote} notes={notes} renameRequest={renameRequest} revision={store.snapshot?.revision} projects={moveTargets}
+      onExternal={inspectorActions.external} onSaveText={inspectorActions.saveText} onColor={inspectorActions.color}
+      onClose={inspectorActions.close} onOpen={inspectorActions.open} onOpenAsNote={inspectorActions.openAsNote}
+      onLift={scopedProject ? inspectorActions.lift : undefined} onMoveInto={inspectorActions.moveInto}
+      onToggleDone={inspectorActions.toggleDone} onSignal={inspectorActions.signal} onDelete={inspectorActions.remove}
+      onSelect={inspectorActions.select} onToggleLink={inspectorActions.toggleLink} outline={inspectorOutline}/>}
     {deleteTarget.length > 0 && <ConfirmDialog
       question={deleteTarget.length === 1 ? '이 메모를 삭제할까요?' : `메모 ${deleteTarget.length}개를 삭제할까요?`}
       subject={deleteSubject ? canvasTitle(deleteSubject) : undefined}

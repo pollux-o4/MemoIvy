@@ -1,10 +1,10 @@
-import { useMemo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import type { Note } from '../../../shared/engine_contract';
 import type { CanvasPoint } from '../model/align';
 import { CARD_HEIGHT, CARD_WIDTH } from '../model/align';
 import { layoutAnchors } from '../model/links/anchors';
 import { PATH_STRATEGIES } from '../model/links/paths';
-import { type Edge, edgeKey, type LinkStyle, type Rect, type Side } from '../model/links/types';
+import { type Edge, type EdgeAnchors, edgeKey, type LinkStyle, type Rect, type Side } from '../model/links/types';
 
 type LinkSample = { creating: boolean; pulsing: boolean; progress: number; travel: number; alpha: number };
 const RESTING: LinkSample = { creating: false, pulsing: false, progress: 1, travel: 0, alpha: 1 };
@@ -32,7 +32,7 @@ function projectedEdges(notes: Note[], allNotes: Note[], scope: string | null): 
  * 연결선 그리기: 연결점·경로는 model/links가 계산하고 여기서는 SVG로만 옮긴다.
  * focus가 있으면 그 가지 밖의 선을 흐리게 한다(가지 초점).
  */
-export function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected, sampleForLink, linkStyle = 'curve', focus }: {
+export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected, sampleForLink, linkStyle = 'curve', focus }: {
   notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>; zoom: number; selected: string[];
   sampleForLink: (key: string) => LinkSample; linkStyle?: LinkStyle; focus?: ReadonlySet<string>;
 }) {
@@ -56,7 +56,21 @@ export function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected,
     return result;
   }, [direct, projected, rects]);
   const projectedKeys = useMemo(() => new Set(projected.map(edgeKey)), [projected]);
-  const draw = PATH_STRATEGIES[linkStyle];
+  // 경로 문자열 캐시: 연결점이 그대로인 간선은 다시 계산하지 않는다(끌기 중에는 움직인 카드에 닿은 간선만 바뀐다).
+  // 이번 프레임 간선만 새 맵으로 옮겨 크기가 간선 수를 넘지 않는다.
+  const pathCache = useRef<{ style: LinkStyle; map: Map<string, { sig: string; d: string }> }>({ style: linkStyle, map: new Map() });
+  const paths = useMemo(() => {
+    const previous = pathCache.current.style === linkStyle ? pathCache.current.map : new Map<string, { sig: string; d: string }>();
+    const next = new Map<string, { sig: string; d: string }>();
+    const draw = PATH_STRATEGIES[linkStyle];
+    for (const item of anchors) {
+      const sig = anchorSignature(item);
+      const hit = previous.get(item.key);
+      next.set(item.key, hit && hit.sig === sig ? hit : { sig, d: draw(item) });
+    }
+    pathCache.current = { style: linkStyle, map: next };
+    return next;
+  }, [anchors, linkStyle]);
   const width = 1.5 / Math.max(zoom, .45);
   return <svg className="canvas-links" aria-hidden="true" data-link-style={linkStyle}>
     <defs>
@@ -69,18 +83,28 @@ export function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected,
       const [fromId, toId] = item.key.split(':');
       const isDirect = !projectedKeys.has(item.key);
       const sample = isDirect ? sampleForLink(item.key) : RESTING;
-      const highlighted = selected.includes(fromId) || selected.includes(toId);
-      const dimmed = focus ? !(focus.has(fromId) && focus.has(toId)) : false;
-      const target = positions[toId];
-      return <g key={item.key} className={`canvas-link${highlighted ? ' is-highlighted' : ''}${dimmed ? ' is-dimmed' : ''}`}>
-        <path d={draw(item)} markerEnd="url(#arrow)" pathLength={isDirect ? 1 : undefined} strokeWidth={highlighted ? width * 1.35 : width}
-          strokeDasharray={!isDirect ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
-          strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}
-          opacity={sample.pulsing ? sample.alpha : undefined}/>
-        {isDirect && target && sample.pulsing && !sample.creating && sample.travel >= 1 && <rect x={target.x - 4} y={target.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="14" fill="none" className={byIdDone(allNotes, toId) ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
-      </g>;
+      const target = isDirect && sample.pulsing && !sample.creating && sample.travel >= 1 ? positions[toId] : undefined;
+      return <LinkItem key={item.key} d={paths.get(item.key)?.d ?? ''} isDirect={isDirect} sample={sample} width={width} zoom={zoom}
+        highlighted={selected.includes(fromId) || selected.includes(toId)} dimmed={focus ? !(focus.has(fromId) && focus.has(toId)) : false}
+        arrive={target} arriveDone={target ? byIdDone(allNotes, toId) : false}/>;
     })}
   </svg>;
-}
+});
+
+/** 연결점이 같은지 가르는 문자열. 같은 서명이면 같은 경로다. */
+const anchorSignature = ({ from, to, bend }: EdgeAnchors) => `${from.side}${from.point.x},${from.point.y}${to.side}${to.point.x},${to.point.y}/${bend}`;
+
+/** 간선 하나. 값만 받아 memo로 바뀐 간선만 다시 그린다. */
+const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, highlighted, dimmed, arrive, arriveDone }: {
+  d: string; isDirect: boolean; sample: LinkSample; width: number; zoom: number; highlighted: boolean; dimmed: boolean; arrive?: CanvasPoint; arriveDone: boolean;
+}) {
+  return <g className={`canvas-link${highlighted ? ' is-highlighted' : ''}${dimmed ? ' is-dimmed' : ''}`}>
+    <path d={d} markerEnd="url(#arrow)" pathLength={isDirect ? 1 : undefined} strokeWidth={highlighted ? width * 1.35 : width}
+      strokeDasharray={!isDirect ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
+      strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}
+      opacity={sample.pulsing ? sample.alpha : undefined}/>
+    {arrive && <rect x={arrive.x - 4} y={arrive.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="14" fill="none" className={arriveDone ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
+  </g>;
+});
 
 const byIdDone = (notes: Note[], id: string) => Boolean(notes.find((note) => note.id === id)?.canvas.done);
