@@ -16,6 +16,7 @@ import { CardMenu } from './parts/CardMenu';
 import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasLinks } from './parts/CanvasLinks';
 import { CanvasNavigator } from './parts/CanvasNavigator';
+import { ConnectPreview } from './parts/ConnectPreview';
 import { SnapGuides } from './parts/SnapGuides';
 import { readLinkStyle } from '../../shared/link_style';
 import { gridStyle } from './model/grid';
@@ -80,7 +81,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const actions = useSelectionActions({ store, selected, selectedNote, openCard, clipboard, toggleDone: commands.toggleDone, requestDelete: setDeleteTarget, requestRename: () => setRenameRequest((count) => count + 1) });
   const createItem = (project: boolean) => { void store.createNote({ project, parent: activeScope }).then((note) => { if (note) { selectAndReveal([note.id]); onOpenNote(note.id); } }).catch(() => undefined); };
   // 새 가지는 고르고 바로 이름 칸에 포커스한다(생각하고 Tab, 다시 생각).
-  const branch = (kind: 'child' | 'sibling') => { void commands.addBranch(kind).then((note) => { if (note) { selectAndReveal([note.id]); setRenameRequest((count) => count + 1); } }).catch(() => undefined); };
+  const branch = (kind: 'child' | 'sibling', from?: { seed: string; at?: CanvasPoint }) => { if (store.saving) return; void commands.addBranch(kind, from).then((note) => { if (note) { selectAndReveal([note.id]); setRenameRequest((count) => count + 1); } }).catch(() => undefined); };
   const groupSelected = async () => {
     if (!selected.length || store.saving || mode !== 'idle' || scopeState.depth >= MAX_DEPTH) return;
     try { const project = await commands.group(); if (project) { setSelected([project.id]); onOpenNote(project.id); } } catch { /* 저장 오류는 상태 막대가 알린다 */ }
@@ -101,6 +102,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     host, camera, setCamera: motion.setCamera, setAutopan: motion.setAutopan, startCoast: motion.startCoast, isPanHeld: () => keyboard.spaceDown.current,
     ...selection, notes, allNotes: store.notes, positions, draftPositions, setDraftPositions, canMoveInto: movable,
     onCardsMoved: fan.hush, onMovePositions: commands.commitPositions, onMoveInto: commands.moveInto,
+    onConnectEmpty: (from, at) => branch('child', { seed: from, at }),
+    onConnectTap: (from) => branch('child', { seed: from }),
     onConnect: (from, to) => { const source = noteById.get(from); if (source && !source.canvas.next.includes(to)) commands.link(source, to); },
   });
   const keyboard = useCanvasKeyboard({
@@ -123,6 +126,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     pointerLeave: fan.wake,
     open: (note: Note) => openCard(note),
     connectStart: pointer.beginConnection,
+    addBranch: (id: string) => branch('child', { seed: id }),
     toggleDone: (id: string) => commands.toggleDone([id]),
     contextMenu: (event: React.MouseEvent, id: string) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); },
     togglePeek: (id: string) => setPeek((current) => current === id ? undefined : id),
@@ -199,7 +203,9 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       <div className={`canvas-world${focus ? ' has-focus' : ''}`} style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
         {notes.map((note) => <CanvasCard key={note.id} note={note} position={positions[note.id]} selected={selected.includes(note.id)} dropTarget={pointer.dropTarget === note.id}
-          fanQuiet={fan.quiet.includes(note.id)} focused={Boolean(focus?.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
+          fanQuiet={fan.quiet.includes(note.id)} linkTarget={pointer.connectPreview?.target === note.id} focused={Boolean(focus?.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
+        {pointer.connectPreview && selection.connectFrom && positions[selection.connectFrom] && <ConnectPreview from={positions[selection.connectFrom]} to={pointer.connectPreview.to}
+          target={pointer.connectPreview.target ? positions[pointer.connectPreview.target] : undefined} linkStyle={linkStyle} zoom={camera.zoom}/>}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
       </div>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}

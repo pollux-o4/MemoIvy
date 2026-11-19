@@ -189,6 +189,17 @@
 .canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
 .canvas-screen .canvas-project-progress { position: absolute; right: 14px; bottom: 5px; left: 14px; height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--note-text) 12%, transparent); }
 .canvas-screen .canvas-project-progress i { display: block; height: 100%; border-radius: inherit; background: var(--canvas-success); }
+/* 가지 손잡이: 카드 오른쪽 가운데. 올리거나 고르거나 키보드로 들어오면 보인다. 누르면 하위 가지, 끌면 잇기. */
+.canvas-screen .card-branch { position: absolute; top: 50%; right: 6px; z-index: 1; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #fff; background: var(--canvas-accent); box-shadow: 0 1px 3px var(--canvas-shadow); cursor: crosshair; opacity: 0; transform: translateY(-50%) scale(.85); transition: opacity var(--disclosure-duration) var(--disclosure-ease), transform var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .canvas-note:is(:hover, .selected, :focus-within) .card-branch { opacity: 1; transform: translateY(-50%) scale(1); }
+.canvas-screen .card-branch:hover { transform: translateY(-50%) scale(1.12); }
+.canvas-screen .card-branch:focus-visible { opacity: 1; outline: 2px solid var(--canvas-surface); outline-offset: 1px; }
+.canvas-screen .canvas-panning .card-branch, .canvas-screen .canvas-board.panning .card-branch { opacity: 0; }
+.canvas-screen .canvas-note.link-target { outline-color: var(--canvas-accent); }
+.canvas-screen .canvas-connect-preview { position: absolute; top: 0; left: 0; z-index: 3; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.canvas-screen .canvas-connect-preview path { fill: none; stroke: var(--canvas-accent); stroke-dasharray: 6 5; }
+.canvas-screen .canvas-connect-preview .connect-ghost { fill: color-mix(in srgb, var(--canvas-accent) 8%, transparent); stroke: color-mix(in srgb, var(--canvas-accent) 60%, transparent); stroke-dasharray: 5 4; }
+@media (prefers-reduced-motion: reduce) { .canvas-screen .card-branch { transition: none; } }
 .canvas-screen .canvas-note > footer { position: absolute; right: 13px; bottom: 8px; left: 13px; display: flex; align-items: center; gap: 4px; color: var(--note-muted); font-size: 10px; }
 .canvas-screen .canvas-note > footer button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--note-muted); background: transparent; cursor: crosshair; }
 .canvas-screen .canvas-note > footer button:hover { background: rgba(255, 255, 255, .45); }

@@ -54,8 +54,8 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
    * Tab·Enter 가지 만들기: kind=child면 선택 카드 아래 가지, sibling이면 같은 부모의 형제.
    * 새 메모는 부모 오른쪽 열의 마지막 가지 아래에 놓는다. 만들 수 없으면(형제인데 부모 없음) undefined.
    */
-  const addBranch = async (kind: 'child' | 'sibling'): Promise<Note | undefined> => {
-    const seed = selected.length === 1 ? selected[0] : undefined;
+  const addBranch = async (kind: 'child' | 'sibling', from?: { seed: string; at?: CanvasPoint }): Promise<Note | undefined> => {
+    const seed = from?.seed ?? (selected.length === 1 ? selected[0] : undefined);
     if (!seed || !positions[seed]) return undefined;
     const graph = buildGraph(scopeEdges(store.notes, activeScope));
     const parentId = kind === 'child' ? seed : treeParent(graph, seed);
@@ -63,7 +63,8 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
     if (!parent || !positions[parent.id]) return undefined;
     const siblings = parent.canvas.next.flatMap((id) => positions[id] ? [positions[id]] : []);
     const base = positions[parent.id];
-    const position = siblings.length
+    // 끌어서 빈 곳에 놓았으면 그 자리(포인터가 카드 왼쪽 가운데), 아니면 마지막 가지 아래.
+    const position = from?.at ? { x: from.at.x, y: from.at.y - CARD_HEIGHT / 2 } : siblings.length
       ? { x: Math.max(...siblings.map((point) => point.x)), y: Math.max(...siblings.map((point) => point.y)) + CARD_HEIGHT + BRANCH_GAP_Y }
       : { x: base.x + CARD_WIDTH + BRANCH_GAP_X, y: base.y };
     const created = await store.createNote({ parent: activeScope });
