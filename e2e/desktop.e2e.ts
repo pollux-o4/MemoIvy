@@ -109,7 +109,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
 
   test('설정의 테마·모션 선택이 열린 창 전체에 반영되고 유지된다', async () => {
     const { app, library } = await launch();
-    await library.keyboard.press('Control+,');
+    await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+    const canvas = await windowWith(app, '.canvas-screen');
+    const settingsButton = canvas.getByRole('button', { name: '설정', exact: true });
+    await settingsButton.focus();
+    await settingsButton.press('Enter');
     const settings = await windowWith(app, '.settings-screen');
     await settings.getByRole('radio', { name: '다크' }).click();
     await settings.getByRole('radiogroup', { name: '모션 줄이기' }).getByRole('radio', { name: '켜기' }).click();
@@ -219,6 +223,17 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const canvas = await browser.newPage({ viewport: { width: 700, height: 600 } });
       await canvas.goto('http://127.0.0.1:5173/?window=canvas');
       await canvas.locator('.canvas-link').first().waitFor();
+      await canvas.setViewportSize({ width: 360, height: 600 });
+      const title = await canvas.locator('.canvas-header .window-title').boundingBox();
+      const settings = await canvas.getByRole('button', { name: '설정', exact: true }).boundingBox();
+      const create = await canvas.getByRole('button', { name: 'New' }).boundingBox();
+      if (!title || !settings || !create) throw new Error('캔버스 제목 줄이 보이지 않음');
+      expect(title.x + title.width).toBeLessThan(settings.x);
+      expect(create.x - (settings.x + settings.width)).toBeGreaterThanOrEqual(6);
+      expect(Math.abs((settings.y + settings.height / 2) - (create.y + create.height / 2))).toBeLessThan(1);
+      expect(create.x + create.width).toBeLessThan(360);
+      await canvas.setViewportSize({ width: 700, height: 600 });
+      await settle(canvas);
       const rightmost = canvas.locator('[data-note-id]').filter({ hasText: '생각을 연결하고' });
       const inside = await rightmost.boundingBox();
       if (!inside) throw new Error('카드가 보이지 않음');

@@ -89,7 +89,7 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     {screen === 'help' && <Help bridge={store.bridge} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'settings' && <Settings store={store} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'note' && activeId && <Editor store={store} noteId={activeId} onClose={() => void closeScreen()}/>}
-    {store.snapshot && screen === 'canvas' && <Canvas store={store} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()} onHelp={openHelp}/>}
+    {store.snapshot && screen === 'canvas' && <Canvas store={store} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()} onHelp={openHelp} onOpenSettings={() => void openSettings()}/>}
     {store.snapshot && screen === 'files' && <Files store={store} onClose={() => void closeScreen()} onOpenNote={(id) => void openNote(id)} initialTab={initialFilesTab}/>}
     {helpTopic && screen !== 'help' && <Help bridge={store.bridge} initialTopic={helpTopic} onClose={() => setHelpTopic(null)}/>}
     {store.error && screen !== 'note' && <div className="global-error" role="alert"><Icon name="close" size={15}/><span>{store.error}</span><button onClick={() => void store.request('snapshot').catch(() => undefined)}>다시 확인</button></div>}

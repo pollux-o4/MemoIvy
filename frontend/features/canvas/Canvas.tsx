@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/Icon';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
@@ -40,7 +41,7 @@ const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${
 const MAX_DEPTH = 3;
 
 /** 캔버스 화면 조립: 범위·선택·카메라·명령·포인터 훅을 묶고 화면 부품에 전달한다. */
-export function Canvas({ store, scope, onOpenNote, onBack, onHelp }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void }) {
+export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
   const [focusConnectList, setFocusConnectList] = useState(false);
@@ -157,7 +158,10 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp }: { store: Me
   // biome-ignore lint/a11y/noNoninteractiveTabindex: 캔버스 단축키를 받으려면 화면 자체가 포커스를 받아야 한다.
   // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
   return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
-    <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
+    <WindowHeader className="window-header canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<>
+      <button type="button" className="icon-button" title="설정" aria-label="설정" onClick={onOpenSettings}><Icon name="settings"/></button>
+      <CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>
+    </>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
     <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}${pointer.connectPicking ? ' picking' : ''}`} role="application" aria-label="캔버스"
