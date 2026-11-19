@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { App } from './App';
 import { createMockBridge, fixtureNoteIds } from '../shared/mock_bridge';
 import type { DesktopBridge, Note, Snapshot } from '../shared/engine_contract';
@@ -60,8 +60,12 @@ export const SaveFailure: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByText('저장됨');
-    const editor = canvasElement.querySelector<HTMLElement>('.cm-content[contenteditable="true"]');
-    if (!editor) throw new Error('Editor content surface was not mounted.');
+    // 편집기는 지연 로딩이라 저장 상태보다 늦게 붙는다.
+    const editor = await waitFor(() => {
+      const surface = canvasElement.querySelector<HTMLElement>('.cm-content[contenteditable="true"]');
+      if (!surface) throw new Error('Editor content surface was not mounted.');
+      return surface;
+    });
     await userEvent.click(editor);
     await userEvent.keyboard('\n상태 확인용 초안');
     await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
