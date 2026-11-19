@@ -1,4 +1,4 @@
-// 큰 캔버스 화면을 오가고 카드를 끈 뒤 GC 후 힙이 회복되는지 검사한다.
+// 큰 캔버스 화면을 오가며 카드를 펼치고 끈 뒤 GC 후 힙이 회복되는지 검사한다.
 // 사용: node scripts/test-memory.mjs [--no-build]
 import { chromium } from 'playwright';
 import { serveStorybook } from './lib/storybook-static.mjs';
@@ -24,6 +24,10 @@ try {
       await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
       switchTo('canvas');
       await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      const disclosure = document.querySelector('.canvas-note .preview-disclosure > button');
+      if (!(disclosure instanceof HTMLButtonElement)) throw new Error('펼침 미리보기 표본이 없습니다.');
+      disclosure.click();
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
       const card = document.querySelector('[data-note-id$="000000000021"]');
       const rect = card.getBoundingClientRect(); const x = rect.x + 80; const y = rect.y + 20;
       card.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, button: 0, buttons: 1, clientX: x, clientY: y }));
@@ -38,7 +42,7 @@ try {
   });
   const delta = (after - baseline) / baseline;
   const passed = delta <= LIMIT;
-  console.log(`${passed ? '✓' : '✗'} ${CYCLES}회 화면 전환·드래그 후 JS 힙: 시작 ${(baseline / 1048576).toFixed(1)}MB → 종료 ${(after / 1048576).toFixed(1)}MB · 변화 ${(delta * 100).toFixed(1)}% (기준 ±${LIMIT * 100}%)`);
+  console.log(`${passed ? '✓' : '✗'} ${CYCLES}회 화면 전환·펼침·드래그 후 JS 힙: 시작 ${(baseline / 1048576).toFixed(1)}MB → 종료 ${(after / 1048576).toFixed(1)}MB · 변화 ${(delta * 100).toFixed(1)}% (기준 ±${LIMIT * 100}%)`);
   process.exitCode = passed ? 0 : 1;
 } finally {
   await browser.close();

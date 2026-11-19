@@ -109,7 +109,8 @@ const canvasLargeSnapshot = (): Snapshot => {
   const notes: Note[] = Array.from({ length: 200 }, (_, n) => {
     const col = n % cols; const row = Math.floor(n / cols);
     const next = [col < cols - 1 ? n + 1 : (n + cols * 2) % 200, row < 9 ? n + cols : (n + 7) % 200].map(id);
-    return { id: id(n), text: `# 카드 ${n + 1}`, color: colors[n % colors.length], modified: now - n, canvas: { position: [80 + col * 340, 80 + row * 220], next, done: false, parent: null } };
+    const preview = n < 6 ? '\n- [ ] 검토\n- [ ] 초안\n- [x] 준비\n- [ ] 회신\n- [ ] 완료 확인' : '';
+    return { id: id(n), text: `# 카드 ${n + 1}${preview}`, color: colors[n % colors.length], modified: now - n, canvas: { position: [80 + col * 340, 80 + row * 220], next, done: false, parent: null } };
   });
   return { notes, assets: [], revision: 1, savedRevision: 1, preferences: {} };
 };
