@@ -1,6 +1,6 @@
 # MemoIvy 작업 지침
 
-- 문서 규칙: Codex 홈의 `init-rules`.
+- 문서 규칙: `docs/rules`에서 RULE ID로 검색.
 - 프로젝트 문서: `docs`에서 관심사로 검색.
 - 개발 검증: 운영 문서에서 `verification`으로 검색.
 - 데스크톱 이관 개발·검증: OPS-004로 검색.
