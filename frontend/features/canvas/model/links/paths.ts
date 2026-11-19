@@ -34,7 +34,7 @@ export function trimEnd(anchor: Anchor, length = ARROW_LENGTH): CanvasPoint {
 }
 
 /** 바깥 방향으로 남은 거리(뒤쪽이면 음수)에 맞는 베지어 손잡이 길이. 앞쪽은 절반, 뒤쪽은 돌아 나올 만큼만 완만하게 늘린다. */
-export function controlOffset(ahead: number): number {
+function controlOffset(ahead: number): number {
   return ahead >= 0 ? Math.max(ahead * 0.5, 12) : Math.max(6.25 * Math.sqrt(-ahead), 12);
 }
 

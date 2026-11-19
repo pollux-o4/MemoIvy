@@ -3,7 +3,7 @@ import { bounds } from './motion';
 import { SNAP_PIXELS, type SnapGuide, snapRect } from './snap';
 
 /** 관성 속도를 잴 최근 포인터 표본 구간(ms). */
-export const COAST_WINDOW_MS = 120;
+const COAST_WINDOW_MS = 120;
 export type PointerSample = { x: number; y: number; at: number };
 
 /**
