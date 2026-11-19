@@ -183,12 +183,14 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   );
   const deleteSubject = deleteTarget.length === 1 ? store.notes.find((note) => note.id === deleteTarget[0]) : undefined;
   const hasProjects = store.notes.some((note) => note.canvas.project);
+  // 단축키는 화면 루트가 포커스를 받아 처리한다. application 역할은 보드에만 둬 제목 줄·도구 막대가 랜드마크로 남게 한다.
   // biome-ignore lint/a11y/noNoninteractiveTabindex: 캔버스 단축키를 받으려면 화면 자체가 포커스를 받아야 한다.
-  return <ProgressProvider notes={store.notes}><div className="canvas-screen" role="application" aria-label="캔버스" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
+  // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
+  return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
-    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}`} style={gridStyle(camera) as React.CSSProperties}
+    <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}`} role="application" aria-label="캔버스" style={gridStyle(camera) as React.CSSProperties}
       {...pointer.board}
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
