@@ -3,6 +3,7 @@
 const { app, BrowserWindow, dialog, ipcMain, shell, session } = require('electron');
 const windowKinds = require('./window_kinds.json');
 const fs = require('node:fs');
+const { absoluteDirectory, linuxDataHome, snapDataDirectory, legacyNotesPath: findLegacyNotes } = require('./data_paths.cjs');
 const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const { EngineTransport } = require('./engine_transport.cjs');
@@ -12,8 +13,9 @@ const { isSafeExternal, openExternal } = require('./external_links.cjs');
 function overrideDataPath() {
   const override = process.env.MEMOIVY_DATA_DIR;
   if (override === undefined) return undefined;
-  if (!path.isAbsolute(override) || path.resolve(override) === path.parse(override).root) throw new Error('MEMOIVY_DATA_DIR must be an absolute non-root path');
-  return path.resolve(override);
+  const directory = absoluteDirectory(override);
+  if (!directory) throw new Error('MEMOIVY_DATA_DIR must be an absolute non-root path');
+  return directory;
 }
 
 app.setName('MemoIvy');
@@ -23,7 +25,9 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('class', 'io.github.pollux_o4.MemoIvy');
 }
 const dataOverride = overrideDataPath();
-if (dataOverride) app.setPath('userData', path.join(dataOverride, 'electron-profile'));
+const snapDirectory = !dataOverride && process.platform === 'linux' ? snapDataDirectory(process.env) : undefined;
+const profileDirectory = dataOverride ?? snapDirectory;
+if (profileDirectory) app.setPath('userData', path.join(profileDirectory, 'electron-profile'));
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
@@ -45,32 +49,14 @@ let isQuitting = false;
 let quitApproved = false;
 
 function dataDirectory() {
-  if (dataOverride) return dataOverride;
-  if (process.platform === 'linux') {
-    const xdg = process.env.XDG_DATA_HOME;
-    if (xdg && path.isAbsolute(xdg)) return path.join(xdg, 'memoivy');
-    const home = process.env.HOME;
-    if (home && path.isAbsolute(home)) return path.join(home, '.local', 'share', 'memoivy');
-  }
-  if (process.platform === 'darwin') return path.join(app.getPath('appData'), 'MemoIvy');
-  return path.join(app.getPath('appData'), 'MemoIvy');
+  if (profileDirectory) return profileDirectory;
+  const linuxHome = process.platform === 'linux' && linuxDataHome(process.env);
+  return linuxHome ? path.join(linuxHome, 'memoivy') : path.join(app.getPath('appData'), 'MemoIvy');
 }
 
 function legacyNotesPath(dataDir) {
-  const candidates = [path.join(dataDir, 'notes.json')];
-  if (process.platform === 'linux') {
-    const xdg = process.env.XDG_DATA_HOME && path.isAbsolute(process.env.XDG_DATA_HOME)
-      ? process.env.XDG_DATA_HOME
-      : process.env.HOME && path.isAbsolute(process.env.HOME) ? path.join(process.env.HOME, '.local', 'share') : null;
-    if (xdg) candidates.push(path.join(xdg, 'linux-sticky-memo', 'notes.json'));
-    if (process.env.SNAP_USER_DATA && path.isAbsolute(process.env.SNAP_USER_DATA)) {
-      candidates.push(path.join(process.env.SNAP_USER_DATA, 'notes.json'));
-      candidates.push(path.join(process.env.SNAP_USER_DATA, 'memoivy', 'notes.json'));
-    }
-  }
-  return candidates.find((candidate) => {
-    try { return fs.lstatSync(candidate).isFile(); } catch { return false; }
-  });
+  // An explicit test or development directory must not discover real user data.
+  return findLegacyNotes(dataDir, dataOverride ? {} : process.env, process.platform, snapDirectory);
 }
 
 function engineExecutable() {
