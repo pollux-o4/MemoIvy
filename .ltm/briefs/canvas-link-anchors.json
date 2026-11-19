@@ -1,0 +1,835 @@
+{
+  "id": "canvas-link-anchors",
+  "title": "캔버스 마인드맵: 간선 연결점·모양·가지 초점·생각 잇기",
+  "revision": 74,
+  "updatedAt": "2026-11-19T10:31:46.522Z",
+  "sections": {
+    "purpose": [
+      {
+        "id": "i1-0",
+        "text": "간선이 카드 위치에 맞는 변과 점에 붙게 한다",
+        "detail": "- 카드가 어디에 있든 선이 자연스럽게 들어가고 나와요\n- [CanvasLinks의 폭 기준 분기를 중심 각도와 카드 비율 비교로 바꾼다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i2-0",
+        "text": "가지를 눌러 연결된 메모만 또렷하게 본다",
+        "detail": "- 관계가 많아도 한 가지의 흐름을 한눈에 읽어요\n- [선택 카드의 next 조상·자손 집합을 구해 나머지 카드와 간선을 흐리게 한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i34-0",
+        "text": "선 모양을 쓰임에 맞게 고르게 한다",
+        "detail": "- 마인드맵은 곡선, 순서도는 직각처럼 골라 써요\n- [linkStyle 설정으로 곡선·직선·직각 전환]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i51-0",
+        "text": "캔버스에서 마인드맵처럼 생각을 잇게 한다",
+        "detail": "- 연결과 프로젝트를 그대로 가지와 하위 맵으로 써요\n- [Note.canvas의 next를 가지로, project·parent를 서브그래프로 해석한다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "scopeIn": [
+      {
+        "id": "i3-0",
+        "text": "변 선택에 이력 유지를 둬 깜빡임을 막는다",
+        "detail": "- 경계 근처에서 연결점이 왔다 갔다 하지 않아요\n- [중심 벡터 기울기를 카드 대각선 기울기와 비교하고 직전 변에 여유 폭을 준다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i4-0",
+        "text": "같은 변의 간선을 나눠 겹치지 않게 한다",
+        "detail": "- 한 카드에서 여러 선이 나가도 각자 다른 점에서 나가요\n- [변별 간선을 상대 카드 좌표순 정렬 후 모서리 반경을 뺀 구간을 균등 분할한다]\n- [ELK·yEd의 포트 순서 배치 방식을 따른다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i5-0",
+        "text": "곡선은 변에 수직으로 들고 나게 한다",
+        "detail": "- 선이 카드에 비스듬히 꽂히지 않아요\n- [변 법선 방향 제어점, 굽힘 길이는 거리 비례에 하한을 둔다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i6-0",
+        "text": "화살촉을 선 굵기에 맞는 꺾쇠로 바꾼다",
+        "detail": "- 화살촉이 테두리에 딱 붙고 줌에도 비율이 맞아요\n- [marker를 stroke 기준 크기로, 선 끝을 화살촉 길이만큼 줄인다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i7-0",
+        "text": "가지 초점에서 나머지를 흐리게 한다",
+        "detail": "- 빈 곳을 누르면 원래대로 돌아와요\n- [초점 집합 밖 카드·간선 opacity를 낮추고 공용 펼침 모션 토큰으로 전환한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i8-0",
+        "text": "연결점 계산을 순수 함수 모듈로 뺀다",
+        "detail": "- 화면 부품은 그리기만 해요\n- [features/canvas/model에 link_anchors.ts를 두고 CanvasLinks는 결과만 그린다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "decision-focus-trigger",
+        "text": "카드를 선택하면 가지 초점이 켜진다",
+        "by": "me",
+        "confirmed": true
+      },
+      {
+        "id": "i24-0",
+        "text": "연결점은 변 위에서 상대 쪽으로 옮긴다",
+        "detail": "- 대각선 카드끼리도 가까운 쪽으로 이어져요\n- [변 위 점을 상대 중심 투영으로 정하고 둥근 모서리 밖으로 고정한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i25-0",
+        "text": "연결점은 자동으로만 정한다",
+        "detail": "- 사람은 이을 메모만 고르고 위치는 손대지 않아요\n- [연결점은 저장하지 않고 그릴 때마다 계산한다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i26-0",
+        "text": "선 모양을 곡선·직선·직각 중에서 고른다",
+        "detail": "- 캔버스 전체에 한 번에 적용돼요\n- [preferences의 linkStyle 값, 기본은 곡선]\n- [설정 화면과 캔버스 보기 메뉴 두 곳에서 바꾼다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i27-0",
+        "text": "직각 선은 꺾이는 곳을 둥글게 한다",
+        "detail": "- 순서도처럼 정돈되어 보여요\n- [React Flow smoothstep 방식: 포트 법선으로 나간 뒤 중간 축에서 꺾고 모서리를 반경으로 굴린다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i33-0",
+        "text": "서로 가리키는 두 간선은 벌려 그린다",
+        "detail": "- 오가는 두 선이 한 줄로 겹치지 않아요\n- [A에서 B, B에서 A 간선이 함께 있으면 법선 방향 반대 오프셋을 준다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i53-0",
+        "text": "정렬 메뉴에 마인드맵으로 배치를 더한다",
+        "detail": "- 흩어진 연결을 오른쪽으로 뻗는 가지 모양으로 놓아요\n- [선택 카드의 뿌리부터 next 트리 배치, 여러 부모면 첫 부모 기준]\n- [기존 alignment_actions에 항목 추가, 실행 취소로 원위치]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i54-0",
+        "text": "Tab과 Enter로 가지를 바로 만든다",
+        "detail": "- 생각하고 Tab, 다시 생각하는 흐름으로 써요\n- [카드 선택 중 Tab은 하위 연결 메모, Enter는 같은 부모의 형제 메모]\n- [새 카드는 부모 오른쪽에 놓고 바로 제목 입력 상태]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i55-0",
+        "text": "인스펙터 연결 칸에 가지 개요를 보인다",
+        "detail": "- 지금 보는 화면 단계의 가지만 들여쓰기로 보여요\n- [기존 InspectorLinks 자리 확장, 하위 프로젝트는 접힌 항목]\n- [항목 클릭은 캔버스 카드 선택과 가지 초점으로 이어진다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i56-0",
+        "text": "가지 개요에서 들여쓰기로 연결을 바꾼다",
+        "detail": "- 목록만으로도 가지를 다시 짤 수 있어요\n- [Tab은 위 형제 아래로, Shift+Tab은 한 단계 위로 next를 옮긴다]\n- [카드 위치는 그대로, useCanvasCommands로 저장·실행 취소]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i57-0",
+        "text": "프로젝트를 들어가지 않고 제자리에서 펼친다",
+        "detail": "- 하위 맵을 잠깐 엿보고 바로 접어요\n- [기존 펼침 버튼과 종이 더미 모션 재사용, 펼친 동안 주변 카드는 흐리게]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i69-0",
+        "text": "마우스로 카드 손잡이를 끌어 가지를 잇는다",
+        "detail": "- 단축키를 몰라도 손으로 마인드맵을 그려요\n- 누르면 하위 가지, 카드에 놓으면 연결, 빈 곳에 놓으면 새 가지\n- [카드 오른쪽 가운데 + 손잡이, 끄는 동안 같은 선 모양 미리보기와 새 카드 자리 표시]\n- [Esc로 취소, 손잡이는 올리거나 고르거나 포커스일 때만 보인다]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "scopeOut": [
+      {
+        "id": "i9-0",
+        "text": "간선이 카드를 피해 돌아가는 경로는 다루지 않는다",
+        "detail": "- 카드가 많아진 뒤 따로 검토해요\n- [다음 과업 후보: 격자 위 A* 맨해튼 라우팅 또는 libavoid 직교 라우팅]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i10-0",
+        "text": "연결과 프로젝트 데이터 구조는 바꾸지 않는다",
+        "detail": "- 저장 형식은 그대로예요\n- [Note.canvas의 next·parent·project 필드와 엔진 계약 변경 금지]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i30-0",
+        "text": "연결점을 사람이 옮기는 기능은 두지 않는다",
+        "detail": "- 자동 처리 뒤에도 불편이 남을 때 검토해요\n- [연결점 고정·저장 필드 추가 금지]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "constraints": [
+      {
+        "id": "i12-0",
+        "text": "모듈 공개 인터페이스는 바꾸지 않는다",
+        "detail": "- 바꿔야 하면 구현 전에 사용자에게 묻어요\n- [CanvasLinks props와 다른 모듈이 쓰는 export 유지]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i13-0",
+        "text": "모션은 공용 펼침 토큰을 쓴다",
+        "detail": "- 앱 전체 펼침과 같은 속도로 움직여요\n- [--disclosure-duration·--disclosure-ease 사용, 모션 줄이기 설정이면 즉시 전환]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i14-0",
+        "text": "프로젝트 경계를 넘는 간선은 점선을 유지한다",
+        "detail": "- 서브그래프 밖으로 이어진 선임을 알아봐요\n- [representative 투영 간선 direct=false의 점선 표현 유지]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i15-0",
+        "text": "테스트는 mise 영역 명령으로만 돌린다",
+        "detail": "- 사용자 화면에 창이 뜨지 않게 해요\n- [맨 cargo test 금지, 웹은 vitest 단위와 check:web, 화면 확인은 Storybook]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i28-0",
+        "text": "선 경로는 업계 표준 방식을 따른다",
+        "detail": "- 검증된 방식이라 낯설지 않아요\n- [곡선: 포트 법선 제어점 3차 베지어, React Flow getBezierPath 방식]\n- [직각: smoothstep 방식, 장애물 회피는 하지 않는다]\n- [직선: 두 연결점을 잇는 선분]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "decision-path-impl",
+        "text": "선 경로 함수는 표준 방식을 따라 직접 구현한다",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i58-0",
+        "text": "Tab은 카드를 선택했을 때만 가로챈다",
+        "detail": "- 평소의 포커스 이동을 해치지 않아요\n- [입력 중이거나 선택이 없으면 기본 Tab 동작 유지]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ],
+    "acceptance": [
+      {
+        "id": "i16-0",
+        "text": "1차: 연결점·경로 함수 단위 테스트가 통과한다",
+        "detail": "- 화면 없이 계산만 먼저 끝내요\n- [좌우·상하·대각 경계·한 변 다중 간선·양방향·역방향 경우를 vitest로 검증]\n- [곡선·직선·직각 경로 함수와 초점 집합 함수 포함, 순환 연결에서 멈추지 않음]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i17-0",
+        "text": "매 차수: 정적 점검이 모두 통과한다",
+        "detail": "- 차수를 마칠 때마다 확인하고 나눠 커밋해요\n- [mise run check:web 통과 후 관심사별 커밋]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i18-0",
+        "text": "2차: 캔버스에서 간선이 겹침 없이 보인다",
+        "detail": "- 한 카드에서 세 선이 서로 다른 점에서 나가요\n- [Screens/Window States Canvas·CanvasProjects 캡처로 확인]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i19-0",
+        "text": "2차: 카드를 끌어도 연결점이 깜빡이지 않는다",
+        "detail": "- 경계를 지나갈 때 한 번만 바뀌어요\n- [드래그 중 변 전환 횟수를 단위 테스트로 확인]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i32-0",
+        "text": "2차: 세 가지 선 모양이 모두 바르게 그려진다",
+        "detail": "- 설정을 바꾸면 모든 선이 바로 바뀌어요\n- [곡선·직선·직각 각각 Storybook 캡처로 확인]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i35-0",
+        "text": "2차: 가지 초점에서 연결된 메모만 또렷하다",
+        "detail": "- 빈 곳을 누르면 모두 다시 보여요\n- [Storybook에서 선택 전후 캡처로 확인]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i43-0",
+        "text": "4차: 계산 복잡도를 목표 안으로 맞춘다",
+        "detail": "- 카드가 많아도 계산이 느려지지 않아요\n- [인접 목록을 한 번 만들고 초점 집합은 노드·간선 수에 비례하게]\n- [연결점 배치는 간선 수 곱 로그 이내, 간선마다 전체 카드 탐색 금지]\n- [드래그 중에는 움직인 카드에 닿은 간선만 다시 계산]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i44-0",
+        "text": "4차: 큰 캔버스에서 프레임 예산을 지킨다",
+        "detail": "- 끌기와 초점 전환이 끊기지 않아요\n- 고르는 순간은 한 프레임까지만 밀려도 돼요\n- [카드 200·간선 400에서 드래그·전환 프레임 p95 16ms 이내, 선택 클릭 프레임 33ms 이내]\n- [mise run test:perf 헤드리스 측정, 전후 수치를 보고에 남긴다]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i45-0",
+        "text": "4차: 메모리 누수가 없다",
+        "detail": "- 오래 써도 앱이 무거워지지 않아요\n- [mise run test:memory: 화면 전환·드래그 50회 뒤 GC 힙 변화 10% 이내]\n- [ResizeObserver·rAF·포인터 리스너는 정리 함수에서 해제, 캐시는 크기 제한]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i46-0",
+        "text": "5차: 구조 점검 뒤 책임별로 나눈다",
+        "detail": "- 기능은 그대로고 고치기 쉬운 구조가 돼요\n- [SOLID·SSoT 위반을 찾아 정리, 카드 크기·모션 값은 한 곳에서만 정의]\n- [선 모양은 Strategy, 개요 편집은 기존 Command 흐름 재사용]\n- [연결점·경로·초점·배치 계산과 그리기 부품을 각각 분리]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i47-0",
+        "text": "5차: 리팩터링 뒤에도 모든 검사가 통과한다",
+        "detail": "- 구조만 바뀌고 동작은 같아요\n- [1~3차 테스트와 캡처 결과가 그대로이고 4차 수치가 나빠지지 않는다]\n- [mise run test:arch 통과]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i59-0",
+        "text": "3차: 마인드맵 기능이 실제 캔버스에서 동작한다",
+        "detail": "- 배치·Tab 가지·가지 개요·제자리 펼치기를 써 볼 수 있어요\n- [각 기능 Storybook 상호작용 스토리와 단위 테스트, 실행 취소 확인]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i60-0",
+        "text": "3차: 화면 단계마다 가지 개요가 따로 보인다",
+        "detail": "- 프로젝트 안에 들어가면 그 안의 가지만 보여요\n- [scope별 개요 계산 단위 테스트와 CanvasProjects 캡처]",
+        "by": "ai",
+        "confirmed": false
+      },
+      {
+        "id": "i70-0",
+        "text": "3차: 마우스로 가지를 만들고 잇는다",
+        "detail": "- 손잡이 누르기·빈 곳에 놓기·카드에 놓기가 모두 동작해요\n- [mise run test:e2e 캔버스 마우스 가지 시나리오와 previewAnchors 단위 테스트]",
+        "by": "ai",
+        "confirmed": false
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "id": "focus-trigger",
+      "section": "scopeIn",
+      "question": "가지 초점은 언제 켜질까?",
+      "why": "평소 캔버스가 얼마나 자주 흐려지는지 정한다",
+      "options": [
+        {
+          "id": "select",
+          "label": "카드 선택 때 항상",
+          "note": "바로 보이지만 선택마다 화면이 바뀌어요",
+          "text": "카드를 선택하면 가지 초점이 켜진다"
+        },
+        {
+          "id": "toggle",
+          "label": "독 버튼으로 켤 때만",
+          "note": "평소 화면은 그대로, 한 번 더 눌러야 해요",
+          "text": "독의 가지만 보기를 켰을 때만 초점이 동작한다"
+        }
+      ],
+      "recommended": "select",
+      "chosen": "select",
+      "chosenBy": "me"
+    },
+    {
+      "id": "path-impl",
+      "section": "constraints",
+      "question": "선 경로 계산을 어떻게 가져올까?",
+      "why": "의존성과 유지보수 부담을 정한다",
+      "options": [
+        {
+          "id": "own",
+          "label": "직접 구현",
+          "note": "수십 줄이고 의존성이 늘지 않아요",
+          "text": "선 경로 함수는 표준 방식을 따라 직접 구현한다"
+        },
+        {
+          "id": "xyflow",
+          "label": "xyflow 시스템 패키지",
+          "note": "검증됐지만 의존성이 하나 늘어요",
+          "text": "선 경로는 xyflow 시스템 패키지 함수를 쓴다"
+        }
+      ],
+      "recommended": "own",
+      "chosen": "own",
+      "chosenBy": "ai"
+    }
+  ],
+  "requests": [],
+  "changes": [
+    {
+      "revision": 74,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T10:31:46.522Z"
+    },
+    {
+      "revision": 73,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-19T10:31:46.465Z"
+    },
+    {
+      "revision": 72,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "4차: 메모리 누수가 없다"
+      },
+      "at": "2026-11-19T10:31:46.410Z"
+    },
+    {
+      "revision": 71,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "4차: 큰 캔버스에서 프레임 예산을 지킨다"
+      },
+      "at": "2026-11-19T10:31:46.358Z"
+    },
+    {
+      "revision": 70,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 마우스로 가지를 만들고 잇는다"
+      },
+      "at": "2026-11-19T10:31:26.281Z"
+    },
+    {
+      "revision": 69,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "마우스로 카드 손잡이를 끌어 가지를 잇는다"
+      },
+      "at": "2026-11-19T10:31:26.205Z"
+    },
+    {
+      "revision": 68,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T05:17:13.373Z"
+    },
+    {
+      "revision": 67,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "5차: 구조 점검 뒤 책임별로 나눈다"
+      },
+      "at": "2026-11-19T05:17:13.311Z"
+    },
+    {
+      "revision": 66,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "5차: 리팩터링 뒤에도 모든 검사가 통과한다"
+      },
+      "at": "2026-11-19T05:17:13.280Z"
+    },
+    {
+      "revision": 65,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "5차: 리팩터링 뒤에도 모든 검사가 통과한다"
+      },
+      "at": "2026-11-19T05:17:13.207Z"
+    },
+    {
+      "revision": 64,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "5차: 구조 점검 뒤 책임별로 나눈다"
+      },
+      "at": "2026-11-19T05:17:13.145Z"
+    },
+    {
+      "revision": 63,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "4차: 메모리 누수가 없다"
+      },
+      "at": "2026-11-19T05:17:13.114Z"
+    },
+    {
+      "revision": 62,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "4차: 큰 캔버스에서 프레임 예산을 지킨다"
+      },
+      "at": "2026-11-19T05:17:13.082Z"
+    },
+    {
+      "revision": 61,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "4차: 계산 복잡도를 목표 안으로 맞춘다"
+      },
+      "at": "2026-11-19T05:17:13.052Z"
+    },
+    {
+      "revision": 60,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 화면 단계마다 가지 개요가 따로 보인다"
+      },
+      "at": "2026-11-19T05:17:13.008Z"
+    },
+    {
+      "revision": 59,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 마인드맵 기능이 실제 캔버스에서 동작한다"
+      },
+      "at": "2026-11-19T05:17:12.919Z"
+    },
+    {
+      "revision": 58,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "Tab은 카드를 선택했을 때만 가로챈다"
+      },
+      "at": "2026-11-19T05:17:12.878Z"
+    },
+    {
+      "revision": 57,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "프로젝트를 들어가지 않고 제자리에서 펼친다"
+      },
+      "at": "2026-11-19T05:17:12.848Z"
+    },
+    {
+      "revision": 56,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "가지 개요에서 들여쓰기로 연결을 바꾼다"
+      },
+      "at": "2026-11-19T05:17:12.814Z"
+    },
+    {
+      "revision": 55,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "인스펙터 연결 칸에 가지 개요를 보인다"
+      },
+      "at": "2026-11-19T05:17:12.782Z"
+    },
+    {
+      "revision": 54,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "Tab과 Enter로 가지를 바로 만든다"
+      },
+      "at": "2026-11-19T05:17:12.698Z"
+    },
+    {
+      "revision": 53,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "정렬 메뉴에 마인드맵으로 배치를 더한다"
+      },
+      "at": "2026-11-19T05:17:12.641Z"
+    },
+    {
+      "revision": 52,
+      "by": "ai",
+      "event": {
+        "kind": "removeItem",
+        "text": "마인드맵 배치와 Tab 가지 추가는 다루지 않는다"
+      },
+      "at": "2026-11-19T05:17:12.610Z"
+    },
+    {
+      "revision": 51,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "캔버스에서 마인드맵처럼 생각을 잇게 한다"
+      },
+      "at": "2026-11-19T05:17:12.581Z"
+    },
+    {
+      "revision": 50,
+      "by": "ai",
+      "event": {
+        "kind": "setTitle",
+        "value": "캔버스 마인드맵: 간선 연결점·모양·가지 초점·생각 잇기"
+      },
+      "at": "2026-11-19T05:17:12.548Z"
+    },
+    {
+      "revision": 49,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T05:13:00.534Z"
+    },
+    {
+      "revision": 48,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "매 차수: 정적 점검이 모두 통과한다"
+      },
+      "at": "2026-11-19T05:13:00.464Z"
+    },
+    {
+      "revision": 47,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "4차: 리팩터링 뒤에도 모든 검사가 통과한다"
+      },
+      "at": "2026-11-19T05:13:00.417Z"
+    },
+    {
+      "revision": 46,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "4차: 구조 점검 뒤 책임별로 나눈다"
+      },
+      "at": "2026-11-19T05:13:00.364Z"
+    },
+    {
+      "revision": 45,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 메모리 누수가 없다"
+      },
+      "at": "2026-11-19T05:13:00.273Z"
+    },
+    {
+      "revision": 44,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 큰 캔버스에서 프레임 예산을 지킨다"
+      },
+      "at": "2026-11-19T05:13:00.177Z"
+    },
+    {
+      "revision": 43,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "3차: 계산 복잡도를 목표 안으로 맞춘다"
+      },
+      "at": "2026-11-19T05:13:00.120Z"
+    },
+    {
+      "revision": 42,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "2차: 가지 초점에서 연결된 메모만 또렷하다"
+      },
+      "at": "2026-11-19T05:13:00.082Z"
+    },
+    {
+      "revision": 41,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "2차: 세 가지 선 모양이 모두 바르게 그려진다"
+      },
+      "at": "2026-11-19T05:13:00.045Z"
+    },
+    {
+      "revision": 40,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "2차: 카드를 끌어도 연결점이 깜빡이지 않는다"
+      },
+      "at": "2026-11-19T05:12:45.623Z"
+    },
+    {
+      "revision": 39,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "2차: 캔버스에서 간선이 겹침 없이 보인다"
+      },
+      "at": "2026-11-19T05:12:45.533Z"
+    },
+    {
+      "revision": 38,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "1차: 연결점·경로 함수 단위 테스트가 통과한다"
+      },
+      "at": "2026-11-19T05:12:45.467Z"
+    },
+    {
+      "revision": 37,
+      "by": "ai",
+      "event": {
+        "kind": "analyzed"
+      },
+      "at": "2026-11-19T05:12:18.233Z"
+    },
+    {
+      "revision": 36,
+      "by": "ai",
+      "event": {
+        "kind": "reviewed"
+      },
+      "at": "2026-11-19T05:12:18.090Z"
+    },
+    {
+      "revision": 35,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "가지 초점에서 연결된 메모만 또렷하다"
+      },
+      "at": "2026-11-19T05:12:18.053Z"
+    },
+    {
+      "revision": 34,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "선 모양을 쓰임에 맞게 고르게 한다"
+      },
+      "at": "2026-11-19T05:12:18.019Z"
+    },
+    {
+      "revision": 33,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "서로 가리키는 두 간선은 벌려 그린다"
+      },
+      "at": "2026-11-19T05:12:09.810Z"
+    },
+    {
+      "revision": 32,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "세 가지 선 모양이 모두 바르게 그려진다"
+      },
+      "at": "2026-11-19T05:12:05.489Z"
+    },
+    {
+      "revision": 31,
+      "by": "ai",
+      "event": {
+        "kind": "decideRecommended",
+        "question": "선 경로 계산을 어떻게 가져올까?"
+      },
+      "at": "2026-11-19T05:12:05.451Z"
+    },
+    {
+      "revision": 30,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "연결점을 사람이 옮기는 기능은 두지 않는다"
+      },
+      "at": "2026-11-19T05:12:05.414Z"
+    },
+    {
+      "revision": 29,
+      "by": "ai",
+      "event": {
+        "kind": "editItem",
+        "text": "간선이 카드를 피해 돌아가는 경로는 다루지 않는다"
+      },
+      "at": "2026-11-19T05:12:05.379Z"
+    },
+    {
+      "revision": 28,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "선 경로는 업계 표준 방식을 따른다"
+      },
+      "at": "2026-11-19T05:12:05.343Z"
+    },
+    {
+      "revision": 27,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "직각 선은 꺾이는 곳을 둥글게 한다"
+      },
+      "at": "2026-11-19T05:12:05.304Z"
+    },
+    {
+      "revision": 26,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "선 모양을 곡선·직선·직각 중에서 고른다"
+      },
+      "at": "2026-11-19T05:12:05.270Z"
+    },
+    {
+      "revision": 25,
+      "by": "ai",
+      "event": {
+        "kind": "addItem",
+        "text": "연결점은 자동으로만 정한다"
+      },
+      "at": "2026-11-19T05:12:05.232Z"
+    }
+  ],
+  "analyzedRevision": 74,
+  "reviewedRevision": 73
+}

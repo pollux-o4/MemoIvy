@@ -1,0 +1,8 @@
+/* 앱 전체 스크롤바의 유일한 원본(UI-001, scrollbar_ssot 테스트가 강제). 바탕 없는 10px 자리에 4px 알약 손잡이. 손잡이는 늘 흐리게 보이고(부모 :hover로 숨기면 Chromium이 다시 그리지 않음), 올리면 6px로 굵고 진해진다.
+   표준 scrollbar-width/color를 쓰면 Chromium이 ::-webkit-scrollbar를 무시하므로 쓰지 않는다. */
+::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: color-mix(in srgb, var(--memoivy-text) 20%, transparent) padding-box; }
+::-webkit-scrollbar-thumb:hover { border-width: 2px; background-color: color-mix(in srgb, var(--memoivy-text) 38%, transparent); }
+::-webkit-scrollbar-thumb:active { border-width: 2px; background-color: color-mix(in srgb, var(--memoivy-text) 50%, transparent); }
+::-webkit-scrollbar-button { display: none; }

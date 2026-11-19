@@ -1,0 +1,332 @@
+use super::legacy::backup_path;
+use super::*;
+use crate::domain::hash;
+use crate::sqlite_store::Engine;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use serde_json::{json, Value};
+use uuid::Uuid;
+fn open() -> (tempfile::TempDir, Engine) {
+    let d = tempfile::tempdir().unwrap();
+    let e = Engine::open(d.path(), None).unwrap();
+    (d, e)
+}
+fn req(e: &mut Engine, op: &str, p: Value) -> ApiResult {
+    e.dispatch(op, &p)
+}
+#[test]
+fn create_conflict_and_reopen_persist_committed_revision() {
+    let (d, mut e) = open();
+    let s = e.snapshot().unwrap();
+    let out = req(
+        &mut e,
+        "create",
+        json!({"baseRevision":s.revision,"text":"persist me"}),
+    )
+    .unwrap();
+    assert_eq!(out["snapshot"]["revision"], 1);
+    let note_id = out["note"]["id"].as_str().unwrap();
+    let conflict = req(
+        &mut e,
+        "update",
+        json!({"baseRevision":0,"id":note_id,"text":"stale"}),
+    )
+    .unwrap_err();
+    assert_eq!(conflict.code, "CONFLICT");
+    assert!(conflict.snapshot.is_some());
+    drop(e);
+    let e = Engine::open(d.path(), None).unwrap();
+    let s = e.snapshot().unwrap();
+    assert_eq!(s.revision, 1);
+    assert_eq!(s.notes.len(), 1);
+    assert_eq!(s.notes[0].text, "persist me");
+}
+#[test]
+fn unrelated_note_and_preference_writes_do_not_conflict() {
+    let (_d, mut e) = open();
+    let a = req(&mut e, "create", json!({"baseRevision":0,"text":"a"})).unwrap();
+    let a_id = a["note"]["id"].as_str().unwrap().to_owned();
+    let b = req(&mut e, "create", json!({"baseRevision":1,"text":"b"})).unwrap();
+    let b_id = b["note"]["id"].as_str().unwrap().to_owned();
+    req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":2,"key":"autoPrune","value":true}),
+    )
+    .unwrap();
+    let updated = req(
+        &mut e,
+        "update",
+        json!({"baseRevision":1,"id":a_id,"text":"a updated"}),
+    )
+    .unwrap();
+    assert_eq!(updated["note"]["text"], "a updated");
+    let other_pref = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":2,"key":"expandedNotes","value":[b_id]}),
+    )
+    .unwrap();
+    assert_eq!(
+        other_pref["snapshot"]["preferences"]["expandedNotes"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let stale_pref = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":2,"key":"autoPrune","value":false}),
+    )
+    .unwrap_err();
+    assert_eq!(stale_pref.code, "CONFLICT");
+    assert!(stale_pref.snapshot.is_some());
+    let stale = req(
+        &mut e,
+        "update",
+        json!({"baseRevision":1,"id":a_id,"text":"lost draft"}),
+    )
+    .unwrap_err();
+    assert_eq!(stale.code, "CONFLICT");
+    assert!(stale.snapshot.is_some());
+}
+#[test]
+fn schema_v1_migrates_existing_note_revision_conservatively() {
+    let (d, mut e) = open();
+    let out = req(&mut e, "create", json!({"baseRevision":0,"text":"stored"})).unwrap();
+    let id = out["note"]["id"].as_str().unwrap().to_owned();
+    e.db.execute_batch(
+        "DROP TABLE note_revisions; DROP TABLE preference_revisions; PRAGMA user_version=1;",
+    )
+    .unwrap();
+    drop(e);
+    let e = Engine::open(d.path(), None).unwrap();
+    let s = e.snapshot().unwrap();
+    assert_eq!(s.note_revisions[&id], 1);
+    assert_eq!(
+        e.db.query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap(),
+        2
+    );
+}
+#[test]
+fn legacy_import_backup_and_invalid_import_preserve_source() {
+    let (d, mut e) = open();
+    let legacy = d.path().join("notes.json");
+    let id = Uuid::new_v4();
+    let source = format!(r#"[{{"id":"{id}","text":"old","color":"yellow","modified":1}}]"#);
+    fs::write(&legacy, &source).unwrap();
+    let s = e.import_legacy(&legacy).unwrap();
+    assert_eq!(s.notes.len(), 1);
+    assert_eq!(fs::read(backup_path(&legacy)).unwrap(), source.as_bytes());
+    assert_eq!(fs::read(&legacy).unwrap(), source.as_bytes());
+    assert_eq!(
+        e.import_legacy(&legacy).unwrap_err().code,
+        "IMPORT_REJECTED"
+    );
+}
+#[test]
+fn legacy_import_auto_and_manual_preserve_notes_attachments_and_preferences_on_reopen() {
+    let d = tempfile::tempdir().unwrap();
+    let legacy = d.path().join("notes.json");
+    let note_id = Uuid::new_v4();
+    let bytes = b"\x89PNG\r\n\x1a\nsynthetic";
+    let id = hash(bytes);
+    let text = format!("![x](asset:{id})");
+    let source =
+        format!(r#"[{{"id":"{note_id}","text":"{text}","color":"yellow","modified":42}}]"#);
+    fs::write(&legacy, &source).unwrap();
+    fs::create_dir(d.path().join("assets")).unwrap();
+    let attachment = d.path().join("assets").join(format!("{id}.png"));
+    fs::write(&attachment, bytes).unwrap();
+    fs::write(
+        d.path().join("assets.json"),
+        format!(
+            r#"{{"auto_prune":true,"assets":{{"{id}":{{"added":11,"last_note":"{note_id}"}}}}}}"#
+        ),
+    )
+    .unwrap();
+    fs::write(d.path().join("library.json"), format!(r#"["{note_id}"]"#)).unwrap();
+    fs::write(
+        d.path().join("navigation.json"),
+        format!(r#"{{"{note_id}":{{"count":3,"last":12}}}}"#),
+    )
+    .unwrap();
+    for auto_import in [true, false] {
+        let data = tempfile::tempdir().unwrap();
+        let discovery = auto_import.then(|| legacy.clone());
+        let mut e = Engine::open(data.path(), discovery.clone()).unwrap();
+        if !auto_import {
+            let result = req(&mut e, "importLegacy", json!({"path":legacy})).unwrap();
+            assert_eq!(result["snapshot"]["notes"][0]["text"], text);
+        }
+        assert_eq!(e.snapshot().unwrap().revision, 1);
+        drop(e);
+
+        let mut e = Engine::open(data.path(), discovery).unwrap();
+        let s = e.snapshot().unwrap();
+        assert_eq!(s.revision, 1);
+        assert_eq!(s.notes[0].text, text);
+        assert_eq!(s.assets.len(), 1);
+        assert_eq!(s.assets[0].added, 11);
+        assert_eq!(s.assets[0].used_by, vec![note_id.to_string()]);
+        assert_eq!(s.preferences["autoPrune"], true);
+        assert_eq!(s.preferences["expandedProjects"][0], note_id.to_string());
+        assert_eq!(
+            s.preferences["navigation"][note_id.to_string()]["lastVisited"],
+            12
+        );
+        let asset = req(&mut e, "readAsset", json!({"id":id})).unwrap();
+        assert_eq!(
+            asset,
+            json!({"mime":"image/png", "data":STANDARD.encode(bytes)})
+        );
+        assert_eq!(fs::read(&legacy).unwrap(), source.as_bytes());
+        assert_eq!(fs::read(backup_path(&legacy)).unwrap(), source.as_bytes());
+        assert_eq!(fs::read(&attachment).unwrap(), bytes);
+    }
+}
+#[test]
+fn failed_legacy_transaction_keeps_empty_database_and_verified_backup() {
+    let (d, mut e) = open();
+    let legacy = d.path().join("notes.json");
+    let id = Uuid::new_v4();
+    let source =
+        format!(r#"[{{"id":"{id}","text":"fail storage","color":"yellow","modified":1}}]"#);
+    fs::write(&legacy, &source).unwrap();
+    e.db.execute_batch("CREATE TRIGGER simulated_migration_failure BEFORE INSERT ON notes BEGIN SELECT RAISE(ABORT,'simulated migration failure'); END;").unwrap();
+    assert!(e.import_legacy(&legacy).is_err());
+    assert_eq!(e.snapshot().unwrap().revision, 0);
+    assert!(e.snapshot().unwrap().notes.is_empty());
+    assert_eq!(fs::read(&legacy).unwrap(), source.as_bytes());
+    assert_eq!(fs::read(backup_path(&legacy)).unwrap(), source.as_bytes());
+}
+#[test]
+fn legacy_import_retries_wait_for_source_lock_and_keep_it_until_close() {
+    let data = tempfile::tempdir().unwrap();
+    let source_dir = tempfile::tempdir().unwrap();
+    let legacy = source_dir.path().join("notes.json");
+    fs::write(&legacy, "[]").unwrap();
+    let writer = Engine::open(source_dir.path(), None).unwrap();
+    let mut e = Engine::open(data.path(), None).unwrap();
+    for _ in 0..2 {
+        assert_eq!(e.import_legacy(&legacy).unwrap_err().code, "LOCKED");
+    }
+    assert!(!backup_path(&legacy).exists());
+    drop(writer);
+
+    e.import_legacy(&legacy).unwrap();
+    assert!(Engine::open(source_dir.path(), None).is_err());
+}
+#[test]
+fn failed_validation_rolls_back_notes_and_revision() {
+    let (_d, mut e) = open();
+    let s = e.snapshot().unwrap();
+    let id = Uuid::new_v4().to_string();
+    let bad = req(
+        &mut e,
+        "create",
+        json!({"baseRevision":s.revision,"parent":id}),
+    )
+    .unwrap_err();
+    assert_eq!(bad.code, "INVALID_DATA");
+    let s = e.snapshot().unwrap();
+    assert_eq!(s.revision, 0);
+    assert!(s.notes.is_empty());
+}
+#[test]
+fn active_writer_lock_blocks_second_engine() {
+    let (d, _e) = open();
+    assert!(Engine::open(d.path(), None).is_err());
+}
+#[test]
+fn sqlite_write_failure_rolls_back_deleted_rows_and_revision() {
+    let (_d, mut e) = open();
+    let base = e.snapshot().unwrap().revision;
+    req(
+        &mut e,
+        "create",
+        json!({"baseRevision":base,"text":"keep me"}),
+    )
+    .unwrap();
+    e.db.execute_batch("CREATE TRIGGER simulated_storage_failure BEFORE INSERT ON notes WHEN json_extract(NEW.body,'$.text')='fail storage' BEGIN SELECT RAISE(ABORT,'simulated storage failure'); END;").unwrap();
+    let revision = e.snapshot().unwrap().revision;
+    assert!(req(
+        &mut e,
+        "create",
+        json!({"baseRevision":revision,"text":"fail storage"})
+    )
+    .is_err());
+    let s = e.snapshot().unwrap();
+    assert_eq!(s.revision, revision);
+    assert_eq!(s.notes.len(), 1);
+    assert_eq!(s.notes[0].text, "keep me");
+}
+#[test]
+fn preference_updates_are_revisioned_and_bounded() {
+    let (_d, mut e) = open();
+    let id = Uuid::new_v4().to_string();
+    let s = e.snapshot().unwrap();
+    let out = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":s.revision,"key":"expandedProjects","value":[id]}),
+    )
+    .unwrap();
+    assert_eq!(out["snapshot"]["revision"], 1);
+    assert_eq!(out["snapshot"]["preferences"]["expandedProjects"][0], id);
+    let bad = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":1,"key":"unknown","value":true}),
+    );
+    assert_eq!(bad.unwrap_err().code, "INVALID_PARAMS");
+}
+#[test]
+fn canvas_link_style_preference_accepts_known_shapes_and_rejects_others() {
+    let (_d, mut e) = open();
+    let saved = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":0,"key":"canvasLinkStyle","value":"straight"}),
+    )
+    .unwrap();
+    assert_eq!(
+        saved["snapshot"]["preferences"]["canvasLinkStyle"],
+        "straight"
+    );
+    let error = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":1,"key":"canvasLinkStyle","value":"zigzag"}),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "INVALID_PARAMS");
+}
+#[test]
+fn appearance_preference_accepts_known_choices_and_rejects_others() {
+    let (_d, mut e) = open();
+    let saved = req(
+        &mut e,
+        "preference",
+        json!({"baseRevision":0,"key":"appearance","value":{"theme":"dark","motion":"reduce"}}),
+    )
+    .unwrap();
+    assert_eq!(
+        saved["snapshot"]["preferences"]["appearance"]["theme"],
+        "dark"
+    );
+    for bad in [
+        json!({"theme":"sepia","motion":"system"}),
+        json!({"theme":"dark"}),
+        json!({"theme":"dark","motion":"system","extra":1}),
+    ] {
+        let error = req(
+            &mut e,
+            "preference",
+            json!({"baseRevision":1,"key":"appearance","value":bad}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "INVALID_PARAMS");
+    }
+}

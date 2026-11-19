@@ -1,0 +1,67 @@
+/* 온보딩 전용 표면. 색·글자는 앱 토큰(shared/tokens.css)만 쓴다. */
+.dsb {
+  display: grid;
+  align-content: start;
+  gap: 40px;
+  /* 앱 셸이 body 스크롤을 막으므로 온보딩이 직접 스크롤한다. 본문 폭은 1040px. */
+  height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 40px max(16px, calc((100% - 1040px) / 2));
+  background: var(--memoivy-bg);
+  color: var(--memoivy-text);
+}
+.dsb :is(h1, h2, h3, p) { margin: 0; }
+.dsb-hero { display: grid; gap: 6px; }
+.dsb-hero h1 { font-size: 2em; font-weight: 700; letter-spacing: -.02em; }
+.dsb-eyebrow { color: var(--memoivy-muted); font-size: var(--font-caption); font-weight: 700; letter-spacing: .14em; }
+.dsb-muted { color: var(--memoivy-muted); font-size: var(--font-meta); }
+
+.dsb-chapter { display: grid; gap: 14px; }
+.dsb-chapter > header { display: grid; gap: 2px; }
+.dsb-chapter > header h2 { font-size: 1.3em; }
+
+.dsb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dsb-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--memoivy-hairline);
+  border-radius: 12px;
+  background: var(--memoivy-surface);
+}
+.dsb-card :is(h2, h3) { font-size: var(--font-title); }
+.dsb-card ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.dsb-card li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--font-meta); }
+.dsb code { font-family: ui-monospace, monospace; font-size: var(--font-caption); }
+
+/* 갈림길: 할 일 → 묶음 링크 → 코드 위치 */
+.dsb-routes .dsb-card { gap: 6px; }
+.dsb-routes a { color: var(--memoivy-accent); font-weight: 600; text-decoration: none; }
+.dsb-routes a:hover { text-decoration: underline; }
+.dsb-routes a:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: 2px; border-radius: 4px; }
+.dsb-routes code { color: var(--memoivy-muted); }
+
+.dsb-id { flex-shrink: 0; color: var(--memoivy-accent); font-family: ui-monospace, monospace; font-size: var(--font-caption); }
+.dsb-value { min-width: 0; margin-left: auto; overflow: hidden; color: var(--memoivy-muted); text-overflow: ellipsis; white-space: nowrap; }
+
+/* 창 지도: 기본 크기를 비율대로 그린다. */
+.dsb-window { height: 64px; display: flex; align-items: end; }
+.dsb-window span { display: block; border: 1px solid var(--memoivy-hairline); border-radius: 6px; background: var(--memoivy-raised); }
+
+/* 토큰 견본: 라이트·다크를 나란히 둔다. */
+.dsb-swatch { display: inline-flex; flex-shrink: 0; gap: 2px; }
+.dsb-swatch span { width: 16px; height: 16px; border: 1px solid var(--memoivy-hairline); border-radius: 4px; }
+.dsb-card li.dsb-token { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+.dsb-token > :first-child { grid-row: span 2; }
+.dsb-token code, .dsb-token .dsb-value { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
