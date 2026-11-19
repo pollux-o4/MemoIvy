@@ -20,7 +20,8 @@
 | 표시·입력 상태 | live_editor의 tags / `EditorTags`, layout / `LayoutState`, markers / `MarkerWidgets`, input / `InputState`·`PointerState` |
 | 원문 수정 | list_edit의 `handle`·`continue_after_commit`, formatting, `source_slice` |
 | 메모 이미지 | live_editor media의 `MediaHost`·`sync_images`·`place_images`, block의 `Block`, import의 `connect_import`·`placement`·`insert_lines`·`move_image`·`drop_target` |
-| 링크 카드 | link_preview의 `CardState`·`pointer_left`·`caret_left`; card의 위젯 구성·`fill` |
+| Electron 링크 카드 | MarkdownSurface의 `linkPreview`, 주소 범위·HTTPS 보정은 link_model, 표시·인라인 입력은 `LinkPreviewCard`, 타이머·문서 변경·좌표 측정은 link_preview |
+| GTK 링크 카드 | link_preview의 `CardState`·`pointer_left`·`caret_left`; card의 위젯 구성·`fill` |
 
 ## 파일 화면·공용 위젯
 

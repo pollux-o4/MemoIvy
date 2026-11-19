@@ -2,7 +2,9 @@
   position: absolute;
   z-index: 50;
   box-sizing: border-box;
-  width: min(360px, calc(100% - 16px));
+  --link-preview-width: min(360px, calc(100% - 16px));
+  width: var(--link-preview-width);
+  left: clamp(8px, var(--link-preview-anchor, 8px), calc(100% - 8px - var(--link-preview-width)));
   padding: 12px;
   border: 1px solid var(--memoivy-hairline);
   border-radius: 10px;

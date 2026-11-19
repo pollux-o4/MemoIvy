@@ -506,6 +506,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         const { snapshot } = await window.memoivy.request('snapshot');
         return snapshot?.notes.find((note) => note.id === id)?.text;
       }, id)).toBe(text.replace('(naver.com)', '(https://naver.com/news)'));
+      await content.getByText('링크 확인', { exact: true }).hover();
+      await content.getByText('네이버', { exact: true }).hover();
+      await preview.getByText('naver.com/news', { exact: true }).waitFor({ timeout: 3_000 });
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

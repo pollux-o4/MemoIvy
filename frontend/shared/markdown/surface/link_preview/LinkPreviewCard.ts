@@ -3,7 +3,6 @@ import { linkInfo, type LinkTarget } from './link_model';
 export class LinkPreviewCard {
   readonly element = document.createElement('section');
   onOpen: (url: string) => void = () => {};
-  onCopy: (url: string) => void = () => {};
   onSave: (link: LinkTarget, value: string) => void = () => {};
   onCancel: () => void = () => {};
 
@@ -13,7 +12,7 @@ export class LinkPreviewCard {
   private readonly warning = document.createElement('p');
   private readonly open = button('열기');
   private readonly copy = button('주소 복사');
-  readonly edit = button('주소 수정');
+  private readonly edit = button('주소 수정');
   private readonly input = document.createElement('input');
   private readonly actions = document.createElement('div');
   private readonly editActions = document.createElement('div');
@@ -35,7 +34,6 @@ export class LinkPreviewCard {
       if (!this.link) return;
       try {
         await navigator.clipboard.writeText(this.link.url);
-        this.onCopy(this.link.url);
         this.copy.textContent = '복사됨';
         this.copy.classList.add('confirmed');
         window.setTimeout(() => { this.copy.textContent = '주소 복사'; this.copy.classList.remove('confirmed'); }, 1200);
@@ -84,7 +82,18 @@ export class LinkPreviewCard {
     this.actions.hidden = editing;
   }
 
-  update(link: LinkTarget) {
+  showAt(left: number, top: number) {
+    this.element.style.setProperty('--link-preview-anchor', `${left}px`);
+    this.element.style.top = `${top}px`;
+    this.element.hidden = false;
+  }
+
+  hide() {
+    this.element.hidden = true;
+    this.setEditing(false);
+  }
+
+  update(link: LinkTarget, editable: boolean) {
     this.link = link;
     const info = linkInfo(link.url, link.label);
     this.badge.textContent = info.badge;
@@ -95,7 +104,7 @@ export class LinkPreviewCard {
     this.warning.textContent = info.warning;
     this.warning.hidden = !info.warning;
     this.open.textContent = info.mail ? '메일 쓰기' : '열기';
-    this.edit.hidden = false;
+    this.edit.hidden = !editable;
     this.copy.textContent = '주소 복사';
     this.copy.classList.remove('confirmed');
   }

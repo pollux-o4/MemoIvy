@@ -8,14 +8,14 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
   return ViewPlugin.fromClass(class {
     private readonly card = new LinkPreviewCard();
     private shown: LinkTarget | null = null;
-    private pending: number | undefined;
+    private pending: { link: LinkTarget; timer: number } | undefined;
     private hideTimer: number | undefined;
     private pointerOverCard = false;
     private dismissed: LinkTarget | null = null;
     private readonly pointerMove = (event: PointerEvent) => {
-      if (this.pointerOverCard || (this.shown && this.card.editing)) return;
+      if (this.pointerOverCard || this.card.editing) return;
       const position = this.view.posAtCoords({ x: event.clientX, y: event.clientY });
-      this.track(position, 350, 'pointer');
+      this.track(position, 'pointer');
     };
     private readonly pointerLeave = () => {
       this.clearPending();
@@ -54,14 +54,12 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     }
 
     update(update: ViewUpdate) {
-      if (this.shown && this.card.editing) {
-        if (update.docChanged || !update.state.facet(EditorView.editable)) this.hide();
-        else if (update.geometryChanged) this.place();
+      if (update.docChanged || (this.card.editing && !update.state.facet(EditorView.editable))) {
+        this.hide();
         return;
       }
-      if (update.docChanged || update.selectionSet) {
-        const position = this.view.state.selection.main.head;
-        this.track(position, 600, 'caret');
+      if (!this.card.editing && update.selectionSet) {
+        this.track(update.state.selection.main.head, 'caret');
       }
       if (update.geometryChanged) this.place();
     }
@@ -84,7 +82,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     private readonly onCardLeave = () => { this.pointerOverCard = false; this.scheduleHide(); };
     private readonly onScroll = () => this.place();
 
-    private track(position: number | null, delay: number, source: 'pointer' | 'caret') {
+    private track(position: number | null, source: 'pointer' | 'caret') {
       if (position === null) return;
       const link = findLinkAt(this.view.state.doc.toString(), position);
       if (!link) {
@@ -102,19 +100,22 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
         this.clearHide();
         return;
       }
+      if (this.pending && sameLink(this.pending.link, link)) return;
       this.clearPending();
-      const quickSwitch = source === 'pointer' && Boolean(this.shown);
-      this.pending = window.setTimeout(() => {
-        this.pending = undefined;
-        this.show(link);
-      }, quickSwitch ? 60 : delay);
+      const delay = source === 'caret' ? 600 : this.shown ? 60 : 350;
+      this.pending = {
+        link,
+        timer: window.setTimeout(() => {
+          this.pending = undefined;
+          this.show(link);
+        }, delay),
+      };
     }
 
     private show(link: LinkTarget) {
       this.shown = link;
       this.clearHide();
-      this.card.update(link);
-      this.card.edit.hidden = !this.view.state.facet(EditorView.editable);
+      this.card.update(link, this.view.state.facet(EditorView.editable));
       this.place();
     }
 
@@ -127,15 +128,10 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
           const coords = view.coordsAtPos(this.shown.from);
           if (!coords) return null;
           const bounds = view.dom.getBoundingClientRect();
-          const width = Math.min(360, bounds.width - 16);
-          const left = Math.max(8, Math.min(coords.left - bounds.left, bounds.width - width - 8));
-          return { left, top: coords.bottom - bounds.top };
+          return { left: coords.left - bounds.left, top: coords.bottom - bounds.top };
         },
         write: (position) => {
-          if (!position) return;
-          this.card.element.style.left = `${position.left}px`;
-          this.card.element.style.top = `${position.top}px`;
-          this.card.element.hidden = false;
+          if (position) this.card.showAt(position.left, position.top);
         },
       });
     }
@@ -157,12 +153,16 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.clearHide();
       this.shown = null;
       this.pointerOverCard = false;
-      this.card.element.hidden = true;
+      this.card.hide();
     }
 
-    private clearPending() { if (this.pending !== undefined) window.clearTimeout(this.pending); this.pending = undefined; }
+    private clearPending() {
+      if (this.pending) window.clearTimeout(this.pending.timer);
+      this.pending = undefined;
+    }
+
     private clearHide() { if (this.hideTimer !== undefined) window.clearTimeout(this.hideTimer); this.hideTimer = undefined; }
   });
 }
 
-function sameLink(a: LinkTarget, b: LinkTarget) { return a.from === b.from && a.to === b.to; }
+function sameLink(a: LinkTarget, b: LinkTarget) { return a.from === b.from && a.to === b.to && a.url === b.url && a.label === b.label; }
