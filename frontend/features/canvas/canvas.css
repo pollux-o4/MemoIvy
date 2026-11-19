@@ -175,7 +175,7 @@
 /* 들여쓰기는 편집기와 같은 규칙: 깊이마다 표식 칸 + 간격 한 칸. */
 .canvas-screen .canvas-note .canvas-checklist-preview li { padding-left: calc(var(--depth, 0) * var(--preview-gutter)); }
 .canvas-screen .canvas-note .canvas-preview-reveal { display: grid; place-items: center; margin-top: 1px; }
-.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); }
+.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
 .canvas-screen .canvas-note .canvas-preview-reveal .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
 /* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */
 /* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */
@@ -184,16 +184,18 @@
 .canvas-screen .canvas-note .canvas-checklist-preview small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
 .canvas-screen .canvas-project-folder { display: inline-grid; flex: none; color: var(--note-text); opacity: .8; }
 /* 가지 손잡이: 카드 오른쪽 가운데. 올리거나 고르거나 키보드로 들어오면 보인다. 누르면 하위 가지, 끌면 잇기. */
-.canvas-screen .card-branch { position: absolute; top: 50%; right: 6px; z-index: 1; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #fff; background: var(--canvas-accent); box-shadow: 0 1px 3px var(--canvas-shadow); cursor: crosshair; opacity: 0; transform: translateY(-50%) scale(.85); transition: opacity var(--disclosure-duration) var(--disclosure-ease), transform var(--disclosure-duration) var(--disclosure-ease); }
-.canvas-screen .canvas-note:is(:hover, .selected, :focus-within) .card-branch { opacity: 1; transform: translateY(-50%) scale(1); }
-.canvas-screen .card-branch:hover { transform: translateY(-50%) scale(1.12); }
+/* 버튼의 판정 영역은 고정하고, 안쪽 그림만 확대한다. */
+.canvas-screen .card-branch { position: absolute; top: 50%; right: 6px; z-index: 1; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: crosshair; opacity: 0; transform: translateY(-50%); transition: opacity var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .card-branch-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; color: #fff; background: var(--canvas-accent); box-shadow: 0 1px 3px var(--canvas-shadow); pointer-events: none; transform: scale(var(--branch-scale, .85)); transition: transform var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .canvas-note:is(:hover, .selected, :focus-within) .card-branch { opacity: 1; --branch-scale: 1; }
+.canvas-screen .canvas-note .card-branch:hover { --branch-scale: 1.12; }
 .canvas-screen .card-branch:focus-visible { opacity: 1; outline: 2px solid var(--canvas-surface); outline-offset: 1px; }
 .canvas-screen .canvas-panning .card-branch, .canvas-screen .canvas-board.panning .card-branch { opacity: 0; }
 .canvas-screen .canvas-note.link-target { outline-color: var(--canvas-accent); }
 .canvas-screen .canvas-connect-preview { position: absolute; top: 0; left: 0; z-index: 3; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 .canvas-screen .canvas-connect-preview path { fill: none; stroke: var(--canvas-accent); stroke-dasharray: 6 5; }
 .canvas-screen .canvas-connect-preview .connect-ghost { fill: color-mix(in srgb, var(--canvas-accent) 8%, transparent); stroke: color-mix(in srgb, var(--canvas-accent) 60%, transparent); stroke-dasharray: 5 4; }
-@media (prefers-reduced-motion: reduce) { .canvas-screen .card-branch { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .canvas-screen :is(.card-branch, .card-branch-face) { transition: none; } }
 .canvas-screen .card-enter { width: 18px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; color: var(--note-text); background: transparent; cursor: pointer; }
 .canvas-screen .card-enter:hover { color: var(--canvas-accent); }
 .canvas-screen .selection-box { position: absolute; z-index: 5; border: 1px solid var(--canvas-accent); background: rgba(10, 108, 255, .1); pointer-events: none; }

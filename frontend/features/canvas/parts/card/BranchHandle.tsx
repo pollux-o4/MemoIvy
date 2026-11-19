@@ -11,6 +11,6 @@ export function BranchHandle({ title, onConnectStart, onAdd }: { title: string; 
     onPointerDown={(event) => { if (event.button !== 0) return; event.stopPropagation(); onConnectStart(event); }}
     // 마우스 누르기는 보드가 포인터를 잡아 처리하고, 여기 click은 키보드(Enter·Space)에서만 온다.
     onClick={(event) => { event.stopPropagation(); if (event.detail === 0) onAdd(); }}>
-    <Icon name="plus" size={14}/>
+    <span className="card-branch-face"><Icon name="plus" size={14}/></span>
   </button>;
 }

@@ -391,6 +391,17 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await canvas.getByRole('button', { name: '전체 보기' }).click();
       await expect.poll(zoomOf).not.toBe(initial);
       await settle(canvas);
+      // 포인터가 움직여도 접힌 카드의 조작 영역은 같은 화면 좌표를 유지한다.
+      const branchHandle = checklist.locator('.card-branch');
+      const disclosure = checklist.locator('.canvas-preview-reveal .disclosure');
+      const controlBounds = async () => Promise.all([branchHandle.boundingBox(), disclosure.boundingBox()]);
+      const restingControls = await controlBounds();
+      await disclosure.hover();
+      await branchHandle.hover();
+      await branchHandle.evaluate(async (button) => {
+        await Promise.all(button.getAnimations({ subtree: true }).map((animation) => animation.finished));
+      });
+      expect(await controlBounds()).toEqual(restingControls);
       /**
        * 화면 안의 화살촉 끝이 카드·종이 더미 사각형 안이면 가린 것(선 층은 카드 아래라 겹치면 안 보인다).
        * 종이 더미는 pointer-events가 없어 elementFromPoint로는 못 잡으므로 사각형으로 판정한다.
