@@ -20,6 +20,12 @@ test('lines indented by the marker width continue the item and hide their indent
   expect(scan('- 시프트로 바로\n  여기서 이어짐\n본문')).toEqual([[[0, 0], [0, 2]], [[0, 0], [0, 2]], []]);
 });
 
+test('a blank continuation line has the same alignment before the first composition input', () => {
+  expect(scan('- [ ] 할 일\n      \n      한글\n\n본문')).toEqual([
+    [[0, 0], [0, 6]], [[0, 0], [0, 6]], [[0, 0], [0, 6]], [], [],
+  ]);
+});
+
 test('a line indented less than the marker width is not a continuation', () => {
   expect(scan('- [ ] 할 일\n  덜 들여씀')).toEqual([[[0, 0], [0, 6]], []]);
 });

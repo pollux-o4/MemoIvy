@@ -114,9 +114,11 @@ export function createListScanner() {
         { from: line.from, to: line.from + item.markerEnd, value: Decoration.replace({ widget }) },
       ];
     }
-    if (!line.text.trim()) return [];
     const indent = leadingSpaces(line.text);
-    if (!current || indent < current.contentIndent) { current = null; return []; }
+    if (!current || indent < current.contentIndent) {
+      if (line.text.trim()) current = null;
+      return [];
+    }
     return [
       { from: line.from, to: line.from, value: lineStyle(current.depth) },
       { from: line.from, to: line.from + current.contentIndent, value: Decoration.replace({}) },
