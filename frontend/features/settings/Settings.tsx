@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { APPEARANCE_KEY, readAppearance, type AppearancePreference, type MotionChoice, type ThemeChoice } from '../../shared/appearance';
+import { LINK_STYLE_KEY, LINK_STYLE_OPTIONS, readLinkStyle } from '../../shared/link_style';
 import type { MemoStore } from '../../shared/useMemoivy';
 import './settings.css';
 
@@ -12,6 +13,7 @@ export function Settings({ store, onClose }: { store: MemoStore; onClose: () => 
   const saved = readAppearance(store.snapshot?.preferences);
   const [draft, setDraft] = useState<AppearancePreference | null>(null);
   const appearance = draft ?? saved;
+  const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const update = (patch: Partial<AppearancePreference>) => {
     const next = { ...appearance, ...patch };
     setDraft(next);
@@ -24,6 +26,9 @@ export function Settings({ store, onClose }: { store: MemoStore; onClose: () => 
       <Section title="화면">
         <Row label="테마" hint="시스템은 운영체제의 라이트·다크 설정을 따릅니다."><Segmented name="테마" options={themeOptions} value={appearance.theme} onChange={(theme) => update({ theme })}/></Row>
         <Row label="모션 줄이기" hint="켜면 확대·전환 애니메이션 대신 결과만 바로 보여 줍니다."><Segmented name="모션 줄이기" options={motionOptions} value={appearance.motion} onChange={(motion) => update({ motion })}/></Row>
+      </Section>
+      <Section title="캔버스">
+        <Row label="연결선 모양" hint="연결점은 카드 위치에 맞춰 자동으로 정해집니다."><Segmented name="연결선 모양" options={LINK_STYLE_OPTIONS} value={linkStyle} onChange={(value) => void store.request('preference', { key: LINK_STYLE_KEY, value }).catch(() => undefined)}/></Row>
       </Section>
       <Section title="기록">
         <Row label="백업" hint="메모와 첨부 파일을 한 파일로 저장합니다."><button className="secondary-button" disabled>준비 중</button></Row>
