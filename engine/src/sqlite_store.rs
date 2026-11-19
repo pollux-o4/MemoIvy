@@ -6,7 +6,9 @@ mod schema;
 mod tests;
 
 use crate::{domain::Snapshot, error::ApiResult};
-pub(crate) use queries::{notes_tx, persist_all, reconcile_asset_usage, serialize_body};
+pub(crate) use queries::{
+    notes_referencing_asset, notes_tx, persist_all, reconcile_asset_usage, serialize_body,
+};
 pub(crate) use revision::{ensure_note_fresh, ensure_preference_fresh};
 use rusqlite::{Connection, OptionalExtension};
 #[cfg(unix)]

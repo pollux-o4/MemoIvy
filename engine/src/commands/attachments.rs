@@ -2,7 +2,7 @@ use super::shared::*;
 use crate::{
     domain::*,
     error::{err, internal, ApiResult},
-    sqlite_store::{notes_tx, Engine},
+    sqlite_store::{notes_referencing_asset, notes_tx, Engine},
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rusqlite::{params, OptionalExtension};
@@ -69,7 +69,7 @@ impl Engine {
         let id = asset_id(p)?;
         let (_, s) = self.write_tx(Some(base), |tx| {
             let ns = notes_tx(tx)?;
-            if ns.iter().any(|n| n.text.contains(&format!("asset:{id}"))) {
+            if notes_referencing_asset(&ns, &id).next().is_some() {
                 return Err(err("IN_USE", "Attachment is used by a note"));
             }
             let count = tx

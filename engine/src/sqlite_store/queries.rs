@@ -82,9 +82,7 @@ fn assets(engine: &Engine, notes: &[Note]) -> Result<Vec<Asset>, String> {
     for row in rows {
         let (id, name, mime, bytes, added, last_note, unused_since) =
             row.map_err(|e| e.to_string())?;
-        let used_by = notes
-            .iter()
-            .filter(|n| n.text.contains(&format!("asset:{id}")))
+        let used_by = notes_referencing_asset(notes, &id)
             .map(|n| n.id.clone())
             .collect();
         out.push(Asset {
@@ -99,6 +97,14 @@ fn assets(engine: &Engine, notes: &[Note]) -> Result<Vec<Asset>, String> {
         })
     }
     Ok(out)
+}
+
+pub(crate) fn notes_referencing_asset<'a>(
+    notes: &'a [Note],
+    id: &str,
+) -> impl Iterator<Item = &'a Note> {
+    let reference = format!("asset:{id}");
+    notes.iter().filter(move |note| note.text.contains(&reference))
 }
 
 pub(super) fn response_snapshot(engine: &Engine) -> ApiResult {
@@ -127,10 +133,7 @@ pub(super) fn prune_expired(engine: &mut Engine) -> ApiResult {
     let (_, snapshot) = super::revision::write_tx(engine, None, |tx| {
         let notes = notes_tx(tx)?;
         for id in &expired {
-            if notes
-                .iter()
-                .any(|n| n.text.contains(&format!("asset:{id}")))
-            {
+            if notes_referencing_asset(&notes, id).next().is_some() {
                 continue;
             }
             tx.execute("DELETE FROM assets WHERE id=?1", [id])
@@ -185,10 +188,7 @@ pub(crate) fn reconcile_asset_usage(tx: &Transaction<'_>) -> Result<(), ApiError
     let mut updates = Vec::new();
     for row in rows {
         let (id, last, unused) = row.map_err(internal)?;
-        let mut users: Vec<_> = notes
-            .iter()
-            .filter(|n| n.text.contains(&format!("asset:{id}")))
-            .collect();
+        let mut users: Vec<_> = notes_referencing_asset(&notes, &id).collect();
         users.sort_by_key(|n| std::cmp::Reverse(n.modified));
         if let Some(n) = users.first() {
             updates.push((id, Some(n.id.clone()), None))
