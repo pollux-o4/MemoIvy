@@ -6,7 +6,7 @@ import { serveStorybook } from './lib/storybook-static.mjs';
 
 const STORY = 'screens-window-states--canvas-large';
 /** 프레임 예산(ms). 60Hz 한 프레임 16.7ms 안에 그리기·합성 여유를 남긴다. */
-const BUDGET = { avg: 10, p95: 16 };
+const BUDGET = { avg: 10, p95: 16, click: 33 };
 /** 한 프레임 이동량이 앞뒤 프레임 평균의 이 배수를 넘으면 튐(끊김)으로 본다. */
 const JUMP_RATIO = 2.5;
 const RUNS = 3;
@@ -46,6 +46,18 @@ const scenario = (name, setup) => page.evaluate(async ({ name, setup, FRAMES }) 
       frame(i) { this.x += i % 60 < 30 ? 4 : -4; this.y += i % 40 < 20 ? 2 : -2; card.dispatchEvent(new PointerEvent('pointermove', { ...pointer, button: 0, buttons: 1, clientX: this.x, clientY: this.y })); },
       end() { card.dispatchEvent(new PointerEvent('pointerup', { ...pointer, button: 0, buttons: 0, clientX: this.x, clientY: this.y })); },
     },
+    // 사람이 고르는 속도(0.5초마다 한 번)로 다른 가지를 고르고, 클릭 프레임과 이어지는 흐림 전환 프레임을 모두 잰다.
+    focus: {
+      start() {},
+      frame(i) {
+        if (i % 30 !== 0) return;
+        const target = document.querySelector(`[data-note-id$="${String([0, 100, 1, 101][(i / 30) % 4]).padStart(12, '0')}"]`);
+        const r = target.getBoundingClientRect(); const x = r.x + 80; const y = r.y + 20;
+        target.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, button: 0, buttons: 1, clientX: x, clientY: y }));
+        target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, button: 0, buttons: 0, clientX: x, clientY: y }));
+      },
+      end() {},
+    },
   };
   const input = inputs[setup];
   const nextFrame = () => new Promise((done) => requestAnimationFrame(done));
@@ -67,24 +79,26 @@ const scenario = (name, setup) => page.evaluate(async ({ name, setup, FRAMES }) 
   // 튐: 한 프레임 이동량이 앞뒤 프레임 평균보다 얼마나 큰가. 스프링 가감속처럼 서서히 변하면 1 근처다.
   let jump = 0;
   for (let i = 1; i < steps.length - 1; i++) jump = Math.max(jump, steps[i] / Math.max((steps[i - 1] + steps[i + 1]) / 2, 0.5));
-  return { name, avg: work.reduce((a, b) => a + b, 0) / work.length, p95: sorted[Math.floor(sorted.length * 0.95)], jump, moved: steps.filter((step) => step > 0.01).length };
+  return { name, avg: work.reduce((a, b) => a + b, 0) / work.length, p95: sorted[Math.floor(sorted.length * 0.95)], max: sorted.at(-1), jump, moved: steps.filter((step) => step > 0.01).length };
 }, { name, setup, FRAMES });
 
-const scenes = [['휠 위아래 이동', 'wheel'], ['휠클릭 끌어 이동', 'pan'], ['Ctrl+휠 확대·축소', 'zoom'], ['카드 끌기', 'drag']];
+const scenes = [['휠 위아래 이동', 'wheel'], ['휠클릭 끌어 이동', 'pan'], ['Ctrl+휠 확대·축소', 'zoom'], ['카드 끌기', 'drag'], ['카드 선택·가지 초점 전환', 'focus']];
 let failed = false;
 for (const [name, setup] of scenes) {
   const runs = [];
   for (let k = 0; k < RUNS; k++) runs.push(await scenario(name, setup));
   // 부하에 흔들리는 측정이라 세 번 중 중앙값으로 판정한다.
   const mid = (key) => runs.map((r) => r[key]).sort((a, b) => a - b)[RUNS >> 1];
-  const result = { avg: mid('avg'), p95: mid('p95'), jump: mid('jump'), moved: mid('moved') };
+  const result = { avg: mid('avg'), p95: mid('p95'), max: mid('max'), jump: mid('jump'), moved: mid('moved') };
   const problems = [];
   if (result.avg > BUDGET.avg) problems.push(`평균 ${result.avg.toFixed(1)}ms > ${BUDGET.avg}`);
   if (result.p95 > BUDGET.p95) problems.push(`p95 ${result.p95.toFixed(1)}ms > ${BUDGET.p95}`);
-  if (setup !== 'drag' && result.moved < FRAMES / 4) problems.push(`화면이 거의 움직이지 않음(${result.moved}프레임)`);
+  // 클릭 프레임은 p95에 묻히므로 따로 본다: 선택 한 번에 프레임 하나 넘게 밀리지 않는다.
+  if (setup === 'focus' && result.max > BUDGET.click) problems.push(`클릭 프레임 ${result.max.toFixed(1)}ms > ${BUDGET.click}`);
+  if (!['drag', 'focus'].includes(setup) && result.moved < FRAMES / 4) problems.push(`화면이 거의 움직이지 않음(${result.moved}프레임)`);
   if (setup === 'wheel' || setup === 'pan') if (result.jump > JUMP_RATIO) problems.push(`이동 튐 ${result.jump.toFixed(1)}배 > ${JUMP_RATIO}`);
   failed ||= problems.length > 0;
-  console.log(`${problems.length ? '✗' : '✓'} ${name}: 평균 ${result.avg.toFixed(1)}ms · p95 ${result.p95.toFixed(1)}ms${setup === 'wheel' || setup === 'pan' ? ` · 튐 ${result.jump.toFixed(1)}배` : ''}${problems.length ? `  — ${problems.join(', ')}` : ''}`);
+  console.log(`${problems.length ? '✗' : '✓'} ${name}: 평균 ${result.avg.toFixed(1)}ms · p95 ${result.p95.toFixed(1)}ms${setup === 'focus' ? ` · 클릭 ${result.max.toFixed(1)}ms` : ''}${setup === 'wheel' || setup === 'pan' ? ` · 튐 ${result.jump.toFixed(1)}배` : ''}${problems.length ? `  — ${problems.join(', ')}` : ''}`);
 }
 await browser.close();
 storybook.close();

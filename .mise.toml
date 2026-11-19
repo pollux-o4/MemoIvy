@@ -129,8 +129,12 @@ description = "Storybook 상호작용·접근성 (현재 코드로 정적 빌드
 run = "npm run test:stories"
 
 [tasks."test:perf"]
-description = "캔버스 조작 부드러움 (카드 200장: 휠·휠클릭 이동·확대·카드 끌기 프레임 예산, 헤드리스)"
+description = "캔버스 조작 부드러움 (카드 200장: 이동·확대·드래그·가지 초점 프레임 예산, 헤드리스)"
 run = "npm run test:perf"
+
+[tasks."test:memory"]
+description = "큰 캔버스 화면 전환·드래그 50회 후 GC 힙 회복 검사 (헤드리스)"
+run = "npm run test:memory"
 
 [tasks."test:e2e"]
 description = "Electron 정합 작동: 합성 데이터로 작성·동기화·재시작 복원 (가상 X 화면, 사용자 화면에 창을 띄우지 않음)"
