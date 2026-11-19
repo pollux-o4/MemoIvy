@@ -19,19 +19,21 @@ try {
   writeFileSync(path.join(payload, 'release-version'), version);
   cpSync(path.join(root, 'snap/snapcraft.yaml'), path.join(staged, 'snap/snapcraft.yaml'));
   const desktopFile = path.join(payload, 'usr/share/applications/io.github.pollux_o4.MemoIvy.desktop');
-  const gui = path.join(staged, 'snap/gui');
+  const iconPath = 'usr/share/icons/hicolor/512x512/apps/memoivy.png';
+  const icon = path.join(payload, iconPath);
   mkdirSync(path.dirname(desktopFile), { recursive: true });
-  mkdirSync(gui, { recursive: true });
+  mkdirSync(path.dirname(icon), { recursive: true });
   const entry = readFileSync(path.join(root, 'integration/memoivy.desktop'), 'utf8')
     .replace(/^Exec=.*$/m, 'Exec=memoivy')
-    .replace(/^Icon=.*$/m, 'Icon=${SNAP}/meta/gui/memoivy.png');
+    .replace(/^Icon=.*$/m, 'Icon=${SNAP}/' + iconPath);
   writeFileSync(desktopFile, entry);
-  cpSync(path.join(root, 'desktop/icon.png'), path.join(gui, 'memoivy.png'));
+  cpSync(path.join(root, 'desktop/icon.png'), icon);
 
-  const artifact = path.join(output, `memoivy_${version}_amd64.snap`);
-  const result = spawnSync('snapcraft', ['pack', '--use-lxd', '--output', artifact], { cwd: staged, stdio: 'inherit' });
+  const filename = `memoivy_${version}_amd64.snap`;
+  const result = spawnSync('snapcraft', ['pack', '--use-lxd'], { cwd: staged, stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Snapcraft exited with ${result.status ?? result.signal}`);
+  cpSync(path.join(staged, filename), path.join(output, filename));
 } finally {
   rmSync(staged, { recursive: true, force: true });
 }

@@ -3,6 +3,10 @@ title: MemoIvy
 base: core24
 summary: Desktop notes and canvas
 description: Write notes, organize projects, and connect ideas on a canvas.
+website: https://github.com/pollux-o4/MemoIvy
+source-code: https://github.com/pollux-o4/MemoIvy
+issues: https://github.com/pollux-o4/MemoIvy/issues
+contact: https://github.com/pollux-o4/MemoIvy/issues
 license: MIT
 grade: stable
 confinement: strict
