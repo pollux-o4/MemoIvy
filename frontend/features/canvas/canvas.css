@@ -111,11 +111,13 @@
 .canvas-screen .has-focus .canvas-link:not(.in-focus) { opacity: .18; }
 .canvas-screen .canvas-link .link-arrive { stroke: var(--canvas-accent); }
 .canvas-screen .canvas-link .link-arrive.is-done { stroke: var(--canvas-success); }
-/* filter는 카드마다 다시 칠해 200장 초점 전환이 프레임 예산을 넘는다. 흐림은 opacity만. */
-.canvas-screen .has-focus > .canvas-note:not(.in-focus) { opacity: .38; }
-.canvas-screen .has-focus > .canvas-note:not(.in-focus):hover { opacity: .8; }
-@media (prefers-reduced-motion: reduce) { .canvas-screen .canvas-link { transition: none; } }
-:root[data-motion="reduce"] .canvas-screen .canvas-link { transition: none; }
+/* 흐림은 카드 위 배경색 덮개(--card-dim)로: 카드 자체 opacity를 내리면 뒤 간선이 비친다.
+   filter는 카드마다 다시 칠해 200장 초점 전환이 프레임 예산을 넘으므로 덮개 opacity만 바꾼다. */
+.canvas-screen .canvas-note::after { content: ""; position: absolute; inset: 0; z-index: 4; border-radius: inherit; background: var(--canvas-bg); opacity: var(--card-dim, 0); pointer-events: none; transition: opacity var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .has-focus > .canvas-note:not(.in-focus) { --card-dim: .62; }
+.canvas-screen .has-focus > .canvas-note:not(.in-focus):hover { --card-dim: .2; }
+@media (prefers-reduced-motion: reduce) { .canvas-screen .canvas-link, .canvas-screen .canvas-note::after { transition: none; } }
+:root[data-motion="reduce"] .canvas-screen .canvas-link, :root[data-motion="reduce"] .canvas-screen .canvas-note::after { transition: none; }
 
 .canvas-screen .canvas-note {
   position: absolute;
@@ -151,7 +153,7 @@
 .canvas-screen .canvas-note:focus { outline: none; }
 .canvas-screen .canvas-note:focus-visible:not(.selected) { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px color-mix(in srgb, var(--canvas-accent) 70%, transparent), 0 6px 18px var(--canvas-shadow); }
 .canvas-screen .canvas-note.drop-target { outline: 2px dashed var(--canvas-accent); outline-offset: 5px; transform: scale(1.035); }
-.canvas-screen .canvas-note.done { opacity: .84; }
+.canvas-screen .canvas-note.done { --card-dim: .16; }
 .canvas-screen .canvas-note > header { min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 7px; }
 .canvas-screen .canvas-note.project > header h3 { flex: 1; }
 .canvas-screen .canvas-note.project .card-done { margin-left: 0; }

@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { _electron as electron, chromium, type ElectronApplication, type Page } from 'playwright';
@@ -354,5 +355,99 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await canvas.locator('.canvas-inspector').getByRole('button', { name: /하위 가지/ }).click();
     await expect.poll(async () => (await ids()).length).toBe(count + 1);
     await quit(app);
+  });
+
+  test('캔버스 연결선: 표본 데이터의 화살촉이 카드·프로젝트 종이 더미에 가리지 않는다', async () => {
+    // 개발 표본(펼친 미리보기·프로젝트·순환·여럿→한)으로 연결선 끝을 화면에서 직접 검사한다.
+    const { sampleNotes } = createRequire(import.meta.url)('../tools/dev-data/sample_notes.cjs') as { sampleNotes: (names?: string[]) => unknown[] };
+    const sampleDir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-sample-'));
+    writeFileSync(path.join(sampleDir, 'notes.json'), JSON.stringify(sampleNotes(['linkCases', 'linkEdgeCases'])));
+    const { app, library } = await launch(sampleDir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      await expect.poll(() => canvas.locator('.canvas-link path').count()).toBeGreaterThan(10);
+      await settle(canvas);
+      // 전체 보기 버튼이 실제로 카메라를 옮긴다(클릭 이벤트가 '선택만 맞추기' 인자로 새던 회귀 방지).
+      const zoomOf = () => canvas.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
+      const initial = await zoomOf();
+      await canvas.getByRole('button', { name: '전체 보기' }).click();
+      await expect.poll(zoomOf).not.toBe(initial);
+      await settle(canvas);
+      /**
+       * 화면 안의 화살촉 끝이 카드·종이 더미 사각형 안이면 가린 것(선 층은 카드 아래라 겹치면 안 보인다).
+       * 종이 더미는 pointer-events가 없어 elementFromPoint로는 못 잡으므로 사각형으로 판정한다.
+       */
+      const hiddenTips = () => canvas.evaluate(() => {
+        const covers = [...document.querySelectorAll<HTMLElement>('.canvas-world > .canvas-note, .canvas-fan-sheet')]
+          .filter((item) => getComputedStyle(item).opacity !== '0').map((item) => ({ rect: item.getBoundingClientRect(), label: item.closest('.canvas-fan') ? 'fan' : item.querySelector('h3')?.textContent ?? '' }));
+        const hidden: string[] = [];
+        let visible = 0;
+        for (const path of document.querySelectorAll<SVGPathElement>('.canvas-link > path')) {
+          const length = path.getTotalLength();
+          const matrix = path.getScreenCTM();
+          if (length < 2 || !matrix) continue;
+          const end = path.getPointAtLength(length);
+          const back = path.getPointAtLength(length - 1);
+          // 화살촉 끝: 선 끝에서 진행 방향으로 marker 길이(viewBox 8-2=6 × 5.4/10 × 선 굵기)만큼.
+          const reach = 6 * 0.54 * Number.parseFloat(path.getAttribute('stroke-width') ?? '1.5');
+          const tip = { x: end.x + (end.x - back.x) * reach, y: end.y + (end.y - back.y) * reach };
+          const x = tip.x * matrix.a + tip.y * matrix.c + matrix.e;
+          const y = tip.x * matrix.b + tip.y * matrix.d + matrix.f;
+          if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue;
+          visible += 1;
+          const cover = covers.find(({ rect }) => x > rect.left + 1 && x < rect.right - 1 && y > rect.top + 1 && y < rect.bottom - 1);
+          if (cover) hidden.push(`${Math.round(tip.x)},${Math.round(tip.y)} ← ${cover.label}`);
+        }
+        return { visible, hidden };
+      });
+      const atStart = await hiddenTips();
+      expect(atStart.visible).toBeGreaterThan(15);
+      expect(atStart.hidden).toEqual([]);
+      // 펼친 미리보기: 본문을 펼친 카드도 아래 연결점이 카드 밖에 남는다.
+      // 축소 화면에서는 버튼이 겹쳐 좌표 클릭이 다른 카드에 갈 수 있어 요소에 직접 누른다.
+      await canvas.locator('.canvas-preview-reveal .disclosure').evaluateAll((items) => { for (const item of items) (item as HTMLButtonElement).click(); });
+      await expect.poll(() => canvas.locator('.canvas-note.is-expanded').count()).toBeGreaterThan(0);
+      // 늘어나는 모션이 끝난 뒤(카드 높이가 두 번 연속 같을 때) 판정한다. 모션 중간에 보면 가림을 놓친다.
+      const heightsNow = () => canvas.locator('.canvas-world > .canvas-note').evaluateAll((items) => items.map((item) => (item as HTMLElement).offsetHeight).join());
+      let previous = '';
+      await expect.poll(async () => { const now = await heightsNow(); const same = now === previous; previous = now; return same; }, { intervals: [150] }).toBe(true);
+      expect((await hiddenTips()).hidden).toEqual([]);
+      // 여러 부모: 가지 개요는 한 갈래 나무 + "다른 곳에서도 이어짐"으로 나머지 부모를 모두 보이고, 연결 칸은 같은 부모를 되풀이하지 않는다.
+      await canvas.locator('.canvas-note', { hasText: '여러 곳에서 모이는 메모' }).click();
+      const also = canvas.locator('.outline-also .inspector-chip');
+      const dimmed = canvas.locator('.has-focus > .canvas-note:not(.in-focus)').first();
+      await expect.poll(() => dimmed.evaluate((card) => getComputedStyle(card, '::after').opacity)).toBe('0.62');
+      expect(await dimmed.evaluate((card) => getComputedStyle(card).opacity)).toBe('1');
+      const inOutline = await canvas.locator('.inspector-outline [data-row]').count();
+      await expect.poll(() => also.count()).toBeGreaterThan(0);
+      expect(inOutline).toBeGreaterThan(1);
+      expect(await also.count()).toBe(3); // 갈래 4개 중 나무 부모 1을 뺀 나머지
+      expect(await canvas.locator('[aria-label="이전 메모"] .inspector-chip').count()).toBe(0);
+      await expect.poll(() => canvas.locator('.outline-merge').textContent()).toBe('+3');
+      const outlineHelp = canvas.getByRole('button', { name: '가지 개요 단축키' });
+      await outlineHelp.click();
+      await expect.poll(() => canvas.locator('.reveal.is-open #outline-shortcuts kbd').count()).toBe(4);
+      await outlineHelp.click();
+      await expect.poll(() => canvas.locator('.reveal.is-open #outline-shortcuts').count()).toBe(0);
+      // 독의 캔버스 사용법은 실제 앱에서 도움말 창을 연다(preload 허용 목록 누락 회귀).
+      await canvas.getByRole('button', { name: '캔버스 사용법' }).click();
+      const help = await windowWith(app, '.help-screen');
+      // 캔버스에서 열면 캔버스 주제로 시작하고, 전체 목록은 묶음별로 접혀 있다가 펼친다.
+      await expect.poll(() => help.getByRole('radio', { name: '캔버스' }).getAttribute('aria-checked')).toBe('true');
+      const canvasTopic = help.getByRole('radio', { name: '캔버스' });
+      await canvasTopic.press('ArrowLeft');
+      expect(await help.getByRole('radio', { name: '메모' }).getAttribute('aria-checked')).toBe('true');
+      await help.keyboard.press('ArrowRight');
+      expect(await canvasTopic.getAttribute('aria-checked')).toBe('true');
+      expect(await help.locator('.help-basic').count()).toBe(4);
+      expect(await help.locator('.help-reveal.is-open').count()).toBe(0);
+      await help.getByRole('button', { name: '프로젝트', exact: false }).first().click();
+      await expect.poll(() => help.locator('.help-reveal.is-open .help-row').count()).toBe(5);
+      if (process.env.MEMOIVY_SHOT) await help.screenshot({ path: process.env.MEMOIVY_SHOT });
+    } finally {
+      await quit(app);
+      rmSync(sampleDir, { recursive: true, force: true });
+    }
   });
 });

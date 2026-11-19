@@ -2,6 +2,7 @@ import { memo, useMemo, useRef } from 'react';
 import type { Note } from '../../../shared/engine_contract';
 import type { CanvasPoint } from '../model/align';
 import { CARD_HEIGHT, CARD_WIDTH } from '../model/align';
+import { PROJECT_STACK_OFFSET } from '../model/geometry';
 import { layoutAnchors } from '../model/links/anchors';
 import { PATH_STRATEGIES } from '../model/links/paths';
 import { type Edge, type EdgeAnchors, edgeKey, type LinkStyle, type Rect, type Side } from '../model/links/types';
@@ -32,8 +33,8 @@ function projectedEdges(notes: Note[], allNotes: Note[], scope: string | null): 
  * 연결선 그리기: 연결점·경로는 model/links가 계산하고 여기서는 SVG로만 옮긴다.
  * focus가 있으면 그 가지 밖의 선을 흐리게 한다(가지 초점).
  */
-export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected, sampleForLink, linkStyle = 'curve', focus }: {
-  notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>; zoom: number; selected: string[];
+export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, positions, heights, zoom, selected, sampleForLink, linkStyle = 'curve', focus }: {
+  notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>; heights?: Readonly<Record<string, number>>; zoom: number; selected: string[];
   sampleForLink: (key: string) => LinkSample; linkStyle?: LinkStyle; focus?: ReadonlySet<string>;
 }) {
   const direct = useMemo(() => {
@@ -41,12 +42,17 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
     return notes.flatMap((note) => note.canvas.next.filter((target) => ids.has(target)).map((to) => ({ from: note.id, to })));
   }, [notes]);
   const projected = useMemo(() => projectedEdges(notes, allNotes, scope), [notes, allNotes, scope]);
-  // shortcut: 카드 높이는 기본값으로 계산(미리보기 펼침 높이 미반영), 펼친 카드 연결점이 어긋나 보이면 카드 높이를 상위 상태로 올린다.
+  // 펼친 카드는 렌더된 높이로: 기본 높이로 계산하면 아래 변 연결점·화살촉이 카드 밑에 묻힌다.
   const rects = useMemo(() => {
     const out: Record<string, Rect> = {};
-    for (const [id, point] of Object.entries(positions)) out[id] = { x: point.x, y: point.y, w: CARD_WIDTH, h: CARD_HEIGHT };
+    // 프로젝트는 뒤 종이 더미까지가 보이는 외곽: 오른쪽·아래 연결점을 더미 밖에 둔다.
+    const stacked = new Set(notes.filter((note) => note.canvas.project).map((note) => note.id));
+    for (const [id, point] of Object.entries(positions)) {
+      const extra = stacked.has(id) ? PROJECT_STACK_OFFSET : 0;
+      out[id] = { x: point.x, y: point.y, w: CARD_WIDTH + extra, h: (heights?.[id] ?? CARD_HEIGHT) + extra };
+    }
     return out;
-  }, [positions]);
+  }, [positions, heights, notes]);
   // 직전 프레임의 변을 기억해 경계 근처에서 연결점이 깜빡이지 않게 한다. 사라진 간선 기록은 매번 새 맵으로 버린다.
   const memory = useRef<Map<string, { from: Side; to: Side }>>(new Map());
   const anchors = useMemo(() => {
@@ -85,9 +91,10 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
       const isDirect = !projectedKeys.has(item.key);
       const sample = isDirect ? sampleForLink(item.key) : RESTING;
       const target = isDirect && sample.pulsing && !sample.creating && sample.travel >= 1 ? positions[toId] : undefined;
+      const targetHeight = heights?.[toId] ?? CARD_HEIGHT;
       return <LinkItem key={item.key} d={paths.get(item.key)?.d ?? ''} isDirect={isDirect} sample={sample} width={width} zoom={zoom}
         highlighted={selected.includes(fromId) || selected.includes(toId)} focused={Boolean(focus?.has(fromId) && focus.has(toId))}
-        arrive={target} arriveDone={target ? doneIds.has(toId) : false}/>;
+        arrive={target} arriveHeight={targetHeight} arriveDone={target ? doneIds.has(toId) : false}/>;
     })}
   </svg>;
 });
@@ -96,14 +103,14 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
 const anchorSignature = ({ from, to, bend }: EdgeAnchors) => `${from.side}${from.point.x},${from.point.y}${to.side}${to.point.x},${to.point.y}/${bend}`;
 
 /** 간선 하나. 값만 받아 memo로 바뀐 간선만 다시 그린다. */
-const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, highlighted, focused, arrive, arriveDone }: {
-  d: string; isDirect: boolean; sample: LinkSample; width: number; zoom: number; highlighted: boolean; focused: boolean; arrive?: CanvasPoint; arriveDone: boolean;
+const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, highlighted, focused, arrive, arriveHeight, arriveDone }: {
+  d: string; isDirect: boolean; sample: LinkSample; width: number; zoom: number; highlighted: boolean; focused: boolean; arrive?: CanvasPoint; arriveHeight: number; arriveDone: boolean;
 }) {
   return <g className={`canvas-link${highlighted ? ' is-highlighted' : ''}${focused ? ' in-focus' : ''}`}>
     <path d={d} markerEnd="url(#arrow)" pathLength={isDirect ? 1 : undefined} strokeWidth={highlighted ? width * 1.35 : width}
       strokeDasharray={!isDirect ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
       strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}
       opacity={sample.pulsing ? sample.alpha : undefined}/>
-    {arrive && <rect x={arrive.x - 4} y={arrive.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="14" fill="none" className={arriveDone ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
+    {arrive && <rect x={arrive.x - 4} y={arrive.y - 4} width={CARD_WIDTH + 8} height={arriveHeight + 8} rx="14" fill="none" className={arriveDone ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
   </g>;
 });

@@ -3,6 +3,8 @@ import canvasBounds from '../../../../desktop/canvas_bounds.json';
 export type CanvasPoint = { x: number; y: number };
 export const CARD_WIDTH = 240;
 export const CARD_HEIGHT = 156;
+/** 프로젝트 카드 뒤 종이 더미가 오른쪽 아래로 비낀 거리(project_fan.css .mid.resting과 같은 값). 연결점이 더미에 묻히지 않게 바깥으로 민다. */
+export const PROJECT_STACK_OFFSET = 10;
 /** 카드 모서리 반경(px). CSS는 --card-radius로만 읽고, 연결점은 이 안쪽으로 들어가지 않는다. */
 export const CARD_RADIUS = 10;
 /** 저장 가능한 좌표 절댓값 상한. 출처는 desktop/canvas_bounds.json(IPC 검증·엔진 LIMIT와 공유). 범위 밖 위치는 묶음 변경 전체가 거절된다. */

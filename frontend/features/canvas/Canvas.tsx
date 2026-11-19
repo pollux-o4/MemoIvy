@@ -182,7 +182,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       links={notes.reduce((count, note) => count + note.canvas.next.filter((id) => noteById.has(id)).length, 0)}
       zoom={camera.zoom} saving={store.saving} error={store.error}
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
-      onZoom={motion.zoomByStep} onFit={fitView} onReset={resetZoom}
+      onZoom={motion.zoomByStep} onFit={() => fitView()} onReset={resetZoom}
       onHelp={() => void openHelpWindow(store.bridge, 'canvas')}/>
   </div></ProgressProvider>;
 }

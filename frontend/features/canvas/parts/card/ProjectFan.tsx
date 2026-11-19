@@ -3,6 +3,7 @@ import './project_fan.css';
 import type { Note } from '../../../../shared/engine_contract';
 import { noteColor, projectSheets } from '../../../../shared/model';
 import type { CanvasPoint } from '../../model/align';
+import { PROJECT_STACK_OFFSET } from '../../model/geometry';
 import { canvasTitle } from '../../model/labels';
 import type { ProjectFan as Fan } from '../../model/project_fan';
 
@@ -14,7 +15,7 @@ export function ProjectFan({ id, fan, position, tone }: { id?: string; fan: Fan;
   const resting = projectSheets(fan.recent.length + fan.more);
   const sheets = SLOTS.map((slot, index) => ({ slot, note: fan.recent[index] as Note | undefined, resting: index < resting }))
     .filter((sheet) => sheet.note || sheet.resting);
-  return <div id={id} className="canvas-fan" aria-hidden="true" style={{ left: position.x, top: position.y, '--card-tone': tone } as CSSProperties}>
+  return <div id={id} className="canvas-fan" aria-hidden="true" style={{ left: position.x, top: position.y, '--card-tone': tone, '--project-stack-offset': `${PROJECT_STACK_OFFSET}px` } as CSSProperties}>
     {sheets.reverse().map(({ slot, note, resting: rest }, index) => <div key={slot} className={`canvas-fan-sheet ${slot}${rest ? ' resting' : ''}`}>
       {note ? <span className="canvas-fan-title" style={{ '--sheet-accent': noteColor(note.color).accent } as CSSProperties}><i/>{canvasTitle(note)}</span>
         : slot === 'near' && fan.recent.length === 0 && <span className="canvas-fan-title empty">아직 메모가 없어요</span>}

@@ -1,6 +1,6 @@
 # C4 Code · 웹 캔버스 탐색
 
-React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, 화면 부품의 네 묶음으로 구성한다. 상위 묶음만 하위 묶음을 참조하며(조립 → 조작 → 모델), 화면 부품은 전달받은 값만 그린다.
+React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, 화면 부품의 네 묶음으로 구성한다. 상위 묶음만 하위 묶음을 참조하며(조립 → 조작 → 모델), 화면 부품은 렌더링과 화면 내부 조작을 맡는다.
 
 ## 조립
 
@@ -25,13 +25,13 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 | 카드 기하·저장 좌표 | `align`(진입점) → geometry의 `CARD_WIDTH`·`CANVAS_LIMIT`·`CANVAS_MIN`(출처 `desktop/canvas_bounds.json`, IPC 검증·엔진과 공유)·`clampCanvasDelta`, savedPositions의 `savedPoint`·`settleDraft`, alignment의 `alignPositions` |
 | 카메라·물리 | `motion`(진입점) → geometry의 `fitting`·`zoomAt`, physics의 `Spring`·`Coast`, cameraMotion, signals의 `pulseSample` |
 | 끌기·선택 카드 표시 | drag의 `dragDelta`·`releaseVelocity`, reveal의 `visibleArea`·`revealCamera` |
-| 연결선 | links의 `graph`·`anchors`·`paths`(`PATH_STRATEGIES`)·`mindmap_layout`·`outline_edit` |
+| 연결선 | links의 `graph`·`anchors`·`paths`(`PATH_STRATEGIES`)·`mindmap_layout`·`outline_tree`(탐색)·`outline_edit`(변경) |
 
 ## 화면 부품 · `parts/`
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview` |
-| 떠 있는 패널 | inspector의 `CanvasInspector`, `CanvasDock`·`CardMenu`·`CanvasNavigator` |
+| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 연결점은 `useCardHeights`가 관찰한 카드 높이를 반영한다. |
+| 떠 있는 패널 | inspector의 `CanvasInspector`·`InspectorOutline`·`useOutlineDrag`, `CanvasDock`·`CardMenu`·`CanvasNavigator` |
 
 동작 계약은 CANVAS-001~005에서, 실행·검증 절차는 OPS-004에서 찾는다.

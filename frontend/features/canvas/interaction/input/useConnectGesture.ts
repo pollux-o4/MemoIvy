@@ -30,13 +30,18 @@ export function useConnectGesture(o: ConnectOutcome & {
   const down = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
   const [picking, setPicking] = useState(false);
   const reset = () => { down.current = null; setPreview(null); setPicking(false); };
+  /** 놓을 카드: 미리보기 강조와 같은 기하 판정 하나로 정한다(DOM 맨 위 요소는 미리보기 선·종이 더미가 가로챌 수 있다). */
+  const targetAt = (world: CanvasPoint) => topCardAt(world, o.notes, o.positions, (note) => note.id !== o.connectFrom)?.id;
   const track = (event: ReactPointerEvent) => {
     const world = o.point.worldPoint(o.point.screenPoint(event));
-    setPreview({ to: world, target: topCardAt(world, o.notes, o.positions, (note) => note.id !== o.connectFrom)?.id });
+    setPreview({ to: world, target: targetAt(world) });
   };
-  const finish = (from: string, target: string | undefined, event: ReactPointerEvent) => {
-    if (target && target !== from) o.onConnect(from, target);
-    else if (!target) o.onConnectEmpty?.(from, o.point.worldPoint(o.point.screenPoint(event)));
+  const finish = (from: string, picked: string | undefined, event: ReactPointerEvent) => {
+    // 출발 카드를 다시 누르면 취소: 기하 판정은 출발 카드를 빼므로 DOM이 고른 카드로 먼저 가른다.
+    if (picked === from) return;
+    const target = targetAt(o.point.worldPoint(o.point.screenPoint(event)));
+    if (target) o.onConnect(from, target);
+    else o.onConnectEmpty?.(from, o.point.worldPoint(o.point.screenPoint(event)));
   };
   const close = () => { reset(); o.setConnectFrom(null); o.setMode('idle'); };
   return {
