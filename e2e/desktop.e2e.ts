@@ -457,6 +457,35 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('링크에서 미리보기 카드로 포인터를 옮겨도 같은 카드가 유지된다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-link-preview-'));
+    const id = 'd0000000-0000-4000-8000-000000000002';
+    const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '링크 확인', exact: true }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      const content = editor.locator('.cm-content');
+      const preview = editor.locator('.link-preview-card');
+      for (const label of ['링크', '네이버']) {
+        await content.getByText(label, { exact: true }).hover();
+        await preview.getByText(label, { exact: true }).waitFor({ timeout: 3_000 });
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        expect(await preview.getByText(label, { exact: true }).isVisible()).toBe(true);
+        await preview.hover({ position: { x: 2, y: 2 } });
+        // 링크 전환과 닫기 타이머가 모두 만료될 시간을 준다.
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        expect(await preview.getByText(label, { exact: true }).isVisible()).toBe(true);
+        await content.getByText('링크 확인', { exact: true }).hover();
+        await preview.waitFor({ state: 'hidden' });
+      }
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('이미지 옆 한글 조합과 후속 입력이 첨부를 보존한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
     const id = 'd0000000-0000-4000-8000-000000000001';

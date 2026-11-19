@@ -13,6 +13,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     private pointerOverCard = false;
     private dismissed: LinkTarget | null = null;
     private readonly pointerMove = (event: PointerEvent) => {
+      if (this.pointerOverCard) return;
       const position = this.view.posAtCoords({ x: event.clientX, y: event.clientY });
       this.track(position, 350, 'pointer');
     };
@@ -62,7 +63,11 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.card.element.remove();
     }
 
-    private readonly onCardEnter = () => { this.pointerOverCard = true; this.clearHide(); };
+    private readonly onCardEnter = () => {
+      this.pointerOverCard = true;
+      this.clearPending();
+      this.clearHide();
+    };
     private readonly onCardLeave = () => { this.pointerOverCard = false; this.scheduleHide(); };
     private readonly onScroll = () => this.place();
 
@@ -79,7 +84,11 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
         if (sameLink(this.dismissed, link)) return;
         this.dismissed = null;
       }
-      if (this.shown && sameLink(this.shown, link)) { this.clearHide(); return; }
+      if (this.shown && sameLink(this.shown, link)) {
+        this.clearPending();
+        this.clearHide();
+        return;
+      }
       this.clearPending();
       const quickSwitch = source === 'pointer' && Boolean(this.shown);
       this.pending = window.setTimeout(() => {
@@ -93,17 +102,27 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.clearHide();
       this.card.update(link);
       this.card.edit.hidden = !this.view.state.facet(EditorView.editable);
-      this.place(link.from);
-      this.card.element.hidden = false;
+      this.place();
     }
 
-    private place(from = this.shown?.from) {
-      if (from === undefined) return;
-      const coords = this.view.coordsAtPos(from);
-      if (!coords) return;
-      const bounds = this.view.dom.getBoundingClientRect();
-      this.card.element.style.left = `${coords.left - bounds.left}px`;
-      this.card.element.style.top = `${coords.bottom - bounds.top + this.view.scrollDOM.scrollTop}px`;
+    private place() {
+      if (!this.shown) return;
+      this.view.requestMeasure({
+        key: this,
+        read: (view) => {
+          if (!this.shown) return null;
+          const coords = view.coordsAtPos(this.shown.from);
+          if (!coords) return null;
+          const bounds = view.dom.getBoundingClientRect();
+          return { left: coords.left - bounds.left, top: coords.bottom - bounds.top };
+        },
+        write: (position) => {
+          if (!position) return;
+          this.card.element.style.left = `${position.left}px`;
+          this.card.element.style.top = `${position.top}px`;
+          this.card.element.hidden = false;
+        },
+      });
     }
 
     private scheduleHide() {
@@ -116,6 +135,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.clearPending();
       this.clearHide();
       this.shown = null;
+      this.pointerOverCard = false;
       this.card.element.hidden = true;
     }
 
