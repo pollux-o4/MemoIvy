@@ -33,8 +33,8 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
         </button>
         {task.total > 0 && <TaskCountLabel progress={task} title={taskText.title} className="task-chip">{taskText.short}</TaskCountLabel>}
       </div>
-      {note.canvas.project && <span className="preview">{childCountLabel(progress.children(note.id).length)}</span>}
       {task.total > 0 && <TaskProgress className="library-progress" label={label} progress={task}/>}
+      {note.canvas.project && <span className="preview project-note-count">{childCountLabel(progress.children(note.id).length)}</span>}
       {rows.length > 0 && <PreviewFrame label={label} targetId={id} preview={preview}>
         <PreviewList ref={preview.ref} className={`preview ${preview.className}`} id={id} rows={rows}
           visibleRows={preview.expanded ? rows.length : collapsedRows} onToggleTask={(line) => savePreviewTask(store, note, line)}/>

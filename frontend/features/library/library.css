@@ -68,6 +68,7 @@
 .project-title .project-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; font: inherit; }
 .project-title .task-chip { font-size: 10px; font-weight: 400; }
 .library-progress { margin-top: 4px; }
+.library-progress + .project-note-count { margin-top: 4px; }
 .project-section > .disclosure { display: grid; place-items: center; margin: 0 auto 6px; }
 .enter-project { align-self: flex-start; margin: 5px 5px 0 0; color: var(--memoivy-muted); }
 .project-contents { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--disclosure-duration) var(--disclosure-ease); }
