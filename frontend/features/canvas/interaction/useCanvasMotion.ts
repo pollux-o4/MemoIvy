@@ -1,7 +1,7 @@
 import { onMotionPreferenceChange, prefersReducedMotion } from '../../../shared/appearance';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, limitLead, linkProgress, panned, pulseSample, zoomAt } from '../model/motion';
+import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, limitLead, LINK_SECONDS, linkProgress, panned, pulseSample, SIGNAL_SECONDS, zoomAt } from '../model/motion';
 import type { Camera, Rect } from '../model/motion';
 import { WHEEL_PAN } from '../model/wheel';
 
@@ -58,15 +58,18 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
         publish({ ...current, x: current.x + dx / current.zoom, y: current.y + dy / current.zoom });
       }
     }
+    // 끝난 신호는 기록에서 지운다: 표본 맵이 진행 중인 간선 수로 묶이고, 쉬는 간선은 restingLink 고정 참조를 받아 다시 그려지지 않는다.
     const samples: Record<string, LinkSample> = {};
     let linksActive = false;
+    const hadLinks = linkStarts.current.size > 0;
     linkStarts.current.forEach(({ at, creating }, key) => {
       const seconds = (now - at) / 1000;
+      if (!animated || seconds >= SIGNAL_SECONDS) { linkStarts.current.delete(key); return; }
       const pulse = pulseSample(seconds, animated);
-      samples[key] = { progress: animated && creating ? linkProgress(seconds) : 1, travel: pulse.travel, alpha: pulse.alpha, creating: animated && creating && seconds < 0.28, pulsing: animated && seconds < 0.95 };
-      if (seconds < 0.95 && animated) linksActive = true;
+      samples[key] = { progress: creating ? linkProgress(seconds) : 1, travel: pulse.travel, alpha: pulse.alpha, creating: creating && seconds < LINK_SECONDS, pulsing: true };
+      linksActive = true;
     });
-    if (Object.keys(samples).length) setLinkSamples(samples);
+    if (hadLinks) setLinkSamples(samples);
     if ((currentMotion && !currentMotion.settled) || coastRef.current || autopanRef.current || linksActive) schedule();
     else lastFrame.current = null;
   }, [animated, publish, schedule]);

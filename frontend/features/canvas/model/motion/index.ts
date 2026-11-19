@@ -6,8 +6,8 @@ const MAX_ZOOM = 2;
 export const ZOOM_STEP = 1.25;
 const FIT_PADDING = 72;
 const TRAVEL_SECONDS = 0.65;
-const SIGNAL_SECONDS = 0.95;
-const LINK_SECONDS = 0.28;
+export const SIGNAL_SECONDS = 0.95;
+export const LINK_SECONDS = 0.28;
 const CAMERA_RESPONSE = 0.34;
 
 const SPRING_STEP = 1 / 240;
