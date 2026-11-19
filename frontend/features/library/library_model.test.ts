@@ -19,8 +19,13 @@ describe('library model', () => {
   });
 
   it('sorts projects before notes and each subtree by its newest descendant', () => {
-    const items = [note('old', 'old', 10), note('project', 'project', 1, true), note('child', 'child', 2, false, 'project'), note('recent', 'recent', 30, false, 'project')];
+    const items = [note('old', 'old', 40), note('project', 'project', 1, true), note('child', 'child', 2, false, 'project'), note('recent', 'recent', 30, false, 'project')];
+    // Electron snapshots omit the false project flag on ordinary notes.
+    for (const item of items) {
+      if (!item.canvas.project) delete item.canvas.project;
+    }
     expect(orderedLibraryChildren(null, items).map((item) => item.id)).toEqual(['project', 'old']);
+    expect(searchLibraryNotes(items, '').map((item) => item.id)).toEqual(['old', 'recent', 'child', 'project']);
     expect(orderedLibraryChildren('project', items).map((item) => item.id)).toEqual(['recent', 'child']);
   });
 

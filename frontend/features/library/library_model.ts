@@ -55,7 +55,7 @@ function createLibraryOrder(notes: Note[]) {
     const cached = ordered.get(parent);
     if (cached) return cached;
     const siblings = [...(parent === null ? roots : children(parent))];
-    siblings.sort((a, b) => Number(b.canvas.project) - Number(a.canvas.project) || newest(b) - newest(a));
+    siblings.sort((a, b) => Number(b.canvas.project === true) - Number(a.canvas.project === true) || newest(b) - newest(a));
     ordered.set(parent, siblings);
     return siblings;
   };

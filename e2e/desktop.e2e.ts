@@ -676,6 +676,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const project = 'd0000000-0000-4000-8000-000000000001';
     const note = 'd0000000-0000-4000-8000-000000000002';
     writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id: 'd0000000-0000-4000-8000-000000000003', text: '최근 메모', color: 'yellow', modified: 200 },
       { id: project, text: '작업 프로젝트\n- [ ] 소개 할 일\n- [ ] 다음 할 일', color: 'yellow', modified: 100, canvas: { project: true } },
       { id: note, text: '작업 메모\n- [ ] 본문 할 일\n## 작은 제목\n  - 하위 글머리\n1. 번호 항목', color: 'blue', modified: 100, canvas: { parent: project } },
     ]));
@@ -684,6 +685,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const window = await app.browserWindow(library);
       await window.evaluate((win) => win.setSize(360, 420));
       await expect.poll(() => library.evaluate(() => [innerWidth, innerHeight])).toEqual([360, 420]);
+      const roots = library.getByRole('region', { name: '메모와 프로젝트' });
+      await expect.poll(() => roots.locator(':scope > * .project-name, :scope > .note-card .card-title').allTextContents()).toEqual(['작업 프로젝트', '최근 메모']);
       const projectDisclosure = library.locator('.project-section > .disclosure');
       const beforeProject = await projectDisclosure.boundingBox();
       await library.getByRole('button', { name: '작업 프로젝트 펼치기' }).click();
