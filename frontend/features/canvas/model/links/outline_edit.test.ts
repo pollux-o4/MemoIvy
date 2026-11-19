@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { indentRow, outdentRow } from './outline_edit';
+import { indentRow, moveRow, outdentRow, shiftRow } from './outline_edit';
 import type { OutlineRow } from './types';
 
 const row = (id: string, depth: number, hasChildren = false, project = false): OutlineRow => ({
@@ -115,5 +115,24 @@ describe('outline_edit', () => {
       { id: 'a', next: [] },
       { id: 'root', next: ['a', 'b', 'a1'] },
     ]);
+  });
+});
+
+describe('moveRow · shiftRow', () => {
+  const r = (id: string, depth: number) => ({ id, depth, hasChildren: false, project: false });
+  // root → [a, b, c], b → [b1]
+  const rows = [r('root', 0), r('a', 1), r('b', 1), r('b1', 2), r('c', 1)];
+  const next: Record<string, string[]> = { root: ['a', 'b', 'c'], b: ['b1'] };
+  const nextOf = (id: string) => next[id] ?? [];
+  it('moves the first sibling down, which Tab cannot do', () => {
+    expect(shiftRow(rows, 'a', 1, nextOf)).toEqual([{ id: 'root', next: ['b', 'a', 'c'] }]);
+    expect(shiftRow(rows, 'a', -1, nextOf)).toEqual([]);
+  });
+  it('re-parents when dropped beside a row of another parent', () => {
+    expect(moveRow(rows, 'c', 'b1', 'before', nextOf)).toEqual([{ id: 'root', next: ['a', 'b'] }, { id: 'b', next: ['c', 'b1'] }]);
+  });
+  it('refuses the root and drops into its own branch', () => {
+    expect(moveRow(rows, 'b', 'b1', 'after', nextOf)).toEqual([]);
+    expect(moveRow(rows, 'a', 'root', 'after', nextOf)).toEqual([]);
   });
 });

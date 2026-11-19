@@ -57,7 +57,8 @@
 .menu-row { width: 100%; min-height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--memoivy-text); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
 .menu-row:hover, .menu-row:focus-visible { outline: 0; color: var(--memoivy-on-accent); background: var(--memoivy-accent); }
 .menu-row:active { background: color-mix(in srgb, var(--memoivy-accent), black 8%); }
-.menu-row > :not(svg):first-of-type, .menu-row > span { flex: 1; }
+/* 글자 칸만 남은 폭을 채운다. 빈 span(색 점 같은 장식)은 제 크기를 지킨다. */
+.menu-row > :not(svg, :empty):first-of-type, .menu-row > span:not(:empty) { flex: 1; }
 .menu-row svg { flex: none; }
 .menu-row.destructive { color: var(--memoivy-danger); }
 .menu-row.destructive:hover, .menu-row.destructive:focus-visible { color: #fff; background: var(--memoivy-danger-fill); }
@@ -74,3 +75,8 @@
 /* GTK tooltip */
 .app-tooltip { position: fixed; z-index: 1000; max-width: 260px; padding: 4px 8px; border-radius: 8px; color: var(--memoivy-text); background: var(--memoivy-raised); box-shadow: 0 0 0 1px var(--memoivy-hairline), 0 6px 18px var(--memoivy-shadow); font-size: .92em; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 120ms ease-out, visibility 0s 120ms; }
 .app-tooltip.is-visible { opacity: 1; visibility: visible; transition: opacity 120ms ease-out; }
+
+/* 단축키 키캡(ShortcutKeys): 도움말 창·인스펙터 안내가 같이 쓴다. */
+.shortcut-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.shortcut-keys i { margin-right: 4px; color: var(--memoivy-muted); font-size: 11px; font-style: normal; }
+.shortcut-key { padding: 1px 7px; border-radius: 5px; color: var(--memoivy-text); background: var(--memoivy-keycap); font: inherit; white-space: nowrap; }

@@ -9,6 +9,7 @@ import { Files } from '../features/attachments/Files';
 import '../shared/motion.css';
 import { Settings } from '../features/settings/Settings';
 import { Help } from '../features/help/Help';
+import { openHelpWindow, rememberHelpTopic } from '../shared/helpTopic';
 import { useAppearance } from '../shared/appearance';
 import { useWindowFrame } from '../shared/useWindowFrame';
 import { installTooltips } from '../shared/tooltip';
@@ -48,8 +49,9 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     setActiveId(id); setScreen('canvas');
   };
   const openHelp = async () => {
-    if (window.memoivy) { await store.bridge.openWindow('help'); return; }
-    setScreen('help');
+    const topic = screen === 'canvas' ? 'canvas' : 'note';
+    if (window.memoivy) { await openHelpWindow(store.bridge, topic); return; }
+    rememberHelpTopic(topic); setScreen('help');
   };
   const openSettings = async () => {
     if (window.memoivy) { await store.bridge.openWindow('settings'); return; }

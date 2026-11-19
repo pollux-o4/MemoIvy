@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { openHelpWindow } from '../../shared/helpTopic';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import type { Note } from '../../shared/engine_contract';
@@ -61,7 +62,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const selectAndReveal = (ids: string[]) => { setSelected(ids); reveal(); };
   const cardMenu = useCardMenu(host, setSelected);
 
-  const { focus, outlineRows, peek, setPeek, indent, outdent } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
+  const { focus, outlineRows, peek, setPeek, indent, outdent, move, shift } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
   const selectedNotes = notes.filter((note) => selected.includes(note.id));
@@ -126,9 +127,11 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     toggleLink: commands.link,
     indent: (id: string) => indent(id),
     outdent: (id: string) => outdent(id),
+    move: (id: string, target: string, place: 'before' | 'after') => move(id, target, place),
+    shift: (id: string, step: -1 | 1) => shift(id, step),
   });
   const moveTargets = useMemo(() => selectedNote ? store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && canMoveInto(note.id, [selectedNote.id], store.notes)) : [], [store.notes, activeScope, selectedNote]);
-  const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent }), [outlineRows, inspectorActions]);
+  const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent, onMove: inspectorActions.move, onShift: inspectorActions.shift }), [outlineRows, inspectorActions]);
 
   useEffect(() => {
     if (!focusConnectList || !selectedNote) return;
@@ -180,6 +183,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       zoom={camera.zoom} saving={store.saving} error={store.error}
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
       onZoom={motion.zoomByStep} onFit={fitView} onReset={resetZoom}
-      onHelp={() => void store.bridge.openWindow('help')}/>
+      onHelp={() => void openHelpWindow(store.bridge, 'canvas')}/>
   </div></ProgressProvider>;
 }

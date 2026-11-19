@@ -14,7 +14,7 @@ export function CanvasProjectMenu({ projects, onMove }: { projects: Note[]; onMo
       {projects.map((project) => {
         const hint = canvasPreview(project.text, 1).rows[0]?.text;
         return <button className="menu-row two-line" role="menuitem" key={project.id} onClick={() => { setOpen(false); onMove(project.id); }}>
-          <span className={`inspector-dot ${project.color}`}/>
+          <span className={`inspector-dot ${project.color}`} aria-hidden="true"/>
           <span className="project-menu-copy"><span>{canvasTitle(project)}</span>{hint && <small className="menu-hint">{hint}</small>}</span>
         </button>;
       })}

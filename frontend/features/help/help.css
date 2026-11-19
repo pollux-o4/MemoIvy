@@ -1,13 +1,50 @@
-/* GTK menus.css .memoivy-help · .help-* */
+/* 단축키와 서식: 주제 → 기본 → 전체(펼침). 읽는 폭을 좁혀 한 줄 시선 이동을 줄인다. */
 .help-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--memoivy-raised); }
 .help-screen .help-bar { background: var(--memoivy-raised); padding: 6px 10px 0; }
-.help-sheet { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 12px 28px 26px; }
-.help-column { display: grid; align-content: start; gap: 18px; }
-.help-group { display: grid; gap: 6px; }
-.help-section { margin: 0 0 3px; color: var(--memoivy-muted); font-size: 1em; font-weight: 400; }
-.help-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
-.help-row.has-syntax { grid-template-columns: 1fr 13ch 9ch; }
+.help-sheet { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 24px; width: 100%; max-width: 600px; margin: 0 auto; padding: 8px 24px 28px; box-sizing: border-box; }
+.help-topics { justify-self: center; }
+.help-topics button { min-width: 88px; min-height: 28px; font-size: 12px; }
+.help-section { margin: 0 0 10px; color: var(--memoivy-muted); font-size: 12px; font-weight: 500; }
+.help-basics ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.help-basic { display: grid; gap: 6px; justify-items: start; padding: 12px; border-radius: 10px; background: color-mix(in srgb, var(--memoivy-text) 4%, transparent); }
+.help-basic strong { font-weight: 600; }
+.help-row .shortcut-keys { justify-content: flex-end; }
+.help-group { display: grid; grid-template-columns: 1fr auto; align-items: center; border-top: 1px solid var(--memoivy-hairline); }
+.help-group-head { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0; border: 0; color: var(--memoivy-text); background: none; font: inherit; text-align: left; cursor: pointer; }
+.help-group-head small { color: var(--memoivy-muted); }
+.help-reveal { grid-column: 1 / -1; }
+.help-rows { display: grid; gap: 8px; padding: 2px 0 14px; }
+.help-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; }
 .help-syntax { color: var(--memoivy-muted); font-family: monospace; }
-.help-keys { display: flex; justify-content: flex-end; gap: 3px; }
-.help-key { padding: 1px 7px; border-radius: 5px; color: var(--memoivy-text); background: var(--memoivy-keycap); font: inherit; white-space: nowrap; }
-@container (max-width: 640px) { .help-sheet { grid-template-columns: 1fr; } }
+@container (max-width: 460px) { .help-basics ul { grid-template-columns: 1fr; } }
+
+/* 기본 동작 그림: 3초 한 바퀴. 멈춘 그림(모션 줄이기)은 동작이 끝난 모습이다. 포인터 움직임과 결과가 같은 시간축을 쓴다. */
+.help-demo { justify-self: center; width: 160px; height: 72px; overflow: visible; }
+.help-demo .demo-card { fill: var(--memoivy-keycap); stroke: var(--memoivy-hairline); }
+.help-demo .demo-card.is-target { stroke-dasharray: 3 2; }
+.help-demo .demo-board circle { fill: var(--memoivy-muted); }
+.help-demo .demo-handle { fill: var(--memoivy-accent); }
+.help-demo .demo-line { fill: none; stroke: var(--memoivy-accent); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.help-demo .demo-ripple { fill: none; stroke: var(--memoivy-accent); opacity: 0; }
+.help-demo .demo-pointer { fill: var(--memoivy-text); stroke: var(--memoivy-raised); stroke-width: 1; }
+.demo-drag .demo-pointer { transform: translate(91px, 32px); } .demo-drag .demo-moving { transform: translateX(62px); }
+.demo-connect .demo-pointer { transform: translate(90px, 32px); } .demo-connect .demo-line { stroke-dashoffset: 0; }
+.demo-pan .demo-pointer { transform: translate(54px, 46px); } .demo-pan .demo-board { transform: translateX(-30px); }
+.demo-open .demo-ripple { opacity: .9; }
+.demo-drag .demo-pointer { animation: demo-drag-pointer 3s ease-in-out infinite; }
+.demo-drag .demo-moving { animation: demo-drag-card 3s ease-in-out infinite; }
+.demo-connect .demo-pointer { animation: demo-connect-pointer 3s ease-in-out infinite; }
+.demo-connect .demo-line { animation: demo-connect-line 3s ease-in-out infinite; }
+.demo-pan .demo-pointer { animation: demo-pan-pointer 3s ease-in-out infinite; }
+.demo-pan .demo-board { animation: demo-pan-board 3s ease-in-out infinite; }
+.demo-open .demo-pointer { transform: translate(60px, 32px); }
+.demo-open .demo-ripple { animation: demo-open-ripple 3s ease-out infinite; }
+@keyframes demo-drag-pointer { 0%, 15% { transform: translate(29px, 32px); } 65%, 85% { transform: translate(91px, 32px); } 100% { transform: translate(29px, 32px); } }
+@keyframes demo-drag-card { 0%, 15% { transform: translateX(0); } 65%, 85% { transform: translateX(62px); } 100% { transform: translateX(0); } }
+@keyframes demo-connect-pointer { 0%, 15% { transform: translate(38px, 32px); } 65%, 85% { transform: translate(90px, 32px); } 100% { transform: translate(38px, 32px); } }
+@keyframes demo-connect-line { 0%, 15% { stroke-dashoffset: 1; } 65%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 1; } }
+@keyframes demo-pan-pointer { 0%, 15% { transform: translate(84px, 46px); } 65%, 85% { transform: translate(54px, 46px); } 100% { transform: translate(84px, 46px); } }
+@keyframes demo-pan-board { 0%, 15% { transform: translateX(0); } 65%, 85% { transform: translateX(-30px); } 100% { transform: translateX(0); } }
+@keyframes demo-open-ripple { 0%, 20% { opacity: 0; r: 4px; } 25% { opacity: .9; r: 4px; } 35% { opacity: 0; r: 14px; } 40% { opacity: .9; r: 4px; } 50%, 100% { opacity: 0; r: 14px; } }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) .help-demo * { animation: none !important; } }
+:root[data-motion="reduce"] .help-demo * { animation: none !important; }

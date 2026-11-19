@@ -38,8 +38,9 @@ const bridge = Object.freeze({
     if (!isId(id)) return Promise.reject(new TypeError('Invalid note id'));
     return ipcRenderer.invoke('memoivy:open-note', id);
   },
+  // 샌드박스 preload는 window_kinds.json을 못 읽어 목록을 따로 둔다(note는 openNote 전용). 일치는 critical.test가 지킨다.
   openWindow: (kind, id) => {
-    if (!['library', 'canvas', 'files', 'settings'].includes(kind) || (id !== undefined && !isId(id))) {
+    if (!['library', 'canvas', 'files', 'settings', 'help'].includes(kind) || (id !== undefined && !isId(id))) {
       return Promise.reject(new TypeError('Invalid window target'));
     }
     return ipcRenderer.invoke('memoivy:open-window', kind, id);

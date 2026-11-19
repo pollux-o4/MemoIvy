@@ -1,13 +1,13 @@
 import { useState } from 'react';
+import { Segmented, type SegmentedOption } from '../../shared/Segmented';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { APPEARANCE_KEY, readAppearance, type AppearancePreference, type MotionChoice, type ThemeChoice } from '../../shared/appearance';
 import { LINK_STYLE_KEY, LINK_STYLE_OPTIONS, readLinkStyle } from '../../shared/link_style';
 import type { MemoStore } from '../../shared/useMemoivy';
 import './settings.css';
 
-type Option<T extends string> = { value: T; label: string };
-const themeOptions: Option<ThemeChoice>[] = [{ value: 'system', label: '시스템' }, { value: 'light', label: '라이트' }, { value: 'dark', label: '다크' }];
-const motionOptions: Option<MotionChoice>[] = [{ value: 'system', label: '시스템' }, { value: 'reduce', label: '켜기' }, { value: 'full', label: '끄기' }];
+const themeOptions: SegmentedOption<ThemeChoice>[] = [{ value: 'system', label: '시스템' }, { value: 'light', label: '라이트' }, { value: 'dark', label: '다크' }];
+const motionOptions: SegmentedOption<MotionChoice>[] = [{ value: 'system', label: '시스템' }, { value: 'reduce', label: '켜기' }, { value: 'full', label: '끄기' }];
 
 export function Settings({ store, onClose }: { store: MemoStore; onClose: () => void }) {
   const saved = readAppearance(store.snapshot?.preferences);
@@ -47,8 +47,4 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
   return <div className="settings-row"><div><b>{label}</b><small>{hint}</small></div>{children}</div>;
-}
-
-function Segmented<T extends string>({ name, options, value, onChange }: { name: string; options: Option<T>[]; value: T; onChange: (value: T) => void }) {
-  return <div className="segmented" role="radiogroup" aria-label={name}>{options.map((option) => <button key={option.value} role="radio" aria-checked={value === option.value} className={value === option.value ? 'selected' : ''} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>;
 }

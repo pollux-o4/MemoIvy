@@ -72,3 +72,10 @@ test('IPC boundary accepts the appearance preference and rejects unknown choices
   assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'sepia', motion: 'full' } }), /appearance/);
   assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'light' } }));
 });
+
+test('preload window allowlist matches window_kinds.json (except note)', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, 'preload.cjs'), 'utf8');
+  const listed = JSON.parse(source.match(/openWindow: \(kind, id\) => \{[\s\S]*?(\[[^\]]*\])\.includes\(kind\)/)[1].replaceAll("'", '"'));
+  const kinds = Object.keys(require('./window_kinds.json')).filter((kind) => kind !== 'note');
+  assert.deepEqual([...listed].sort(), kinds.sort());
+});

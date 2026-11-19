@@ -70,3 +70,10 @@ input, textarea, .markdown-surface .cm-content { caret-animation: manual; animat
 /* 모션 줄이기: 운영체제 설정(앱이 끄기로 고르지 않은 경우) 또는 앱 설정 */
 @media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) *,:root:not([data-motion="full"]) *::before,:root:not([data-motion="full"]) *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
 :root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+
+/* 접힘 펼침 공통 모션: 내용은 늘 DOM에 두고(닫힘은 inert) 높이 0fr↔1fr와 투명도로 연다. 자식 하나를 .reveal > * 로 감싼다. */
+.reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 240ms var(--ease-out-expo), opacity 180ms var(--ease-settle); }
+.reveal > * { min-height: 0; overflow: hidden; }
+.reveal.is-open { grid-template-rows: 1fr; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) .reveal { transition: none; } }
+:root[data-motion="reduce"] .reveal { transition: none; }
