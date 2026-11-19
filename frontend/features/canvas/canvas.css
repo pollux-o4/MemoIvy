@@ -174,7 +174,9 @@
 /* 들여쓰기는 편집기와 같은 규칙: 깊이마다 표식 칸 + 간격 한 칸. */
 .canvas-screen .canvas-note .canvas-checklist-preview li { padding-left: calc(var(--depth, 0) * var(--preview-gutter)); }
 .canvas-screen .canvas-note .canvas-preview-reveal { display: grid; place-items: center; margin-top: 1px; }
-.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
+.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { position: relative; flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
+/* 화살표와 배치 크기는 그대로 두고 포인터 영역만 40×24px로 넓힌다. */
+.canvas-screen .canvas-note .canvas-preview-reveal .disclosure::before { content: ""; position: absolute; inset: -3px -6px; }
 .canvas-screen .canvas-note .canvas-preview-reveal .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
 /* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */
 /* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */

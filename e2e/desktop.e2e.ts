@@ -429,6 +429,12 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await Promise.all(button.getAnimations({ subtree: true }).map((animation) => animation.finished));
       });
       expect(await controlBounds()).toEqual(restingControls);
+      expect(await disclosure.evaluate((button) => {
+        const rect = button.getBoundingClientRect();
+        const extra = rect.width / 28 * 4;
+        const y = rect.top + rect.height / 2;
+        return [rect.left - extra, rect.right + extra].every((x) => button.contains(document.elementFromPoint(x, y)));
+      })).toBe(true);
       /**
        * 화면 안의 화살촉 끝이 카드·종이 더미 사각형 안이면 가린 것(선 층은 카드 아래라 겹치면 안 보인다).
        * 종이 더미는 pointer-events가 없어 elementFromPoint로는 못 잡으므로 사각형으로 판정한다.
