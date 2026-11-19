@@ -1,12 +1,11 @@
-import { linkInfo } from './link_model';
-
-export type PreviewLink = { from: number; to: number; url: string; label: string };
+import { linkInfo, type LinkTarget } from './link_model';
 
 export class LinkPreviewCard {
   readonly element = document.createElement('section');
   onOpen: (url: string) => void = () => {};
   onCopy: (url: string) => void = () => {};
-  onEdit: (link: PreviewLink) => void = () => {};
+  onSave: (link: LinkTarget, value: string) => void = () => {};
+  onCancel: () => void = () => {};
 
   private readonly badge = document.createElement('span');
   private readonly title = document.createElement('strong');
@@ -15,7 +14,12 @@ export class LinkPreviewCard {
   private readonly open = button('열기');
   private readonly copy = button('주소 복사');
   readonly edit = button('주소 수정');
-  private link: PreviewLink | null = null;
+  private readonly input = document.createElement('input');
+  private readonly actions = document.createElement('div');
+  private readonly editActions = document.createElement('div');
+  private link: LinkTarget | null = null;
+
+  get editing() { return !this.input.hidden; }
 
   constructor() {
     this.element.className = 'link-preview-card';
@@ -37,26 +41,56 @@ export class LinkPreviewCard {
         window.setTimeout(() => { this.copy.textContent = '주소 복사'; this.copy.classList.remove('confirmed'); }, 1200);
       } catch { /* Clipboard access can be denied by browser policy. */ }
     });
-    this.edit.addEventListener('click', () => { if (this.link) this.onEdit(this.link); });
+    const form = document.createElement('form');
+    this.input.className = 'link-preview-input';
+    this.input.setAttribute('aria-label', '링크 주소');
+    this.input.inputMode = 'url';
+    this.input.spellcheck = false;
+    this.input.required = true;
+    this.input.pattern = String.raw`[^\s<>\(\)]+`;
+    const save = button('저장');
+    save.type = 'submit';
+    save.classList.add('primary');
+    const cancel = button('취소');
+    cancel.addEventListener('click', () => this.onCancel());
+    this.edit.addEventListener('click', () => {
+      if (!this.link) return;
+      this.input.value = this.link.url;
+      this.setEditing(true);
+      this.input.focus();
+      this.input.select();
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (this.editing && this.link) this.onSave(this.link, this.input.value);
+    });
     const heading = document.createElement('div');
     heading.className = 'link-preview-heading';
     const text = document.createElement('div');
     text.className = 'link-preview-copy';
-    text.append(this.title, this.address);
+    text.append(this.title, this.address, this.input);
     heading.append(this.badge, text);
-    const actions = document.createElement('div');
-    actions.className = 'link-preview-actions';
-    actions.append(this.open, this.copy, this.edit);
-    this.element.append(heading, this.warning, actions);
+    this.actions.className = this.editActions.className = 'link-preview-actions';
+    this.actions.append(this.open, this.copy, this.edit);
+    this.editActions.append(cancel, save);
+    form.append(heading, this.warning, this.actions, this.editActions);
+    this.element.append(form);
+    this.setEditing(false);
   }
 
-  update(link: PreviewLink) {
+  private setEditing(editing: boolean) {
+    this.input.hidden = this.editActions.hidden = !editing;
+    this.address.hidden = editing || !this.address.textContent;
+    this.actions.hidden = editing;
+  }
+
+  update(link: LinkTarget) {
     this.link = link;
     const info = linkInfo(link.url, link.label);
     this.badge.textContent = info.badge;
     this.title.textContent = info.title;
     this.address.textContent = info.address;
-    this.address.hidden = !info.address;
+    this.setEditing(false);
     this.address.title = link.url;
     this.warning.textContent = info.warning;
     this.warning.hidden = !info.warning;

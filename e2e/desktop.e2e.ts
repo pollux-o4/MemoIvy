@@ -457,7 +457,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  test('링크에서 미리보기 카드로 포인터를 옮겨도 같은 카드가 유지된다', async () => {
+  test('링크 미리보기 카드 유지와 인라인 주소 수정', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-link-preview-'));
     const id = 'd0000000-0000-4000-8000-000000000002';
     const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)';
@@ -480,6 +480,25 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await content.getByText('링크 확인', { exact: true }).hover();
         await preview.waitFor({ state: 'hidden' });
       }
+      const editAddress = async () => {
+        await content.getByText('네이버', { exact: true }).hover();
+        await preview.getByRole('button', { name: '주소 수정' }).click();
+        return preview.getByRole('textbox', { name: '링크 주소' });
+      };
+      const input = await editAddress();
+      expect(await input.inputValue()).toBe('naver.com');
+      await input.fill('naver.com/news');
+      await content.getByText('링크 확인', { exact: true }).hover();
+      await input.press('Escape');
+      await preview.waitFor({ state: 'hidden' });
+      expect(await (await editAddress()).inputValue()).toBe('naver.com');
+      await input.fill('naver.com/news');
+      await input.press('Enter');
+      await preview.waitFor({ state: 'hidden' });
+      await expect.poll(() => library.evaluate(async (id) => {
+        const { snapshot } = await window.memoivy.request('snapshot');
+        return snapshot?.notes.find((note) => note.id === id)?.text;
+      }, id)).toBe(text.replace('(naver.com)', '(naver.com/news)'));
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

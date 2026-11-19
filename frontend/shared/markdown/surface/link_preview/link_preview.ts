@@ -13,7 +13,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     private pointerOverCard = false;
     private dismissed: LinkTarget | null = null;
     private readonly pointerMove = (event: PointerEvent) => {
-      if (this.pointerOverCard) return;
+      if (this.pointerOverCard || (this.shown && this.card.editing)) return;
       const position = this.view.posAtCoords({ x: event.clientX, y: event.clientY });
       this.track(position, 350, 'pointer');
     };
@@ -22,7 +22,13 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.scheduleHide();
     };
     private readonly keyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && this.shown) {
+      if (event.key === 'Escape' && !event.isComposing && this.shown) {
+        if (this.card.editing) {
+          event.preventDefault();
+          event.stopPropagation();
+          this.finishEditing();
+          return;
+        }
         this.dismissed = this.shown;
         this.hide();
       }
@@ -32,11 +38,12 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.card.element.addEventListener('pointerenter', this.onCardEnter);
       this.card.element.addEventListener('pointerleave', this.onCardLeave);
       this.card.onOpen = (url) => { handlers.open(externalLinkUrl(url)); this.hide(); };
-      this.card.onEdit = (link) => {
-        const value = window.prompt('새 주소를 입력하세요.', link.url);
-        if (value === null) return;
-        this.view.dispatch({ changes: { from: link.from, to: link.to, insert: value } });
-        this.hide();
+      this.card.onCancel = () => this.finishEditing();
+      this.card.onSave = (link, value) => {
+        this.finishEditing();
+        if (link.url !== value) {
+          this.view.dispatch({ changes: { from: link.from, to: link.to, insert: value } });
+        }
       };
       this.view.dom.addEventListener('pointermove', this.pointerMove);
       this.view.dom.addEventListener('pointerleave', this.pointerLeave);
@@ -46,6 +53,11 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     }
 
     update(update: ViewUpdate) {
+      if (this.shown && this.card.editing) {
+        if (update.docChanged || !update.state.facet(EditorView.editable)) this.hide();
+        else if (update.geometryChanged) this.place();
+        return;
+      }
       if (update.docChanged || update.selectionSet) {
         const position = this.view.state.selection.main.head;
         this.track(position, 600, 'caret');
@@ -114,7 +126,9 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
           const coords = view.coordsAtPos(this.shown.from);
           if (!coords) return null;
           const bounds = view.dom.getBoundingClientRect();
-          return { left: coords.left - bounds.left, top: coords.bottom - bounds.top };
+          const width = Math.min(360, bounds.width - 16);
+          const left = Math.max(8, Math.min(coords.left - bounds.left, bounds.width - width - 8));
+          return { left, top: coords.bottom - bounds.top };
         },
         write: (position) => {
           if (!position) return;
@@ -125,9 +139,15 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       });
     }
 
+    private finishEditing() {
+      this.dismissed = this.shown;
+      this.hide();
+      this.view.focus();
+    }
+
     private scheduleHide() {
       this.clearHide();
-      if (this.pointerOverCard) return;
+      if (this.pointerOverCard || (this.shown && this.card.editing)) return;
       this.hideTimer = window.setTimeout(() => this.hide(), 220);
     }
 
