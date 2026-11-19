@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useLayoutEffect, useRef } from 'react';
+import { type KeyboardEvent, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '../../../../shared/Icon';
 import type { OutlineRow } from '../../model/links/types';
 
@@ -12,6 +12,7 @@ export function InspectorOutline({ rows, current, labelOf, onSelect, onIndent, o
 }) {
   const list = useRef<HTMLOListElement>(null);
   const keep = useRef<string | undefined>(undefined);
+  const [blocked, setBlocked] = useState<string | undefined>(undefined);
   // 들여쓰기로 목록이 다시 그려져도 같은 항목에 포커스를 둔다.
   useLayoutEffect(() => {
     if (!keep.current) return;
@@ -20,9 +21,10 @@ export function InspectorOutline({ rows, current, labelOf, onSelect, onIndent, o
   });
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, id: string, index: number) => {
     if (event.key === 'Tab') {
-      // 바꿀 수 없으면 기본 포커스 이동에 맡긴다.
-      if (!(event.shiftKey ? onOutdent(id) : onIndent(id))) return;
-      event.preventDefault(); event.stopPropagation(); keep.current = id;
+      // 개요 편집기 관례: 바꿀 수 없어도 포커스는 그 자리에 두고 이유만 알린다. 목록 밖으로는 화살표·클릭으로 나간다.
+      event.preventDefault(); event.stopPropagation();
+      if (event.shiftKey ? onOutdent(id) : onIndent(id)) { keep.current = id; setBlocked(undefined); return; }
+      setBlocked(event.shiftKey ? '이미 맨 위 단계예요' : '위에 같은 단계 항목이 없어요');
       return;
     }
     const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
@@ -31,12 +33,12 @@ export function InspectorOutline({ rows, current, labelOf, onSelect, onIndent, o
     list.current?.querySelectorAll<HTMLButtonElement>('[data-row]')[index + step]?.focus();
   };
   return <section className="inspector-group" aria-label="가지 개요">
-    <header><b>가지 개요</b><small className="inspector-hint">Tab 들여쓰기</small></header>
+    <header><b>가지 개요</b><small className="inspector-hint" role="status">{blocked ?? 'Tab 들여쓰기 · ⇧Tab 내어쓰기'}</small></header>
     <ol ref={list} className="inspector-outline">
       {rows.map((row, index) => <li key={row.id} style={{ '--depth': row.depth } as React.CSSProperties}>
         <button data-row={row.id} aria-current={row.id === current ? 'true' : undefined}
           title={row.project ? `${labelOf(row.id)} · 프로젝트` : labelOf(row.id)}
-          onClick={() => onSelect(row.id)} onKeyDown={(event) => onKeyDown(event, row.id, index)}>
+          onClick={() => onSelect(row.id)} onBlur={() => setBlocked(undefined)} onKeyDown={(event) => onKeyDown(event, row.id, index)}>
           <span className={`outline-bullet${row.hasChildren ? ' has-children' : ''}`} aria-hidden="true">{row.project && <Icon name="project" size={11}/>}</span>
           <span className="outline-label">{labelOf(row.id)}</span>
         </button>

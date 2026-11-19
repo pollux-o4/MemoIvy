@@ -134,6 +134,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(outlineDepths).toEqual(['0', '1', '2']);
     await canvas.keyboard.press('Shift+Tab');
     await expect.poll(outlineDepths).toEqual(['0', '1', '1']);
+    // 위 형제가 없는 첫 가지: Tab은 아무것도 바꾸지 않고 포커스도 그 자리에 둔다.
+    const firstBranch = canvas.locator('.inspector-outline button').nth(1);
+    await firstBranch.focus();
+    await canvas.keyboard.press('Tab');
+    await expect.poll(outlineDepths).toEqual(['0', '1', '1']);
+    await expect.poll(() => firstBranch.evaluate((item) => item === document.activeElement)).toBe(true);
+    await expect.poll(() => canvas.locator('.inspector-outline').locator('xpath=..').locator('.inspector-hint').textContent()).toBe('위에 같은 단계 항목이 없어요');
     // 마인드맵 배치 후 실행 취소로 원위치.
     await card(root).click();
     const placed = await card(child).evaluate((item) => item.style.cssText);
@@ -149,6 +156,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => canvas.locator('.canvas-note.is-dimmed').count()).toBeGreaterThan(0);
     await canvas.locator('.canvas-screen').press('Escape');
     await expect.poll(() => project.getAttribute('class')).not.toContain('is-peeking');
+    // 보이는 입구: 인스펙터의 하위 가지 버튼도 Tab과 같이 가지를 만든다(화면이 새 가지로 옮겨 가므로 마지막에 둔다).
+    await card(root).click();
+    const count = (await ids()).length;
+    await canvas.getByRole('button', { name: /하위 가지/ }).click();
+    await expect.poll(async () => (await ids()).length).toBe(count + 1);
     await quit(app);
   });
 });

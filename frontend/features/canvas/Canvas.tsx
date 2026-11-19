@@ -132,6 +132,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     saveText: actions.saveText,
     color: (note: Note, color: string) => actions.recolor([note.id], color),
     close: () => setSelected([]),
+    addBranch: () => { if (!store.saving) branch('child'); },
     open: (note: Note) => openCard(note),
     openAsNote: (note: Note) => openCard(note, true),
     lift: liftSelected,
@@ -216,7 +217,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       onClose={inspectorActions.close} onOpen={inspectorActions.open} onOpenAsNote={inspectorActions.openAsNote}
       onLift={scopedProject ? inspectorActions.lift : undefined} onMoveInto={inspectorActions.moveInto}
       onToggleDone={inspectorActions.toggleDone} onSignal={inspectorActions.signal} onDelete={inspectorActions.remove}
-      onSelect={inspectorActions.select} onToggleLink={inspectorActions.toggleLink} outline={inspectorOutline}/>}
+      onSelect={inspectorActions.select} onToggleLink={inspectorActions.toggleLink} onAddBranch={inspectorActions.addBranch} outline={inspectorOutline}/>}
     {deleteTarget.length > 0 && <ConfirmDialog
       question={deleteTarget.length === 1 ? '이 메모를 삭제할까요?' : `메모 ${deleteTarget.length}개를 삭제할까요?`}
       subject={deleteSubject ? canvasTitle(deleteSubject) : undefined}

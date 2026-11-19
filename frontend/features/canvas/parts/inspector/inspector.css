@@ -47,6 +47,8 @@
 .canvas-screen .inspector-group > header { display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0 2px 0 8px; }
 .canvas-screen .inspector-group > header b { color: var(--canvas-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
 .canvas-screen .inspector-mini { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-actions { display: inline-flex; gap: 2px; }
+.canvas-screen .inspector-mini kbd { margin-left: 2px; padding: 0 4px; border-radius: 4px; color: var(--canvas-muted); background: var(--canvas-hover); font: inherit; font-size: 10px; line-height: 16px; }
 .canvas-screen .inspector-mini:hover { color: var(--canvas-text); background: var(--canvas-hover); }
 .canvas-screen .inspector-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 4px 0 8px; }
 .canvas-screen .inspector-chips > small { width: 30px; color: var(--canvas-muted); font-size: 11px; }
