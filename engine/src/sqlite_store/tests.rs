@@ -251,6 +251,14 @@ fn preference_updates_are_revisioned_and_bounded() {
     assert_eq!(bad.unwrap_err().code, "INVALID_PARAMS");
 }
 #[test]
+fn canvas_link_style_preference_accepts_known_shapes_and_rejects_others() {
+    let (_d, mut e) = open();
+    let saved = req(&mut e, "preference", json!({"baseRevision":0,"key":"canvasLinkStyle","value":"straight"})).unwrap();
+    assert_eq!(saved["snapshot"]["preferences"]["canvasLinkStyle"], "straight");
+    let error = req(&mut e, "preference", json!({"baseRevision":1,"key":"canvasLinkStyle","value":"zigzag"})).unwrap_err();
+    assert_eq!(error.code, "INVALID_PARAMS");
+}
+#[test]
 fn appearance_preference_accepts_known_choices_and_rejects_others() {
     let (_d, mut e) = open();
     let saved = req(

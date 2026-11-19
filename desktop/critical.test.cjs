@@ -62,6 +62,11 @@ test('engine transport correlates a protocol response and terminates on process 
   assert.equal(stopped.killed, true);
 });
 
+test('IPC boundary accepts the canvas link style preference and rejects unknown shapes', () => {
+  validateRequest('preference', { baseRevision: 0, key: 'canvasLinkStyle', value: 'orthogonal' });
+  assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'canvasLinkStyle', value: 'zigzag' }), /canvasLinkStyle/);
+});
+
 test('IPC boundary accepts the appearance preference and rejects unknown choices', () => {
   validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'light', motion: 'full' } });
   assert.throws(() => validateRequest('preference', { baseRevision: 0, key: 'appearance', value: { theme: 'sepia', motion: 'full' } }), /appearance/);

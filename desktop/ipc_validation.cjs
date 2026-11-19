@@ -88,6 +88,10 @@ function validatePreference(key, value) {
     if (!['system', 'light', 'dark'].includes(value.theme) || !['system', 'reduce', 'full'].includes(value.motion)) throw bad('Invalid appearance preference');
     return;
   }
+  if (key === 'canvasLinkStyle') {
+    if (!['curve', 'straight', 'orthogonal'].includes(value)) throw bad('Invalid canvasLinkStyle preference');
+    return;
+  }
   throw bad('Unsupported preference key');
 }
 

@@ -97,6 +97,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await settings.getByRole('radio', { name: '다크' }).click();
     await settings.getByRole('radiogroup', { name: '모션 줄이기' }).getByRole('radio', { name: '켜기' }).click();
     await expect.poll(() => library.evaluate(() => [document.documentElement.classList.contains('theme-dark'), document.documentElement.dataset.motion])).toEqual([true, 'reduce']);
+    // 연결선 모양은 엔진 설정으로 저장되어 오류 없이 선택 상태가 바뀐다.
+    await settings.getByRole('radio', { name: '직각' }).click();
+    await expect.poll(() => settings.getByRole('radio', { name: '직각' }).getAttribute('aria-checked')).toBe('true');
+    expect(await settings.getByRole('alert').count()).toBe(0);
     await quit(app);
 
     const reopened = await launch();
