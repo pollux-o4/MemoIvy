@@ -32,7 +32,7 @@
 
 .markdown-surface .md-inline-code,
 .markdown-surface .cm-line.md-code-block {
-  background-color: color-mix(in srgb, var(--note-text) 10%, transparent);
+  background-color: color-mix(in srgb, var(--markdown-code-tint, var(--note-text)) var(--markdown-code-strength, 10%), transparent);
 }
 .markdown-surface .md-inline-code {
   border-radius: 4px;

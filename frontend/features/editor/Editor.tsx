@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import type { EditorView } from '@codemirror/view';
 import { Icon } from '../../shared/Icon';
+import { noteColor } from '../../shared/model';
 import { useSaveLabel } from '../../shared/useSaveLabel';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
@@ -43,7 +44,7 @@ export function Editor({ store, noteId, onClose }: { store: MemoStore; noteId: s
 
   if (!note) return <div className="editor-screen"><div className="editor-topbar"><button className="icon-button" onClick={onClose}><Icon name="close"/></button><span>메모를 찾을 수 없습니다</span></div></div>;
 
-  return <div className={`editor-screen note-${note.color}`}>
+  return <div className={`editor-screen note-${note.color}`} style={{ '--markdown-code-tint': noteColor(note.color).accent } as CSSProperties}>
     <EditorToolbar note={note} store={store} onClose={onClose} raw={raw} onToggleRaw={() => setRaw(!raw)} onDelete={() => setDeleteConfirm(true)} onColor={changeColor}/>
     <EditorContent onFile={(file, drop) => void addFile(file, draft.setError, drop)}>
       <MarkdownSurface
