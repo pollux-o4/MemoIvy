@@ -79,6 +79,19 @@ const canvasBranchesSnapshot = (linkStyle = 'curve'): Snapshot => {
     assets: [], revision: 1, savedRevision: 1, preferences: { canvasLinkStyle: linkStyle },
   };
 };
+/** 성능 측정용 큰 캔버스: 카드 200개(20×10 격자), 간선 400개(오른쪽·아래 이웃). */
+const canvasLargeSnapshot = (): Snapshot => {
+  const now = Math.floor(Date.now() / 1000);
+  const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const cols = 20; const colors = ['yellow', 'blue', 'green', 'purple', 'pink'];
+  const notes: Note[] = Array.from({ length: 200 }, (_, n) => {
+    const col = n % cols; const row = Math.floor(n / cols);
+    const next = [col < cols - 1 ? n + 1 : (n + cols * 2) % 200, row < 9 ? n + cols : (n + 7) % 200].map(id);
+    return { id: id(n), text: `# 카드 ${n + 1}`, color: colors[n % colors.length], modified: now - n, canvas: { position: [80 + col * 340, 80 + row * 220], next, done: false, parent: null } };
+  });
+  return { notes, assets: [], revision: 1, savedRevision: 1, preferences: {} };
+};
+export const CanvasLarge: Story = { render: () => previewApp('canvas', undefined, canvasLargeSnapshot(), [1400, 900]) };
 export const CanvasBranches: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot(), [1100, 900]) };
 export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
 export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
