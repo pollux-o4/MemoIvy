@@ -24,10 +24,24 @@ describe('markdown preview', () => {
     expect(togglePreviewTask(checked, 2)).toBe(checked);
   });
 
-  test('keeps literal checkbox examples inside fences read-only', () => {
-    const markdown = 'Title\n```markdown\n- [ ] example\n```\n- [ ] actual';
-    expect(markdownPreview(markdown).rows.filter((row) => row.kind === 'task').map(({ sourceLine }) => sourceLine)).toEqual([4]);
-    expect(togglePreviewTask(markdown, 2)).toBe(markdown);
+  test.each([
+    { name: '백틱과 언어 이름', fence: ['```markdown', '- [ ] 예시', '```'] },
+    { name: '짧은 백틱과 다른 종류의 펜스', fence: ['````md', '```', '- [ ] 예시', '~~~~', '- [ ] 다른 예시', '````'] },
+    { name: '닫는 기호 뒤에 글자가 있는 경우', fence: ['~~~md', '~~~ 아직 코드', '- [ ] 예시', '~~~  '] },
+    { name: '닫히지 않은 코드 블록', fence: ['```', '- [ ] 예시'], unclosed: true },
+  ])('$name 안의 체크박스 예시는 원문을 바꾸지 않는다', ({ fence, unclosed }) => {
+    const prefix = ['제목', '> - [ ] 인용', '- [/] **한글**과 `- [ ]`', '  - [x] [링크](https://example.com)'];
+    const lines = [...prefix, ...fence, '- [ ] 실제 할 일'];
+    const markdown = lines.join('\r\n');
+    const expected = unclosed ? [2, 3] : [2, 3, lines.length - 1];
+    const tasks = markdownPreview(markdown).rows.filter((row) => row.kind === 'task');
+
+    expect(tasks.map(({ sourceLine }) => sourceLine)).toEqual(expected);
+    for (const [index, line] of lines.entries()) {
+      const changed = [...lines];
+      if (expected.includes(index)) changed[index] = line.replace(/\[([ x/])\]/, (_, state) => state === 'x' ? '[ ]' : '[x]');
+      expect(togglePreviewTask(markdown, index)).toBe(changed.join('\r\n'));
+    }
   });
 
   test('rebases consecutive toggles and rejects edits to the original layout', () => {

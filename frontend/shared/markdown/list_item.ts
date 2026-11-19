@@ -33,7 +33,9 @@ export function createListItemReader() {
   return (text: string) => {
     const delimiter = /^\s*(`{3,}|~{3,})/.exec(text)?.[1];
     if (fence) {
-      if (delimiter?.[0] === fence[0] && delimiter.length >= fence.length) fence = undefined;
+      if (delimiter?.[0] === fence[0] && delimiter.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(text)) {
+        fence = undefined;
+      }
       return undefined;
     }
     if (delimiter) { fence = delimiter; return undefined; }

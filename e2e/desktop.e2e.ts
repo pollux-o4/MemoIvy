@@ -461,7 +461,12 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const hash = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
     const image = `![첨부](asset:${hash})`;
     const data = readFileSync(path.join(root, 'docs/assets/gtk-reference/fixtures/image-used/assets', `${hash}.png`)).toString('base64');
-    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: `입력 확인\n${image}`, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
+    const markdown = [
+      '입력 확인', '**굵게**와 `인라인`',
+      '- [ ] 실제 할 일', '  - [x] 하위 할 일',
+      '```md', '- [ ] 코드 예시', '```', image,
+    ].join('\n');
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: markdown, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
     const { app, library } = await launch(dir);
     try {
       await library.evaluate(async (data) => {
@@ -474,6 +479,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const preview = content.locator('.cm-asset-preview img');
       await preview.waitFor({ timeout: 8_000 });
       await expect.poll(() => preview.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
+      expect(await content.locator('.md-checkbox').count()).toBe(2);
       await editor.keyboard.press('Control+End');
       const input = await app.context().newCDPSession(editor);
       try {
@@ -491,10 +497,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(async () => {
         const result = await library.evaluate(() => window.memoivy.request('snapshot'));
         return result.snapshot?.notes.find((note) => note.id === id)?.text;
-      }, { timeout: 8_000 }).toBe(`입력 확인\n${image}\n한 이어서 작성`);
+      }, { timeout: 8_000 }).toBe(`${markdown}\n한 이어서 작성`);
       await editor.reload({ timeout: 8_000 });
       await expect.poll(() => content.locator('.cm-line').allTextContents()).toContain('한 이어서 작성');
       await expect.poll(() => preview.count()).toBe(1);
+      expect(await content.locator('.md-checkbox').count()).toBe(2);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
