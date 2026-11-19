@@ -7,6 +7,7 @@ const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const { EngineTransport } = require('./engine_transport.cjs');
 const { validateRequest, validateWindowTarget, isId } = require('./ipc_validation.cjs');
+const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 function overrideDataPath() {
   const override = process.env.MEMOIVY_DATA_DIR;
@@ -94,15 +95,12 @@ function isApprovedFrame(frameUrl) {
   } catch { return false; }
 }
 
-function isSafeExternal(url) {
-  try {
-    const parsed = new URL(url);
-    return ['https:', 'http:', 'mailto:'].includes(parsed.protocol) && !parsed.username && !parsed.password;
-  } catch { return false; }
-}
-
 function broadcast(event) {
   for (const win of windows) if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('memoivy:event', event);
+}
+
+function openExternalWithoutWaiting(url) {
+  void openExternal(url, (target) => shell.openExternal(target)).catch((error) => console.error('External link failed:', error.message));
 }
 
 function setEngineFailure(error) {
@@ -208,8 +206,7 @@ function installIpc() {
   });
   ipcMain.handle('memoivy:open-external', async (event, url) => {
     assertSender(event);
-    if (typeof url !== 'string' || url.length > 4096 || !isSafeExternal(url)) throw new TypeError('Only HTTP and HTTPS links are allowed');
-    await shell.openExternal(url);
+    await openExternal(url, (target) => shell.openExternal(target));
   });
   ipcMain.handle('memoivy:import-legacy', async (event) => {
     const win = assertSender(event);
@@ -269,11 +266,11 @@ function createWindow(kind = 'library', id) {
   win.webContents.on('will-navigate', (event, target) => {
     if (!isApprovedFrame(target)) {
       event.preventDefault();
-      if (isSafeExternal(target)) void shell.openExternal(target).catch((error) => console.error('External link failed:', error.message));
+      openExternalWithoutWaiting(target);
     }
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (isSafeExternal(url)) void shell.openExternal(url).catch((error) => console.error('External link failed:', error.message));
+    openExternalWithoutWaiting(url);
     return { action: 'deny' };
   });
   win.on('close', (event) => {

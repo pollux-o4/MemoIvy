@@ -6,8 +6,20 @@ const { EventEmitter } = require('node:events');
 const { PassThrough, Writable } = require('node:stream');
 const { validateRequest, validateWindowTarget } = require('./ipc_validation.cjs');
 const { EngineTransport } = require('./engine_transport.cjs');
+const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
+
+test('external URL policy is shared and only valid bounded web or mail links open', async () => {
+  for (const url of ['https://example.com/path', 'http://example.com', 'mailto:user@example.com']) assert.equal(isSafeExternal(url), true);
+  for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:pass@example.com', 'https://example.com/' + 'a'.repeat(4096), null]) assert.equal(isSafeExternal(url), false);
+
+  const opened = [];
+  await openExternal('https://example.com', async (url) => opened.push(url));
+  assert.deepEqual(opened, ['https://example.com']);
+  await assert.rejects(openExternal('file:///etc/passwd', async () => {}), /HTTP, HTTPS, and mailto/);
+  await assert.rejects(openExternal('https://example.com', async () => { throw new Error('shell failed'); }), /shell failed/);
+});
 
 test('IPC window targets allow settings and reject invalid kinds or ids', () => {
   assert.deepEqual(validateWindowTarget('settings'), { kind: 'settings', id: undefined });
