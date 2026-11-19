@@ -4,8 +4,11 @@ export const CARD_HEIGHT = 156;
 /** 카드 모서리 반경(px). CSS는 --card-radius로만 읽고, 연결점은 이 안쪽으로 들어가지 않는다. */
 export const CARD_RADIUS = 10;
 /** 캔버스 위 카드가 차지하는 사각형. 카드 치수의 원본(CARD_WIDTH·CARD_HEIGHT)과 함께 둔다. */
-/** 저장 좌표는 정수 픽셀. 저장 직전 반올림의 단일 출처. */
-export const savedPoint = (point: CanvasPoint): [number, number] => [Math.round(point.x), Math.round(point.y)];
+/** 저장 가능한 좌표 범위 상한(엔진 persistence::LIMIT와 같다). 범위 밖 위치는 엔진이 묶음 변경 전체를 거절한다. */
+export const CANVAS_LIMIT = 20_000;
+const clampAxis = (value: number) => Math.min(Math.max(Math.round(value), 0), CANVAS_LIMIT);
+/** 저장 좌표는 0..CANVAS_LIMIT 정수 픽셀. 저장 직전 반올림·범위 맞춤의 단일 출처. */
+export const savedPoint = (point: CanvasPoint): [number, number] => [clampAxis(point.x), clampAxis(point.y)];
 /**
  * 저장할 위치 변경만 고른다. 비교 기준은 저장된 위치다(끌기 미리보기가 섞인 화면 위치와 비교하면 늘 같아 저장이 빠진다).
  * 저장된 위치가 없는 카드(자동 배치)는 놓은 자리를 새로 저장한다.
@@ -25,7 +28,7 @@ export function clampCanvasDelta(points: CanvasPoint[], dx: number, dy: number):
   if (!points.length) return { x: dx, y: dy };
   const minX = Math.min(...points.map((point) => point.x)); const maxX = Math.max(...points.map((point) => point.x));
   const minY = Math.min(...points.map((point) => point.y)); const maxY = Math.max(...points.map((point) => point.y));
-  return { x: Math.min(Math.max(dx, -minX), Math.max(-minX, 20_000 - maxX)), y: Math.min(Math.max(dy, -minY), Math.max(-minY, 20_000 - maxY)) };
+  return { x: Math.min(Math.max(dx, -minX), Math.max(-minX, CANVAS_LIMIT - maxX)), y: Math.min(Math.max(dy, -minY), Math.max(-minY, CANVAS_LIMIT - maxY)) };
 }
 export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-x' | 'distribute-y' | 'grid' | 'flow' | 'mindmap';
 

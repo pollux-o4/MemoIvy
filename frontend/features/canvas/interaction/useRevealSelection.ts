@@ -1,32 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { Camera } from '../model/motion';
+import { type Rect, revealCamera, visibleArea } from '../model/reveal';
 
-type Rect = { x: number; y: number; w: number; h: number };
+/** 보드 위에 겹쳐 떠 카드를 가릴 수 있는 패널. */
+const OVERLAY_SELECTOR = '.canvas-inspector';
 
-const MARGIN = 12;
-const INSPECTOR_WIDTH = 284;
+const toRect = (r: DOMRect): Rect => ({ x: r.left, y: r.top, w: r.width, h: r.height });
 
 /**
- * 선택한 카드가 인스펙터에 가려지거나 화면 밖이면 보이는 곳으로 카메라를 옮긴다.
- * 사용자가 직접 누른 카드는 이미 보고 있으므로 옮기지 않는다: 호출자가 reveal()을 요청할 때만(새로 만든 카드,
- * 인스펙터의 연결 카드 선택 등) 한 번 실행한다. 카메라·위치 변화에는 반응하지 않아 이동 중 끌려가지 않는다.
+ * 선택한 카드가 겹친 패널(인스펙터)에 가려지거나 화면 밖이면 보이는 곳까지 카메라를 최소한만 옮긴다.
+ * - 단일 선택이 바뀌면 조작(끌기·잇기 등)이 끝난 뒤 한 번 확인한다. 직접 누른 카드도 인스펙터가 새로 열리며 가릴 수 있다.
+ * - reveal(): 선택이 그대로여도 다시 확인한다(새로 만든 카드 등).
+ * 가림 영역은 실행 시점의 실제 패널 크기로 잰다. 카메라·위치 변화에는 반응하지 않아 이동 중 끌려가지 않는다.
  */
-export function useRevealSelection(host: RefObject<HTMLDivElement | null>, rect: Rect | undefined, camera: Camera, animateTo: (next: Camera) => void) {
+export function useRevealSelection(host: RefObject<HTMLDivElement | null>, target: { id: string; rect: Rect } | undefined,
+  camera: Camera, animateTo: (next: Camera) => void, idle: boolean) {
   const [request, setRequest] = useState(0);
-  const latest = useRef({ rect, camera, animateTo });
-  latest.current = { rect, camera, animateTo };
+  const pending = useRef(false);
+  const latest = useRef({ target, camera, animateTo });
+  latest.current = { target, camera, animateTo };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 선택 id 변화·요청이 확인 계기다.
+  useEffect(() => { if (target) pending.current = true; }, [target?.id, request]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 나머지는 실행 시점의 최신 값을 읽는다.
   useEffect(() => {
     const board = host.current;
-    const { rect: target, camera: view, animateTo: move } = latest.current;
-    if (!request || !board || !target) return;
-    const width = board.clientWidth; const height = board.clientHeight;
-    const visibleWidth = Math.max(width - INSPECTOR_WIDTH, width * .35);
-    const left = (target.x - view.x) * view.zoom; const top = (target.y - view.y) * view.zoom;
-    const right = left + target.w * view.zoom; const bottom = top + target.h * view.zoom;
-    if (left >= MARGIN && top >= MARGIN && right <= visibleWidth - MARGIN && bottom <= height - MARGIN) return;
-    const centerX = target.x + target.w / 2; const centerY = target.y + target.h / 2;
-    move({ x: centerX - visibleWidth / view.zoom / 2, y: centerY - height / view.zoom / 2, zoom: view.zoom });
-  }, [request, host]);
+    const { target: current, camera: view, animateTo: move } = latest.current;
+    if (!pending.current || !idle || !board || !current) return;
+    pending.current = false;
+    const overlays = [...board.parentElement?.querySelectorAll(OVERLAY_SELECTOR) ?? []].map((el) => toRect(el.getBoundingClientRect()));
+    const next = revealCamera(current.rect, view, visibleArea(toRect(board.getBoundingClientRect()), overlays));
+    if (next) move(next);
+  }, [target?.id, request, idle, host]);
   return useCallback(() => setRequest((value) => value + 1), []);
 }

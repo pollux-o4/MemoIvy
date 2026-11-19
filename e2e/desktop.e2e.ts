@@ -19,6 +19,12 @@ async function waitForServer(url: string) {
   }
   throw new Error('vite dev server did not start');
 }
+/** 카메라 애니메이션이 멈출 때까지 기다린다(두 번 연속 같은 transform). */
+async function settle(page: Page): Promise<void> {
+  const world = () => page.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
+  let previous = '';
+  await expect.poll(async () => { const now = await world(); const same = now === previous; previous = now; return same; }, { intervals: [120] }).toBe(true);
+}
 async function launch(): Promise<{ app: ElectronApplication; library: Page }> {
   const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dataDir } as Record<string, string> });
   const library = await app.firstWindow();
@@ -124,6 +130,44 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => canvas.locator('.zoom-value').textContent(), { timeout: 3_000 }).not.toBe('100%');
     } finally { await browser.close(); }
   });
+  test('캔버스 손잡이 누르기: 고르기 상태에서 카드를 누르면 연결만 는다', async () => {
+    const browser = await chromium.launch();
+    try {
+      const canvas = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.locator('.canvas-link').first().waitFor();
+      const links = () => canvas.locator('.canvas-link').count();
+      const cards = () => canvas.locator('[data-note-id]').count();
+      const [links0, cards0] = [await links(), await cards()];
+      const from = canvas.locator('[data-note-id]').filter({ hasText: '아이디어를 모으고' });
+      const to = canvas.locator('[data-note-id]').filter({ hasText: '오늘의 작은 기록' });
+      const center = async (locator: typeof from) => { const b = await locator.boundingBox(); if (!b) throw new Error('보이지 않는 요소'); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+      const c = await center(from); await canvas.mouse.move(c.x, c.y);
+      const h = await center(from.locator('.card-branch') as typeof from); await canvas.mouse.click(h.x, h.y);
+      await expect.poll(() => canvas.locator('.canvas-pick-hint').count()).toBe(1);
+      const t = await center(to); await canvas.mouse.click(t.x, t.y);
+      await expect.poll(links).toBe(links0 + 1);
+      expect(await cards()).toBe(cards0);
+      expect(await canvas.locator('.canvas-pick-hint').count()).toBe(0);
+    } finally { await browser.close(); }
+  });
+  test('캔버스 좁은 창: 고른 카드가 인스펙터에 가리면 보이는 곳까지 옮긴다', async () => {
+    const browser = await chromium.launch();
+    try {
+      const canvas = await browser.newPage({ viewport: { width: 700, height: 600 } });
+      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.locator('.canvas-link').first().waitFor();
+      const rightmost = canvas.locator('[data-note-id]').filter({ hasText: '생각을 연결하고' });
+      const inside = await rightmost.boundingBox();
+      if (!inside) throw new Error('카드가 보이지 않음');
+      await canvas.mouse.click(inside.x + 20, inside.y + 20);
+      const gap = async () => {
+        const card = await rightmost.boundingBox(); const panel = await canvas.locator('.canvas-inspector').boundingBox();
+        return card && panel ? panel.x - (card.x + card.width) : Number.NEGATIVE_INFINITY;
+      };
+      await expect.poll(gap, { timeout: 3_000 }).toBeGreaterThanOrEqual(0);
+    } finally { await browser.close(); }
+  });
   test('캔버스 마우스 가지: 손잡이 누르기·빈 곳에 놓기·카드에 놓기', async () => {
     const { app, library } = await launch();
     await library.getByRole('button', { name: '캔버스 열기' }).first().click();
@@ -139,25 +183,41 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const card = (id: string) => canvas.locator(`[data-note-id="${id}"]`);
     const handle = (id: string) => card(id).locator('.card-branch');
     const box = async (locator: ReturnType<typeof card>) => { const found = await locator.boundingBox(); if (!found) throw new Error('보이지 않는 요소'); return found; };
-    await canvas.locator('.canvas-screen').press('Escape');
+    const tapHandle = async (id: string) => { await hoverCard(id); const found = await box(handle(id)); await canvas.mouse.click(found.x + found.width / 2, found.y + found.height / 2); };
+    const hoverCard = async (id: string) => { const found = await box(card(id)); await canvas.mouse.move(found.x + found.width / 2, found.y + found.height / 2); };
+    // 새 카드는 골라지며 인스펙터가 열리고 카메라가 따라간다. 다음 조작 전에 선택을 풀고 전체를 보이게 한 뒤 멈출 때까지 기다린다.
+    const overview = async () => {
+      // 선택이 없을 때 Esc는 창을 닫으므로 인스펙터가 열려 있을 때만 누른다.
+      // 이름 칸에 포커스가 있으면 첫 Esc는 포커스만 푼다.
+      for (let i = 0; i < 3 && await canvas.locator('.canvas-inspector').count(); i += 1) await canvas.locator('.canvas-screen').press('Escape');
+      await canvas.getByRole('button', { name: '전체 보기' }).click();
+      await settle(canvas);
+    };
+    await overview();
     // 누르기: 바로 만들지 않고 고르기 상태가 된다. Esc는 취소, 빈 곳을 누르면 그 자리에 하위 가지.
     const links0 = await linkCount();
     const hint = canvas.locator('.canvas-pick-hint');
-    await card(root).hover();
-    await handle(root).click();
+    await tapHandle(root);
     await expect.poll(() => hint.count()).toBe(1);
     expect((await ids()).length).toBe(before.length + 1);
     await canvas.keyboard.press('Escape');
     await expect.poll(() => hint.count()).toBe(0);
-    await card(root).hover();
-    await handle(root).click();
-    const rootBox = await box(card(root));
-    await canvas.mouse.click(rootBox.x + rootBox.width + 160, rootBox.y + 40);
+    await tapHandle(root);
+    // 빈 곳: 보드 자체가 맞는 점을 찾는다(카드·패널 위를 누르면 연결이나 다른 동작이 된다).
+    const empty = await canvas.locator('.canvas-board').evaluate((board) => {
+      const r = board.getBoundingClientRect();
+      for (let y = r.top + 60; y < r.bottom - 80; y += 40) for (let x = r.left + 40; x < r.right - 40; x += 40) {
+        if (document.elementFromPoint(x, y) === board) return { x, y };
+      }
+      throw new Error('빈 곳 없음');
+    });
+    await canvas.mouse.click(empty.x, empty.y);
     await expect.poll(async () => (await ids()).length).toBe(before.length + 2);
     await expect.poll(linkCount).toBe(links0 + 1);
     await expect.poll(() => hint.count()).toBe(0);
+    await overview();
     // 빈 곳에 놓기: 끄는 동안 미리보기 선이 보이고, 놓은 자리에 새 가지가 생긴다.
-    await card(root).hover();
+    await hoverCard(root);
     const start = await box(handle(root));
     await canvas.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
     await canvas.mouse.down();
@@ -167,9 +227,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(async () => (await ids()).length).toBe(before.length + 3);
     await expect.poll(linkCount).toBe(links0 + 2);
     await expect.poll(() => canvas.locator('.canvas-connect-preview').count()).toBe(0);
+    await overview();
     // 카드에 놓기: 새 카드 없이 연결만 는다.
     const [first, second] = (await ids()).filter((id) => !before.includes(id) && id !== root);
-    await card(second).hover();
+    await hoverCard(second);
     const from = await box(handle(second));
     const to = await box(card(first));
     await canvas.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
@@ -179,12 +240,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await canvas.mouse.up();
     await expect.poll(linkCount).toBe(links0 + 3);
     expect((await ids()).length).toBe(before.length + 3);
-    // 누르고 카드 고르기: 새 카드 없이 연결만 는다.
-    await card(first).hover();
-    await handle(first).click();
-    await card(root).click();
-    await expect.poll(linkCount).toBe(links0 + 4);
-    expect((await ids()).length).toBe(before.length + 3);
+    await overview();
     await quit(app);
   });
 

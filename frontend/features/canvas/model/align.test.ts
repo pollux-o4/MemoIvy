@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { alignPositions, canvasSlot, changedPositions, clampCanvasDelta, vacantGroup } from './align';
+import { alignPositions, CANVAS_LIMIT, canvasSlot, changedPositions, clampCanvasDelta, savedPoint, vacantGroup } from './align';
 
 test('aligns selected positions and preserves the other axis', () => {
   const positions = { a: { x: 10, y: 20 }, b: { x: 80, y: 60 }, c: { x: 40, y: 5 } };
@@ -48,4 +48,9 @@ test('changedPositions compares against saved positions, not the drag preview', 
     { id: 'a', position: [40, 10] },
     { id: 'b', position: [5, 5] },
   ]);
+});
+
+test('savedPoint는 저장 범위 밖 좌표를 0..CANVAS_LIMIT로 맞춘다(엔진이 묶음 변경을 거절하지 않게)', () => {
+  assert.deepEqual(savedPoint({ x: -40.6, y: 12.4 }), [0, 12]);
+  assert.deepEqual(savedPoint({ x: 30_000, y: -1 }), [CANVAS_LIMIT, 0]);
 });

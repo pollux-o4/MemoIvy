@@ -66,7 +66,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const motion = useCanvasMotion(host, cardRects, selectedRects);
   const { camera, animateTo, triggerLink } = motion;
   useCanvasWheel(host, motion);
-  const reveal = useRevealSelection(host, selectedRects.length === 1 ? selectedRects[0] : undefined, camera, animateTo);
+  const reveal = useRevealSelection(host, selected.length === 1 && selectedRects.length === 1 ? { id: selected[0], rect: selectedRects[0] } : undefined, camera, animateTo, mode === 'idle');
   const commands = useCanvasCommands({ store, notes, positions, selected, activeScope, setDraftPositions, triggerLink });
   const clipboard = useCanvasClipboard({ store, notes, positions, selected, activeScope, onPasted: (ids) => selectAndReveal(ids) });
   const movable = (target: string, ids: string[]) => canMoveInto(target, ids, store.notes);
