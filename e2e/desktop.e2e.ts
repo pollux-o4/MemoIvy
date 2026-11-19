@@ -321,7 +321,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await quit(app);
   });
 
-  test('캔버스 마인드맵: Tab·Enter 가지, 가지 개요, 실행 취소, 프로젝트 제자리 펼치기', async () => {
+  test('캔버스 마인드맵: Tab·Enter 가지, 가지 개요, 실행 취소, 프로젝트 미리보기', async () => {
     const { app, library } = await launch();
     await library.getByRole('button', { name: '캔버스 열기' }).first().click();
     const canvas = await windowWith(app, '.canvas-screen');
@@ -365,15 +365,22 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await canvas.keyboard.press('Alt+m');
     await canvas.keyboard.press('Control+z');
     await expect.poll(() => card(child).evaluate((item) => item.style.cssText)).toBe(placed);
-    // 프로젝트 제자리 펼치기: 묶은 프로젝트를 펼치면 주변은 흐려지고 Esc로 접힌다.
+    // 하위 메모 수는 정보로 남고, 종이 더미는 호버와 키보드 포커스로 미리 본다.
     await card(child).click();
     await canvas.keyboard.press('Alt+g');
-    const project = canvas.locator('.canvas-note.project').filter({ has: canvas.locator('.canvas-peek') }).last();
-    await project.locator('.canvas-peek button').click();
-    await expect.poll(() => project.getAttribute('class')).toContain('is-peeking');
-    await expect.poll(() => canvas.locator('.canvas-world.has-focus > .canvas-note:not(.in-focus)').count()).toBeGreaterThan(0);
-    await canvas.locator('.canvas-screen').press('Escape');
-    await expect.poll(() => project.getAttribute('class')).not.toContain('is-peeking');
+    const project = canvas.locator('.canvas-note.project').filter({ hasText: '메모 1개' }).last();
+    expect(await project.locator('.canvas-project-meta button').count()).toBe(0);
+    const fanTitleOpacity = () => project.evaluate((item) => {
+      const title = item.nextElementSibling?.querySelector('.canvas-fan-title');
+      return title ? getComputedStyle(title).opacity : null;
+    });
+    await project.hover();
+    await expect.poll(fanTitleOpacity).toBe('1');
+    await canvas.getByRole('button', { name: '전체 보기' }).hover();
+    await expect.poll(fanTitleOpacity).toBe('0');
+    await project.locator('button').first().focus();
+    await canvas.keyboard.press('Shift+Tab');
+    await expect.poll(fanTitleOpacity).toBe('1');
     // 보이는 입구: 인스펙터의 하위 가지 버튼도 Tab과 같이 가지를 만든다(화면이 새 가지로 옮겨 가므로 마지막에 둔다).
     await card(root).click();
     const count = (await ids()).length;

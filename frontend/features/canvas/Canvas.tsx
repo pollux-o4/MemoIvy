@@ -60,7 +60,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const selectAndReveal = (ids: string[]) => { setSelected(ids); reveal(); };
   const cardMenu = useCardMenu(host, setSelected);
 
-  const { focus, outlineRows, peek, setPeek, indent, outdent, move, shift } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
+  const { focus, outlineRows, indent, outdent, move, shift } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
   const selectedNotes = notes.filter((note) => selected.includes(note.id));
@@ -90,7 +90,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     removeSelected: actions.remove, toggleDone: actions.toggleDone,
     connectSelected: () => openLinkPicker.current?.(),
     fit: fitView, resetZoom, groupSelected: () => void groupSelected(), liftSelected,
-    nudge: commands.nudge, cancelInteraction: () => { if (peek) { setPeek(undefined); return true; } return pointer.cancel(); },
+    nudge: commands.nudge, cancelInteraction: pointer.cancel,
     copy: actions.copy, cut: actions.cut, paste: actions.paste, duplicate: actions.duplicate, rename: actions.rename,
     openMenu: () => cardMenu.openForSelection(selected),
     addChild: () => { if (selected.length !== 1 || store.saving) return false; branch('child'); return true; },
@@ -107,7 +107,6 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     toggleTask: actions.toggleTask,
     toggleDone: (id: string) => commands.toggleDone([id]),
     contextMenu: (event: React.MouseEvent, id: string) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); },
-    togglePeek: (id: string) => setPeek((current) => current === id ? undefined : id),
   });
   const inspectorActions = useStableHandlers({
     external: (url: string) => void store.bridge.openExternal(url),
@@ -156,7 +155,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}${pointer.connectPicking ? ' picking' : ''}`} role="application" aria-label="캔버스"
       {...pointer.board}
 >
-      <CanvasWorld camera={camera} notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} selected={selected} focus={focus} peek={peek}
+      <CanvasWorld camera={camera} notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} selected={selected} focus={focus}
         quiet={fan.quiet} dropTarget={pointer.dropTarget} connect={connectView} guides={pointer.guides} linkStyle={linkStyle} sampleForLink={motion.sampleForLink} actions={cardActions}/>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}
       {pointer.connectPicking && <p className="canvas-pick-hint" role="status">이을 메모를 누르세요 · 빈 곳은 새 가지 · Esc 취소</p>}

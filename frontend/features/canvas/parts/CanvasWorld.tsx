@@ -20,7 +20,7 @@ export type WorldConnect = { from: CanvasPoint; to: CanvasPoint; target?: Canvas
  */
 export const CanvasWorld = memo(function CanvasWorld(o: {
   camera: Camera; notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>;
-  selected: string[]; focus?: ReadonlySet<string>; peek?: string; quiet: readonly string[]; dropTarget: string | null;
+  selected: string[]; focus?: ReadonlySet<string>; quiet: readonly string[]; dropTarget: string | null;
   connect: WorldConnect | null; guides: SnapGuide[]; linkStyle: LinkStyle; sampleForLink: LinkSampler; actions: CardActions;
 }) {
   const { camera } = o;
@@ -31,7 +31,7 @@ export const CanvasWorld = memo(function CanvasWorld(o: {
     <div ref={world} className={`canvas-world${o.focus ? ' has-focus' : ''}`} style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
       <CanvasLinks notes={o.notes} allNotes={o.allNotes} scope={o.scope} positions={o.positions} heights={heights} zoom={camera.zoom} selected={o.selected} sampleForLink={o.sampleForLink} linkStyle={o.linkStyle} focus={o.focus}/>
       {o.notes.map((note) => <CanvasCard key={note.id} note={note} position={o.positions[note.id]} selected={o.selected.includes(note.id)} dropTarget={o.dropTarget === note.id}
-        fanQuiet={o.quiet.includes(note.id)} linkTarget={o.connect?.targetId === note.id} focused={Boolean(o.focus?.has(note.id))} peeking={note.canvas.project ? o.peek === note.id : undefined} actions={o.actions}/>)}
+        fanQuiet={o.quiet.includes(note.id)} linkTarget={o.connect?.targetId === note.id} focused={Boolean(o.focus?.has(note.id))} actions={o.actions}/>)}
       {o.connect && <ConnectPreview from={o.connect.from} to={o.connect.to} target={o.connect.target} linkStyle={o.linkStyle} zoom={camera.zoom}/>}
       <SnapGuides guides={o.guides} zoom={camera.zoom}/>
     </div>
