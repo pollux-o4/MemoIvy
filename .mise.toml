@@ -125,7 +125,7 @@ description = "화면 순수 로직 단위 테스트 (Vitest)"
 run = "npm run test:unit"
 
 [tasks."test:stories"]
-description = "Storybook 상호작용·접근성 (Storybook 실행 중이어야 함)"
+description = "Storybook 상호작용·접근성 (현재 코드로 정적 빌드 후 검사, 실행 중인 Storybook 불필요)"
 run = "npm run test:stories"
 
 [tasks."test:e2e"]

@@ -15,7 +15,7 @@ Node와 Rust는 프로젝트 mise 설정을 사용한다. `npm ci`로 잠긴 의
 | 엔진 관련 검증 | `mise run test:engine` |
 | 데스크톱 통신 관련 검증 | `mise run test:desktop` |
 | 화면 순수 로직 단위 테스트 | `mise run test:web` |
-| 스토리 상호작용·접근성(axe) | `mise run test:stories` (Storybook 실행 중) |
+| 스토리 상호작용·접근성(axe) | `mise run test:stories` (현재 코드로 정적 빌드 후 검사. 띄워 둔 dev 서버로는 `npm run test:stories:live`) |
 | 실제 창 작성·동기화·재시작 복원 | `mise run test:e2e` (합성 데이터 폴더, xvfb) |
 | 린트·미사용 코드·모듈 경계·중복·미사용 crate | `mise run check:web` |
 | 화면 상태 번들 | `npm run build:storybook` |
