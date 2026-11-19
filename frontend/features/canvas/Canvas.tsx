@@ -17,6 +17,8 @@ import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasLinks } from './parts/CanvasLinks';
 import { CanvasNavigator } from './parts/CanvasNavigator';
 import { SnapGuides } from './parts/SnapGuides';
+import { branchSet, buildGraph, scopeEdges } from './model/links/graph';
+import { readLinkStyle } from '../../shared/link_style';
 import { gridStyle } from './model/grid';
 import { canvasTitle } from './model/labels';
 import { bounds, fitting } from './model/motion';
@@ -68,6 +70,14 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const selectAndReveal = (ids: string[]) => { setSelected(ids); reveal(); };
   const cardMenu = useCardMenu(host, setSelected);
 
+  // 가지 초점: 카드 하나를 고르면 그 카드와 이어진 가지만 또렷하게, 나머지는 흐리게 둔다.
+  const graph = useMemo(() => buildGraph(scopeEdges(store.notes, activeScope)), [store.notes, activeScope]);
+  const focus = useMemo(() => {
+    if (selected.length !== 1) return undefined;
+    const branch = branchSet(graph, selected[0]);
+    return branch.size > 1 ? branch : undefined;
+  }, [graph, selected]);
+  const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
   const selectedNotes = notes.filter((note) => selected.includes(note.id));
   const selectedNote = selectedNotes.length === 1 ? selectedNotes[0] : undefined;
@@ -153,8 +163,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       {...pointer.board}
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
-        <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
+        <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
+        {notes.map((note) => <CanvasCard key={note.id} note={note} dimmed={Boolean(focus && !focus.has(note.id))} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
           onOpen={(item) => openCard(item)} onConnectStart={pointer.beginConnection}
           onContextMenu={(event, id) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); }}/>)}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>

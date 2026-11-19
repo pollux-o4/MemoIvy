@@ -62,6 +62,25 @@ const canvasProjectsSnapshot = (): Snapshot => {
   };
 };
 export const CanvasProjects: Story = { render: () => previewApp('canvas', undefined, canvasProjectsSnapshot(), [1100, 640]) };
+/** 가지 두 개(위: 기획 → 시안·조사, 아래: 서로 이어진 한 쌍). 카드를 고르면 그 가지만 또렷해진다. */
+const canvasBranchesSnapshot = (linkStyle = 'curve'): Snapshot => {
+  const now = Math.floor(Date.now() / 1000);
+  const id = (n: number) => `00000000-0000-4000-8000-0000000002${String(n).padStart(2, '0')}`;
+  const card = (n: number, title: string, color: string, position: [number, number], next: number[]): Note => ({ id: id(n), text: `# ${title}`, color, modified: now - n * 60, canvas: { position, next: next.map(id), done: false, parent: null } });
+  return {
+    notes: [
+      card(1, '여름 캠페인 기획', 'yellow', [80, 220], [2, 3]),
+      card(2, '시안 세 가지', 'blue', [420, 80], [4]),
+      card(3, '경쟁사 조사', 'green', [420, 360], []),
+      card(4, '최종 시안 고르기', 'purple', [760, 80], []),
+      card(5, '주간 회고', 'pink', [760, 420], [6]),
+      card(6, '다음 주 계획', 'yellow', [760, 640], [5]),
+    ],
+    assets: [], revision: 1, savedRevision: 1, preferences: { canvasLinkStyle: linkStyle },
+  };
+};
+export const CanvasBranches: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot(), [1100, 900]) };
+export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
 export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {

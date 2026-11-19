@@ -14,8 +14,8 @@ import { ProjectFan } from './card/ProjectFan';
 import { ProjectSummary } from './card/ProjectSummary';
 
 /** 캔버스 카드 조립: 상태 클래스·포인터 연결만 맡고 내용은 card/ 부품이 그린다. 프로젝트면 뒤에 부채를 함께 둔다. */
-export function CanvasCard({ note, position, selected, dropTarget, fanQuiet = false, onPointerLeave, onPointerDown, onOpen, onConnectStart, onToggleDone, onContextMenu }: {
-  onToggleDone: () => void; dropTarget?: boolean; fanQuiet?: boolean; onPointerLeave?: (id: string) => void;
+export function CanvasCard({ note, position, selected, dropTarget, fanQuiet = false, dimmed = false, onPointerLeave, onPointerDown, onOpen, onConnectStart, onToggleDone, onContextMenu }: {
+  onToggleDone: () => void; dropTarget?: boolean; fanQuiet?: boolean; dimmed?: boolean; onPointerLeave?: (id: string) => void;
   note: Note; position: CanvasPoint; selected: boolean;
   onPointerDown: (event: PointerEvent, id: string) => void; onOpen: (note: Note) => void;
   onConnectStart: (id: string) => void; onContextMenu?: (event: React.MouseEvent, id: string) => void;
@@ -29,7 +29,7 @@ export function CanvasCard({ note, position, selected, dropTarget, fanQuiet = fa
   const children = progress.children(note.id);
   const tasks = progress.of(note);
   const taskText = progressLabel(note, progress);
-  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${grow > 0 ? ' is-expanded' : ''}`;
+  const state = `${selected ? ' selected' : ''}${dropTarget ? ' drop-target' : ''}${note.canvas.done ? ' done' : ''}${project ? ' project' : ''}${fanQuiet ? ' fan-quiet' : ''}${grow > 0 ? ' is-expanded' : ''}${dimmed ? ' is-dimmed' : ''}`;
   return <>
     <article className={`canvas-note${state}`} style={{ left: position.x, top: position.y, '--card-tone': tone, '--preview-extra': `${grow}px` } as CSSProperties}
       // biome-ignore lint/a11y/noNoninteractiveTabindex: 카드는 키보드로 선택·열기(Enter)·삭제하는 캔버스 항목이라 포커스를 받아야 한다.

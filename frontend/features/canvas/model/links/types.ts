@@ -23,7 +23,8 @@ export interface EdgeAnchors { key: string; from: Anchor; to: Anchor; bend: numb
 /** 직전 프레임에 고른 변. 키는 edgeKey(edge). 경계 근처에서 변이 깜빡이지 않게 넘긴다. */
 export type SideMemory = ReadonlyMap<string, { from: Side; to: Side }>;
 
-export type LinkStyle = 'curve' | 'straight' | 'orthogonal';
+export type { LinkStyle } from '../../../../shared/link_style';
+import type { LinkStyle } from '../../../../shared/link_style';
 
 /** 선 모양 Strategy: 연결점 두 개로 SVG path d 문자열을 만든다. */
 export type PathStrategy = (anchors: EdgeAnchors) => string;
@@ -31,7 +32,7 @@ export type PathStrategy = (anchors: EdgeAnchors) => string;
 export const edgeKey = (edge: Edge) => `${edge.from}:${edge.to}`;
 
 /** 카드 모서리 반경(canvas.css .canvas-note border-radius)과 여유. 연결점은 이 안쪽으로 들어가지 않는다. */
-export const CARD_RADIUS = 10;
+const CARD_RADIUS = 10;
 export const ANCHOR_INSET = CARD_RADIUS + 8;
 /** 화살촉 길이(px, 선 굵기 1.5 기준). 경로 끝을 이만큼 줄여 화살촉이 테두리에 닿게 한다. */
 export const ARROW_LENGTH = 8;

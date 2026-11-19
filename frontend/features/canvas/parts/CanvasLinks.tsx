@@ -1,51 +1,86 @@
+import { useMemo, useRef } from 'react';
 import type { Note } from '../../../shared/engine_contract';
 import type { CanvasPoint } from '../model/align';
 import { CARD_HEIGHT, CARD_WIDTH } from '../model/align';
+import { layoutAnchors } from '../model/links/anchors';
+import { PATH_STRATEGIES } from '../model/links/paths';
+import { type Edge, edgeKey, type LinkStyle, type Rect, type Side } from '../model/links/types';
 
-export function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected, sampleForLink }: {
-  notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>; zoom: number; selected: string[];
-  sampleForLink: (key: string) => { creating: boolean; pulsing: boolean; progress: number; travel: number; alpha: number };
-}) {
+type LinkSample = { creating: boolean; pulsing: boolean; progress: number; travel: number; alpha: number };
+const RESTING: LinkSample = { creating: false, pulsing: false, progress: 1, travel: 0, alpha: 1 };
+
+/** 이 화면 단계 밖(프로젝트 안쪽)으로 이어진 연결을 그 단계에 보이는 대표 카드끼리의 점선으로 투영한다. */
+function projectedEdges(notes: Note[], allNotes: Note[], scope: string | null): Edge[] {
   const noteIds = new Set(notes.map((note) => note.id));
   const byId = new Map(allNotes.map((note) => [note.id, note]));
   const representative = (id: string): string | undefined => {
     let note = byId.get(id);
     const seen = new Set<string>();
-    while (note && note.canvas.parent !== scope && note.canvas.parent && !seen.has(note.id)) {
-      seen.add(note.id); note = byId.get(note.canvas.parent);
-    }
+    while (note && note.canvas.parent !== scope && note.canvas.parent && !seen.has(note.id)) { seen.add(note.id); note = byId.get(note.canvas.parent); }
     return note?.canvas.parent === scope ? note.id : undefined;
   };
-  const projected = new Set<string>();
+  const pairs = new Set<string>();
   for (const note of allNotes) for (const target of note.canvas.next) {
+    if (noteIds.has(note.id) && noteIds.has(target)) continue;
     const from = representative(note.id); const to = representative(target);
-    if (from && to && from !== to && (!noteIds.has(note.id) || !noteIds.has(target)) && !notes.find((item) => item.id === from)?.canvas.next.includes(to)) projected.add(`${from}:${to}`);
+    if (from && to && from !== to && !byId.get(from)?.canvas.next.includes(to)) pairs.add(`${from}:${to}`);
   }
-  const paths: Array<{ fromId: string; toId: string; direct: boolean }> = notes.flatMap((note) =>
-    note.canvas.next.filter((target) => noteIds.has(target)).map((target) => ({ fromId: note.id, toId: target, direct: true })),
-  );
-  paths.push(...[...projected].map((pair) => { const [fromId, toId] = pair.split(':'); return { fromId, toId, direct: false }; }));
-  return <svg className="canvas-links" aria-hidden="true">
-    {paths.map(({ fromId, toId, direct }) => {
-      const from = positions[fromId]; const to = positions[toId]; if (!from || !to) return null;
-      const sample = direct ? sampleForLink(`${fromId}:${toId}`) : { creating: false, pulsing: false, progress: 1, travel: 0, alpha: 1 };
-      const horizontal = Math.abs(to.x - from.x) >= CARD_WIDTH + 24;
-      const direction = horizontal ? (to.x > from.x ? 1 : -1) : (to.y >= from.y ? 1 : -1);
-      const start: CanvasPoint = horizontal ? { x: from.x + (direction > 0 ? CARD_WIDTH : 0), y: from.y + CARD_HEIGHT / 2 } : { x: from.x + CARD_WIDTH / 2, y: from.y + (direction > 0 ? CARD_HEIGHT : 0) };
-      const end: CanvasPoint = horizontal ? { x: to.x + (direction > 0 ? 0 : CARD_WIDTH), y: to.y + CARD_HEIGHT / 2 } : { x: to.x + CARD_WIDTH / 2, y: to.y + (direction > 0 ? 0 : CARD_HEIGHT) };
-      const bend = Math.max(Math.abs((horizontal ? end.x - start.x : end.y - start.y) / 2), 40);
-      const c1 = horizontal ? `${start.x + direction * bend} ${start.y}` : `${start.x} ${start.y + direction * bend}`;
-      const c2 = horizontal ? `${end.x - direction * bend} ${end.y}` : `${end.x} ${end.y - direction * bend}`;
+  return [...pairs].map((pair) => { const [from, to] = pair.split(':'); return { from, to }; });
+}
+
+/**
+ * 연결선 그리기: 연결점·경로는 model/links가 계산하고 여기서는 SVG로만 옮긴다.
+ * focus가 있으면 그 가지 밖의 선을 흐리게 한다(가지 초점).
+ */
+export function CanvasLinks({ notes, allNotes, scope, positions, zoom, selected, sampleForLink, linkStyle = 'curve', focus }: {
+  notes: Note[]; allNotes: Note[]; scope: string | null; positions: Record<string, CanvasPoint>; zoom: number; selected: string[];
+  sampleForLink: (key: string) => LinkSample; linkStyle?: LinkStyle; focus?: ReadonlySet<string>;
+}) {
+  const direct = useMemo(() => {
+    const ids = new Set(notes.map((note) => note.id));
+    return notes.flatMap((note) => note.canvas.next.filter((target) => ids.has(target)).map((to) => ({ from: note.id, to })));
+  }, [notes]);
+  const projected = useMemo(() => projectedEdges(notes, allNotes, scope), [notes, allNotes, scope]);
+  // shortcut: 카드 높이는 기본값으로 계산(미리보기 펼침 높이 미반영), 펼친 카드 연결점이 어긋나 보이면 카드 높이를 상위 상태로 올린다.
+  const rects = useMemo(() => {
+    const out: Record<string, Rect> = {};
+    for (const [id, point] of Object.entries(positions)) out[id] = { x: point.x, y: point.y, w: CARD_WIDTH, h: CARD_HEIGHT };
+    return out;
+  }, [positions]);
+  // 직전 프레임의 변을 기억해 경계 근처에서 연결점이 깜빡이지 않게 한다. 사라진 간선 기록은 매번 새 맵으로 버린다.
+  const memory = useRef<Map<string, { from: Side; to: Side }>>(new Map());
+  const anchors = useMemo(() => {
+    const edges = [...direct, ...projected];
+    const result = layoutAnchors(rects, edges, memory.current);
+    memory.current = new Map(result.map((item) => [item.key, { from: item.from.side, to: item.to.side }]));
+    return result;
+  }, [direct, projected, rects]);
+  const projectedKeys = useMemo(() => new Set(projected.map(edgeKey)), [projected]);
+  const draw = PATH_STRATEGIES[linkStyle];
+  const width = 1.5 / Math.max(zoom, .45);
+  return <svg className="canvas-links" aria-hidden="true" data-link-style={linkStyle}>
+    <defs>
+      {/* 꺾쇠 화살촉: 선 굵기 단위라 줌·강조에 따라 같은 비율로 커진다. */}
+      <marker id="arrow" viewBox="0 0 10 10" markerWidth="5.4" markerHeight="5.4" refX="2" refY="5" orient="auto" markerUnits="strokeWidth">
+        <path d="M2 1.5 L8 5 L2 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </marker>
+    </defs>
+    {anchors.map((item) => {
+      const [fromId, toId] = item.key.split(':');
+      const isDirect = !projectedKeys.has(item.key);
+      const sample = isDirect ? sampleForLink(item.key) : RESTING;
       const highlighted = selected.includes(fromId) || selected.includes(toId);
-      return <g key={`${fromId}:${toId}:${direct}`}>
-        <path d={`M ${start.x} ${start.y} C ${c1}, ${c2}, ${end.x} ${end.y}`}
-        markerEnd="url(#arrow)" pathLength={1} stroke={highlighted ? 'var(--canvas-accent)' : undefined} strokeOpacity={highlighted ? .95 : undefined} strokeWidth={(highlighted ? 2.025 : 1.5) / Math.max(zoom, .45)}
-        strokeDasharray={!direct ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
-        strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}
-        opacity={sample.pulsing ? sample.alpha : 1}/>
-        {direct && sample.pulsing && !sample.creating && sample.travel >= 1 && <rect x={to.x - 4} y={to.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="18" fill="none" stroke={byId.get(toId)?.canvas.done ? 'var(--canvas-success)' : 'var(--canvas-accent)'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
+      const dimmed = focus ? !(focus.has(fromId) && focus.has(toId)) : false;
+      const target = positions[toId];
+      return <g key={item.key} className={`canvas-link${highlighted ? ' is-highlighted' : ''}${dimmed ? ' is-dimmed' : ''}`}>
+        <path d={draw(item)} markerEnd="url(#arrow)" pathLength={isDirect ? 1 : undefined} strokeWidth={highlighted ? width * 1.35 : width}
+          strokeDasharray={!isDirect ? '5 5' : sample.creating ? '1' : sample.pulsing ? '.12 .88' : undefined}
+          strokeDashoffset={sample.creating ? 1 - sample.progress : sample.pulsing ? -sample.travel : undefined}
+          opacity={sample.pulsing ? sample.alpha : undefined}/>
+        {isDirect && target && sample.pulsing && !sample.creating && sample.travel >= 1 && <rect x={target.x - 4} y={target.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="14" fill="none" className={byIdDone(allNotes, toId) ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
       </g>;
     })}
-    <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="currentColor"/></marker></defs>
   </svg>;
 }
+
+const byIdDone = (notes: Note[], id: string) => Boolean(notes.find((note) => note.id === id)?.canvas.done);
