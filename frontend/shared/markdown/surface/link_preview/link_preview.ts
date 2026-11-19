@@ -1,6 +1,6 @@
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
-import { findLinkAt, type LinkTarget } from './link_model';
+import { externalLinkUrl, findLinkAt, type LinkTarget } from './link_model';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import './link_preview.css';
 
@@ -30,7 +30,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
     constructor(private readonly view: EditorView) {
       this.card.element.addEventListener('pointerenter', this.onCardEnter);
       this.card.element.addEventListener('pointerleave', this.onCardLeave);
-      this.card.onOpen = (url) => { handlers.open(url); this.hide(); };
+      this.card.onOpen = (url) => { handlers.open(externalLinkUrl(url)); this.hide(); };
       this.card.onEdit = (link) => {
         const value = window.prompt('새 주소를 입력하세요.', link.url);
         if (value === null) return;

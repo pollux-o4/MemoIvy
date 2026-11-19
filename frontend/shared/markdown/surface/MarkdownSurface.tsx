@@ -10,6 +10,7 @@ import { editorTheme } from './editor_theme';
 import { formattingKeymap } from './formatting_keymap';
 import { liveMarkdown } from './live_markdown';
 import { linkPreview } from './link_preview/link_preview';
+import { externalLinkUrl, findLinkAt } from './link_preview/link_model';
 import type { ImageHandlers } from './image_tools/widget';
 
 export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onComposing, onExternal, onViewImage, label = '메모 내용', placeholder, compact = false }: {
@@ -51,10 +52,9 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
           if (!(event.ctrlKey || event.metaKey)) return false;
           const position = currentView.posAtCoords({ x: event.clientX, y: event.clientY });
           if (position === null) return false;
-          const line = currentView.state.doc.lineAt(position);
-          const match = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/.exec(line.text);
-          if (!match) return false;
-          callbacks.current.onExternal(match[2]);
+          const link = findLinkAt(currentView.state.doc.toString(), position);
+          if (!link) return false;
+          callbacks.current.onExternal(externalLinkUrl(link.url));
           return true;
         },
       }),

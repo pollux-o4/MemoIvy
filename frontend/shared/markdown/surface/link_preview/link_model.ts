@@ -26,19 +26,25 @@ export function findLinkAt(text: string, position: number): LinkTarget | null {
   return links.find(({ from, to }) => position >= from && position <= to) ?? null;
 }
 
+export function externalLinkUrl(url: string) {
+  const hostnameWithoutScheme = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/?#][^\s]*)?$/i;
+  return hostnameWithoutScheme.test(url) ? `https://${url}` : url;
+}
+
 export function linkInfo(url: string, label: string) {
+  const target = externalLinkUrl(url);
   let host = url;
   let rest = '';
   const mail = url.toLowerCase().startsWith('mailto:');
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(target);
     host = mail ? parsed.pathname.split('@').at(-1) || url : parsed.host;
-    rest = mail ? '' : `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    rest = mail ? '' : `${target !== url && parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     // Keep unsupported or malformed destinations visible so the user can inspect them.
   }
   const named = label.trim() !== '' && label !== url;
-  const warning = !mail && !url.toLowerCase().startsWith('https://')
+  const warning = !mail && !target.toLowerCase().startsWith('https://')
     ? '보안 연결이 아닌 주소입니다. 열기 전에 주소를 확인하세요.'
     : '';
   const initial = host.replace(/^www\./i, '').charAt(0).toLocaleUpperCase() || '?';

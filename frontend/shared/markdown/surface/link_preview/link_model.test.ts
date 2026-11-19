@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findLinkAt, linkInfo } from './link_model';
+import { externalLinkUrl, findLinkAt, linkInfo } from './link_model';
 
 describe('findLinkAt', () => {
   it('returns the destination range and label for a Markdown link', () => {
@@ -16,11 +16,14 @@ describe('findLinkAt', () => {
     expect(findLinkAt(text, text.indexOf('path'))).toEqual({ from: 4, to: 28, url: 'https://example.com/path', label: '' });
   });
 
-  it('finds the Naver URL below a named link', () => {
-    const url = 'https://naver.com';
-    const text = `[링크](https://example.com)\n${url}`;
+  it('preserves the Naver destination and uses HTTPS when opening it', () => {
+    const url = 'naver.com';
+    const text = '[링크](https://example.com)\n[네이버](naver.com)';
     const from = text.indexOf(url);
-    expect(findLinkAt(text, from + 8)).toEqual({ from, to: text.length, url, label: '' });
+    expect(findLinkAt(text, text.indexOf('네이버'))).toEqual({ from, to: from + url.length, url, label: '네이버' });
+    expect(linkInfo(url, '네이버')).toMatchObject({ title: '네이버', address: url, warning: '' });
+    expect(externalLinkUrl(url)).toBe('https://naver.com');
+    expect(externalLinkUrl('mailto:team@example.com')).toBe('mailto:team@example.com');
   });
 
   it('returns null outside link text and formats mail addresses', () => {
