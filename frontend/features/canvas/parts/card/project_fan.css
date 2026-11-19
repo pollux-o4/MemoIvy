@@ -3,7 +3,7 @@
    클릭(누름)은 부채를 건드리지 않는다. 실제로 끈 카드만 접고(.fan-quiet), 포인터가 그 카드를 떠나야 다시 펼친다. 모션은 transform·opacity만 써서 합성 단계에서 끝난다. */
 .canvas-screen .canvas-note.project { z-index: 2; }
 .canvas-screen .canvas-fan { position: absolute; z-index: 1; width: var(--card-width); height: var(--card-height); pointer-events: none; }
-.canvas-screen .canvas-fan-sheet { position: absolute; inset: 0; border-radius: 10px; background: color-mix(in srgb, var(--card-tone) 92%, black); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--note-text) 12%, transparent), 0 1px 3px var(--canvas-shadow); opacity: 0; transform: translate(5px, 5px); transition: transform 320ms var(--ease-out-expo), opacity 200ms ease-out; will-change: transform; }
+.canvas-screen .canvas-fan-sheet { position: absolute; inset: 0; border-radius: var(--card-radius); background: color-mix(in srgb, var(--card-tone) 92%, black); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--note-text) 12%, transparent), 0 1px 3px var(--canvas-shadow); opacity: 0; transform: translate(5px, 5px); transition: transform 320ms var(--ease-out-expo), opacity 200ms ease-out; will-change: transform; }
 .canvas-screen .canvas-fan-sheet.resting { opacity: 1; }
 .canvas-screen .canvas-fan-sheet.near.resting { transform: translate(5px, 5px) rotate(.6deg); }
 .canvas-screen .canvas-fan-sheet.mid.resting { transform: translate(10px, 10px) rotate(1.2deg); background: color-mix(in srgb, var(--card-tone) 84%, black); }

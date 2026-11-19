@@ -8,7 +8,7 @@ import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { AlignmentBar } from './parts/alignment/AlignmentBar';
-import { canvasSlot, CARD_HEIGHT, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
+import { canvasSlot, CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
 
 import { type CardActions, CanvasCard } from './parts/CanvasCard';
 import { CanvasDock } from './parts/CanvasDock';
@@ -38,7 +38,7 @@ import { useRevealSelection } from './interaction/useRevealSelection';
 import { useFanQuiet } from './interaction/useFanQuiet';
 
 // 카드 치수의 원본은 model/align. CSS(카드·부채)는 이 변수만 읽는다.
-const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px` } as React.CSSProperties;
+const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px`, '--card-radius': `${CARD_RADIUS}px` } as React.CSSProperties;
 
 const MAX_DEPTH = 3;
 

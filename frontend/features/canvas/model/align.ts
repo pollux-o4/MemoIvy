@@ -1,6 +1,8 @@
 export type CanvasPoint = { x: number; y: number };
 export const CARD_WIDTH = 240;
 export const CARD_HEIGHT = 156;
+/** 카드 모서리 반경(px). CSS는 --card-radius로만 읽고, 연결점은 이 안쪽으로 들어가지 않는다. */
+export const CARD_RADIUS = 10;
 /** 캔버스 위 카드가 차지하는 사각형. 카드 치수의 원본(CARD_WIDTH·CARD_HEIGHT)과 함께 둔다. */
 /** 저장 좌표는 정수 픽셀. 저장 직전 반올림의 단일 출처. */
 export const savedPoint = (point: CanvasPoint): [number, number] => [Math.round(point.x), Math.round(point.y)];

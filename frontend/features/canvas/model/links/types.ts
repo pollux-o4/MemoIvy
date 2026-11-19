@@ -2,7 +2,7 @@
  * 캔버스 간선·마인드맵 계산의 공용 계약. 화면(React)을 모르는 순수 데이터만 둔다.
  * 각 계산 모듈(anchors · paths · graph · mindmap_layout)은 이 타입만 주고받는다.
  */
-import type { CanvasPoint } from '../align';
+import { CARD_RADIUS, type CanvasPoint } from '../align';
 
 export type { CanvasPoint };
 
@@ -30,8 +30,7 @@ export type PathStrategy = (anchors: EdgeAnchors) => string;
 
 export const edgeKey = (edge: Edge) => `${edge.from}:${edge.to}`;
 
-/** 카드 모서리 반경(canvas.css .canvas-note border-radius)과 여유. 연결점은 이 안쪽으로 들어가지 않는다. */
-const CARD_RADIUS = 10;
+/** 연결점이 카드 모서리 반경 안쪽으로 들어가지 않게 두는 여유. */
 export const ANCHOR_INSET = CARD_RADIUS + 8;
 /** 화살촉 길이(px, 선 굵기 1.5 기준). 경로 끝을 이만큼 줄여 화살촉이 테두리에 닿게 한다. */
 export const ARROW_LENGTH = 8;
