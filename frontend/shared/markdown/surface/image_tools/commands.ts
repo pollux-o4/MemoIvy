@@ -1,3 +1,5 @@
+import { parseListItem } from '../../list_item';
+
 const MIN_IMAGE_WIDTH = 64;
 export const MAX_IMAGE_WIDTH = 4096;
 
@@ -38,8 +40,10 @@ export function moveImageLine(text: string, sourceFrom: number, targetFrom: numb
   const source = starts.indexOf(sourceFrom);
   const target = starts.indexOf(targetFrom);
   if (source < 0 || target < 0 || source === target) return text;
+  const item = after ? parseListItem(lines[target]) : null;
   const [image] = lines.splice(source, 1);
+  const moved = `${' '.repeat(item?.contentIndent ?? 0)}${image.trimStart()}`;
   const insertion = target + Number(after) - Number(target > source);
-  lines.splice(insertion, 0, image);
+  lines.splice(insertion, 0, moved);
   return lines.join('\n');
 }

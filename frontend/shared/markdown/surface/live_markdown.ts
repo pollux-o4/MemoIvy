@@ -97,9 +97,13 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       const imageLines = new Set<number>();
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {
         const line = view.state.doc.line(lineNumber);
+        const listDecorations = listLine(line);
         const match = assetLine.exec(line.text.trim());
         if (match) {
           imageLines.add(lineNumber);
+          // The image replaces the source range. Keep only the list alignment decoration.
+          const alignment = listDecorations[0];
+          if (alignment) ranges.push(alignment);
           const widget = new AssetWidget({
             description: match[1], src: assetUrls[match[3]], width: Number(match[2]) || undefined,
             hash: match[3], from: line.from, to: line.to, view, handlers: imageHandlers,
@@ -108,7 +112,7 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push(line.number === active ? { from: line.from, to: line.from, value: Decoration.widget({ widget, side: -1 }) } : { from: line.from, to: line.to, value: Decoration.replace({ widget }) });
           continue;
         }
-        ranges.push(...listLine(line));
+        ranges.push(...listDecorations);
       }
       const { from: visibleFrom, to: visibleTo } = view.viewport;
       syntaxTree(view.state).iterate({ from: visibleFrom, to: visibleTo, enter(node) {

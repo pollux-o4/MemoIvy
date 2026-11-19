@@ -2,9 +2,9 @@
   position: relative;
   display: inline-block;
   max-width: 100%;
-  /* GTK 앵커 위젯처럼 이미지 아래 기준선에 원문이 이어진다. */
-  vertical-align: baseline;
-  padding: 14px 0 0;
+  --image-block-gap: 6px;
+  vertical-align: top;
+  padding-block: var(--image-block-gap);
 }
 
 .cm-asset-preview img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
@@ -16,7 +16,7 @@
   transition: opacity 120ms ease;
 }
 .cm-asset-preview:is(:hover, :focus-within) :is(.cm-image-tools, .cm-image-resize) { opacity: 1; }
-.cm-image-tools { inset-block-start: 18px; inset-inline-end: 4px; display: flex; gap: 4px; }
+.cm-image-tools { inset-block-start: calc(var(--image-block-gap) + 4px); inset-inline-end: 4px; display: flex; gap: 4px; }
 .cm-image-tool, .cm-image-resize {
   appearance: none;
   display: grid;
@@ -35,7 +35,7 @@
 .cm-image-tool:disabled { opacity: .5; cursor: default; }
 .cm-image-tool:enabled:hover, .cm-image-resize:hover { color: var(--memoivy-accent); }
 .cm-image-tool:focus-visible, .cm-image-resize:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: 1px; }
-.cm-image-resize { inset-inline-end: 4px; inset-block-end: 4px; cursor: se-resize; touch-action: none; }
+.cm-image-resize { inset-inline-end: 4px; inset-block-end: calc(var(--image-block-gap) + 4px); cursor: se-resize; touch-action: none; }
 .cm-image-resize::after { content: ''; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; }
 @media (hover: none) {
   .cm-image-tools, .cm-image-resize { opacity: 1; }

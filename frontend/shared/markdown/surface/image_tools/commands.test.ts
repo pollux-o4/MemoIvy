@@ -23,4 +23,9 @@ describe('inline image commands', () => {
     expect(moveImageLine('첫째\n이미지\n셋째', 3, 7, true)).toBe('첫째\n셋째\n이미지');
     expect(moveImageLine('첫째\n이미지\n셋째', 3, 3, true)).toBe('첫째\n이미지\n셋째');
   });
+  it('nests an image dropped after a child checklist item', () => {
+    const text = '- [ ] 위\n  - [ ] 하위\n- [ ] 다음\n이미지';
+    expect(moveImageLine(text, text.lastIndexOf('이미지'), text.indexOf('  -'), true))
+      .toBe('- [ ] 위\n  - [ ] 하위\n        이미지\n- [ ] 다음');
+  });
 });
