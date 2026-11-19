@@ -1,17 +1,16 @@
 import { useMemo } from 'react';
 import type { Note } from '../../shared/engine_contract';
-import { Disclosure } from '../../shared/Disclosure';
 import { childCountLabel } from '../../shared/hierarchy';
 import { Icon } from '../../shared/Icon';
 import { progressLabel } from '../../shared/progress';
 import { useProgress } from '../../shared/ProgressProvider';
-import { useCollapsible } from '../../shared/useCollapsible';
+import { PreviewDisclosure, usePreviewDisclosure } from '../../shared/markdown/preview/PreviewDisclosure';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { libraryTitle } from './library_model';
 import { NoteMenu } from './NoteMenu';
 import { TaskCountLabel, TaskProgress } from '../../shared/TaskProgress';
 import { markdownPreview } from '../../shared/markdown/preview/model';
-import { PreviewList, previewRowsHeight } from '../../shared/markdown/preview/PreviewList';
+import { PreviewList } from '../../shared/markdown/preview/PreviewList';
 import { savePreviewTask } from '../../shared/markdown/preview/savePreviewTask';
 
 export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOpen }: { note: Note; path: string[]; store: MemoStore; onOpenCanvas?: (id?: string) => void; nested?: boolean; onOpen: () => void }) {
@@ -22,7 +21,7 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
   const taskText = progressLabel(note, progress);
   const label = libraryTitle(note);
   const id = `preview-${note.id}`;
-  const preview = useCollapsible<HTMLUListElement>((list) => previewRowsHeight(list, collapsedRows), [rows, collapsedRows]);
+  const preview = usePreviewDisclosure(rows, collapsedRows);
 
   return <article className={`note-card card ${note.color}${note.canvas.project ? ' project' : ''}${nested ? ' nested' : ''}`}>
     <div className="card-row"><div className="card-stripe"/><div className="card-content">
@@ -38,6 +37,6 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
       {!note.canvas.project && !note.text.trim() && <span className="preview">열어서 내용을 적어 보세요</span>}
       {note.canvas.project && task.total > 0 && <TaskProgress className="project-progress" label={label} progress={task}/>}
     </div>{note.canvas.project && onOpenCanvas && <button className="icon-button enter-project" title="캔버스에서 프로젝트 열기" aria-label={`${label} 캔버스 열기`} onClick={() => onOpenCanvas(note.id)}><Icon name="enter" size={17}/></button>}<NoteMenu id={note.id} title={label} store={store}/></div>
-    {preview.needsReveal && <Disclosure expanded={preview.expanded} onToggle={preview.toggle} targetId={id} label={`${label} 본문`}/>}
+    <PreviewDisclosure label={label} targetId={id} preview={preview}/>
   </article>;
 }

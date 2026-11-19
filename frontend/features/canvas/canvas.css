@@ -170,11 +170,9 @@
 .canvas-screen .canvas-note .canvas-checklist-preview .preview-check { flex: 0 0 12px; width: 12px; height: 12px; margin: 1px 1px 0; border-radius: 3px; }
 .canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { font-size: 10px; }
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.canvas-screen .canvas-note .canvas-preview-reveal { display: grid; place-items: center; margin-top: 1px; }
-.canvas-screen .canvas-note .canvas-preview-reveal .disclosure { position: relative; z-index: 1; flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
-/* 화살표와 배치 크기는 그대로 두고 포인터 영역만 36×36px로 넓힌다. */
-.canvas-screen .canvas-note .canvas-preview-reveal .disclosure::before { content: ""; position: absolute; inset: -9px -4px; }
-.canvas-screen .canvas-note .canvas-preview-reveal .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
+.canvas-screen .canvas-note .preview-disclosure { margin-top: 1px; }
+.canvas-screen .canvas-note .preview-disclosure .disclosure { width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
+.canvas-screen .canvas-note .preview-disclosure .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
 /* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */
 /* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */
 .canvas-screen .canvas-note.is-expanded { z-index: 3; }

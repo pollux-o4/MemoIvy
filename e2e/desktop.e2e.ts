@@ -414,7 +414,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
       await noteTask.click();
       await expect.poll(() => noteTask.getAttribute('aria-checked')).toBe('true');
-      await card.getByRole('button', { name: '작업 메모 본문 펼치기' }).click();
+      const disclosure = card.getByRole('button', { name: '작업 메모 본문 펼치기' });
+      const hitSize = () => disclosure.evaluate((button) => {
+        const area = getComputedStyle(button, '::before');
+        return [area.width, area.height];
+      });
+      await expect.poll(hitSize).toEqual(['36px', '36px']);
+      await disclosure.click();
       expect(await preview.locator('.preview-heading').textContent()).toBe('작은 제목');
       expect(await preview.locator('.preview-bullet .preview-marker').textContent()).toBe('•');
       expect(await preview.locator('.preview-number .preview-marker').textContent()).toBe('1.');
@@ -469,7 +475,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await settle(canvas);
       // 포인터가 움직여도 접힌 카드의 조작 영역은 같은 화면 좌표를 유지한다.
       const branchHandle = checklist.locator('.card-branch');
-      const disclosure = checklist.locator('.canvas-preview-reveal .disclosure');
+      const disclosure = checklist.locator('.preview-disclosure .disclosure');
       const clippedTask = checklist.locator('button[aria-label="펼친 미리보기 줄 4"]');
       expect(await clippedTask.evaluate((button: HTMLButtonElement) => {
         button.focus();
@@ -524,7 +530,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(atStart.hidden).toEqual([]);
       // 펼친 미리보기: 본문을 펼친 카드도 아래 연결점이 카드 밖에 남는다.
       // 축소 화면에서는 버튼이 겹쳐 좌표 클릭이 다른 카드에 갈 수 있어 요소에 직접 누른다.
-      await canvas.locator('.canvas-preview-reveal .disclosure').evaluateAll((items) => { for (const item of items) (item as HTMLButtonElement).click(); });
+      await canvas.locator('.preview-disclosure .disclosure').evaluateAll((items) => { for (const item of items) (item as HTMLButtonElement).click(); });
       await expect.poll(() => canvas.locator('.canvas-note.is-expanded').count()).toBeGreaterThan(0);
       // 늘어나는 모션이 끝난 뒤(카드 높이가 두 번 연속 같을 때) 판정한다. 모션 중간에 보면 가림을 놓친다.
       const heightsNow = () => canvas.locator('.canvas-world > .canvas-note').evaluateAll((items) => items.map((item) => (item as HTMLElement).offsetHeight).join());

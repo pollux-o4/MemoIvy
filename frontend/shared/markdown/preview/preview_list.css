@@ -6,3 +6,8 @@
 .preview-list .preview-check { flex: 0 0 auto; }
 .preview-list .preview-check::before { content: ""; position: absolute; inset: -2px; }
 .preview-list small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+
+.preview-disclosure { display: grid; place-items: center; }
+.preview-disclosure > .disclosure { position: relative; z-index: 1; flex: none; }
+/* 버튼 크기와 본문 배치는 그대로 두고 공통 포인터 영역을 제공한다. */
+.preview-disclosure > .disclosure::before { content: ""; position: absolute; top: 50%; left: 50%; width: 36px; height: 36px; transform: translate(-50%, -50%); }

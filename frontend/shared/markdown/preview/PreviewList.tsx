@@ -27,10 +27,3 @@ function TaskCheck({ row, sourceLine, onToggle }: { row: Extract<PreviewItem, { 
     onPointerDown={stop} onDoubleClick={stop} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') stop(event); }}
     onClick={(event) => { event.stopPropagation(); onToggle(sourceLine); }}/>;
 }
-
-
-/** 앞에서부터 지정한 행까지의 실제 높이. 줄이 감겨도 행 중간에서 잘리지 않는다. */
-export function previewRowsHeight(list: HTMLUListElement, rows: number): number {
-  const last = list.children[Math.min(rows, list.children.length) - 1] as HTMLElement | undefined;
-  return last ? last.offsetTop - list.offsetTop + last.offsetHeight : 0;
-}
