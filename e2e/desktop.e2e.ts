@@ -394,16 +394,20 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const project = 'd0000000-0000-4000-8000-000000000001';
     const note = 'd0000000-0000-4000-8000-000000000002';
     writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
-      { id: project, text: '작업 프로젝트\n- [ ] 소개 할 일', color: 'yellow', modified: 100, canvas: { project: true } },
+      { id: project, text: '작업 프로젝트\n- [ ] 소개 할 일\n- [ ] 다음 할 일', color: 'yellow', modified: 100, canvas: { project: true } },
       { id: note, text: '작업 메모\n- [ ] 본문 할 일\n## 작은 제목\n  - 하위 글머리\n1. 번호 항목', color: 'blue', modified: 100, canvas: { parent: project } },
     ]));
     const { app, library } = await launch(dir);
     try {
       await library.getByRole('button', { name: '작업 프로젝트 펼치기' }).click();
       const intro = library.locator('.project-intro-preview');
-      const task = intro.getByRole('checkbox', { name: '소개 할 일' });
-      await task.click();
-      await expect.poll(() => task.getAttribute('aria-checked')).toBe('true');
+      const tasks = intro.getByRole('checkbox');
+      await tasks.first().waitFor();
+      await tasks.evaluateAll((buttons) => {
+        for (const button of buttons) (button as HTMLButtonElement).click();
+      });
+      await expect.poll(() => tasks.evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-checked')))).toEqual(['true', 'true']);
+      expect(await library.getByRole('alert').count()).toBe(0);
 
       const card = library.locator('.note-card').filter({ has: library.getByRole('button', { name: '작업 메모', exact: true }) });
       const preview = card.locator('.preview-list');
@@ -416,7 +420,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(await preview.locator('.preview-number .preview-marker').textContent()).toBe('1.');
       expect(await preview.locator('.preview-bullet').evaluate((row) => parseFloat(getComputedStyle(row).paddingInlineStart))).toBeGreaterThan(0);
       await expect.poll(() => card.locator('.task-chip').textContent()).toBe('1/1');
-      await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('2/2');
+      await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('3/3');
       expect(app.windows()).toHaveLength(1);
       // 본문 영역의 포인터는 열기 버튼의 클릭 영역으로 전달된다.
       const heading = preview.locator('.preview-heading');

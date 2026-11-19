@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { markdownPreview, togglePreviewTask } from './model';
+import { markdownPreview, rebasePreviewTask, togglePreviewTask } from './model';
 
 describe('markdown preview', () => {
   test('retains title markers, check state, numbering, and overflow count', () => {
@@ -28,6 +28,15 @@ describe('markdown preview', () => {
     const markdown = 'Title\n```markdown\n- [ ] example\n```\n- [ ] actual';
     expect(markdownPreview(markdown).rows.filter((row) => row.kind === 'task').map(({ sourceLine }) => sourceLine)).toEqual([4]);
     expect(togglePreviewTask(markdown, 2)).toBe(markdown);
+  });
+
+  test('rebases consecutive toggles and rejects edits to the original layout', () => {
+    const original = 'Title\n- [ ] first\n- [ ] second';
+    const first = togglePreviewTask(original, 1);
+    expect(rebasePreviewTask(original, first, 2)).toBe('Title\n- [x] first\n- [x] second');
+    expect(rebasePreviewTask(original, first, 1)).toBe(original);
+    expect(rebasePreviewTask(original, first.replace('second', 'edited'), 2)).toBeUndefined();
+    expect(rebasePreviewTask(original, `${first}\n- [ ] new`, 2)).toBeUndefined();
   });
 
   test('keeps the editor list depth for nested items', () => {

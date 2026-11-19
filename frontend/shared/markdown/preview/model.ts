@@ -44,3 +44,25 @@ export function togglePreviewTask(markdown: string, sourceLine: number): string 
   lines[sourceLine] = line.slice(0, at) + (item.task === 'x' ? ' ' : 'x') + line.slice(at + 1);
   return lines.join('\n');
 }
+
+
+/** 앞선 체크 변경은 반영하되 줄 내용·위치가 달라진 원문은 덮지 않는다. */
+export function rebasePreviewTask(original: string, current: string, sourceLine: number): string | undefined {
+  if (original === current) return togglePreviewTask(current, sourceLine);
+  const before = original.split('\n');
+  const after = current.split('\n');
+  if (before.length !== after.length) return undefined;
+  const readBefore = createListItemReader();
+  const readAfter = createListItemReader();
+  const sameLayout = before.every((line, index) => {
+    const nextLine = after[index];
+    const oldItem = readBefore(line);
+    const newItem = readAfter(nextLine);
+    if (line === nextLine) return true;
+    if (!oldItem?.task || !newItem?.task) return false;
+    const at = taskBoxOffset(oldItem) + 1;
+    return at === taskBoxOffset(newItem) + 1 &&
+      line.slice(0, at) === nextLine.slice(0, at) && line.slice(at + 1) === nextLine.slice(at + 1);
+  });
+  return sameLayout ? togglePreviewTask(current, sourceLine) : undefined;
+}
