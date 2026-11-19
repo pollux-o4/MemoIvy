@@ -1,0 +1,81 @@
+name: Desktop release candidates
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      MSIX_IDENTITY: ${{ vars.MSIX_IDENTITY || 'MemoIvy.Development' }}
+      MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER || 'CN=MemoIvy Development' }}
+      MSIX_PUBLISHER_NAME: ${{ vars.MSIX_PUBLISHER_NAME || 'MemoIvy Development' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+        with:
+          install_args: node rust
+      - run: npm ci
+      - run: mise run test:engine
+      - run: mise run test:desktop
+      - run: npm run release:windows
+      - run: >
+          .\scripts\package-msix.ps1
+          -IdentityName $env:MSIX_IDENTITY
+          -Publisher $env:MSIX_PUBLISHER
+          -PublisherDisplayName $env:MSIX_PUBLISHER_NAME
+      - name: Verify payload and record checksums
+        shell: pwsh
+        run: |
+          if (!(Test-Path artifacts/installers/win-unpacked/resources/engine/memoivy-engine.exe)) { throw "Windows engine missing" }
+          Set-Location artifacts/installers
+          Get-ChildItem -File -Path *.exe,*.msix | ForEach-Object {
+            "$( (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() )  $($_.Name)"
+          } | Set-Content SHA256SUMS
+          Set-Content SOURCE_COMMIT $env:GITHUB_SHA
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            artifacts/installers/*.exe
+            artifacts/installers/*.msix
+            artifacts/installers/SHA256SUMS
+            artifacts/installers/SOURCE_COMMIT
+
+  snap:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+        with:
+          install_args: node rust
+      - name: Prepare isolated Snapcraft builder
+        run: |
+          sudo snap install snapcraft --classic
+          if ! command -v lxd >/dev/null; then sudo snap install lxd; fi
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo usermod -aG lxd "$USER"
+      - run: npm ci
+      - run: mise run test:engine
+      - run: mise run test:desktop
+      - run: sg lxd -c 'npm run release:snap'
+      - name: Verify payload and record checksums
+        run: |
+          cd artifacts/installers
+          test "$(find . -maxdepth 1 -name '*.snap' | wc -l)" -eq 1
+          unsquashfs -ll ./*.snap | grep 'resources/engine/memoivy-engine$'
+          sha256sum -- *.snap > SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > SOURCE_COMMIT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snap-amd64-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            artifacts/installers/*.snap
+            artifacts/installers/SHA256SUMS
+            artifacts/installers/SOURCE_COMMIT

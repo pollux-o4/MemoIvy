@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { version } from '../../../package.json';
 import { Segmented, type SegmentedOption } from '../../shared/Segmented';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { APPEARANCE_KEY, readAppearance, type AppearancePreference, type MotionChoice, type ThemeChoice } from '../../shared/appearance';
@@ -54,7 +55,7 @@ export function Settings({ store, onClose }: { store: MemoStore; onClose: () => 
         <Row label="내보내기" hint="Markdown 파일로 내보냅니다."><button className="secondary-button" disabled>준비 중</button></Row>
       </Section>
       <Section title="정보">
-        <Row label="MemoIvy" hint="데스크톱 메모"><span className="settings-value">0.1.2</span></Row>
+        <Row label="MemoIvy" hint="데스크톱 메모"><span className="settings-value">{version}</span></Row>
       </Section>
     </main>
   </div>;
