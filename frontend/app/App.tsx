@@ -9,7 +9,7 @@ import { Files } from '../features/attachments/Files';
 import '../shared/motion.css';
 import { Settings } from '../features/settings/Settings';
 import { Help } from '../features/help/Help';
-import { openHelpWindow, rememberHelpTopic } from '../shared/helpTopic';
+import type { HelpTopic } from '../shared/helpTopic';
 import { useAppearance } from '../shared/appearance';
 import { useWindowFrame } from '../shared/useWindowFrame';
 import { installTooltips } from '../shared/tooltip';
@@ -25,6 +25,7 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     return requested === 'note' || requested === 'canvas' || requested === 'files' || requested === 'settings' || requested === 'help' ? requested : 'library';
   });
   const [activeId, setActiveId] = useState<string | undefined>(() => initialId ?? (initialScreen ? undefined : query.get('id') ?? undefined));
+  const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   useAppearance(store.snapshot?.preferences);
   const frame = useWindowFrame();
   useEffect(() => installTooltips(), []);
@@ -48,11 +49,7 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     if (window.memoivy) { await store.bridge.openWindow('canvas', id); return; }
     setActiveId(id); setScreen('canvas');
   };
-  const openHelp = async () => {
-    const topic = screen === 'canvas' ? 'canvas' : 'note';
-    if (window.memoivy) { await openHelpWindow(store.bridge, topic); return; }
-    rememberHelpTopic(topic); setScreen('help');
-  };
+  const openHelp = () => setHelpTopic(screen === 'canvas' ? 'canvas' : 'note');
   const openSettings = async () => {
     if (window.memoivy) { await store.bridge.openWindow('settings'); return; }
     setScreen('settings');
@@ -63,8 +60,8 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
   };
   // 전역 단축키는 한 번만 걸고, 누를 때마다 지금 화면의 동작을 읽는다.
   const onGlobalKey = useEffectEvent((event: KeyboardEvent) => {
-    handle(() => { void createNote(false); })(event);
-    if (event.key === 'F1') { event.preventDefault(); void openHelp(); }
+    if (event.key === 'F1') { event.preventDefault(); if (!helpTopic && screen !== 'help') openHelp(); return; }
+    if (!helpTopic) handle(() => { void createNote(false); })(event);
   });
   useEffect(() => {
     const listener = (event: KeyboardEvent) => onGlobalKey(event);
@@ -92,8 +89,9 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     {screen === 'help' && <Help bridge={store.bridge} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'settings' && <Settings store={store} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'note' && activeId && <Editor store={store} noteId={activeId} onClose={() => void closeScreen()}/>}
-    {store.snapshot && screen === 'canvas' && <Canvas store={store} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()}/>}
+    {store.snapshot && screen === 'canvas' && <Canvas store={store} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()} onHelp={openHelp}/>}
     {store.snapshot && screen === 'files' && <Files store={store} onClose={() => void closeScreen()} onOpenNote={(id) => void openNote(id)} initialTab={initialFilesTab}/>}
+    {helpTopic && screen !== 'help' && <Help bridge={store.bridge} initialTopic={helpTopic} onClose={() => setHelpTopic(null)}/>}
     {store.error && screen !== 'note' && <div className="global-error" role="alert"><Icon name="close" size={15}/><span>{store.error}</span><button onClick={() => void store.request('snapshot').catch(() => undefined)}>다시 확인</button></div>}
   </div>;
 }

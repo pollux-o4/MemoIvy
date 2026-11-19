@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { openHelpWindow } from '../../shared/helpTopic';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import type { Note } from '../../shared/engine_contract';
@@ -41,7 +40,7 @@ const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${
 const MAX_DEPTH = 3;
 
 /** 캔버스 화면 조립: 범위·선택·카메라·명령·포인터 훅을 묶고 화면 부품에 전달한다. */
-export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void }) {
+export function Canvas({ store, scope, onOpenNote, onBack, onHelp }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
   const [focusConnectList, setFocusConnectList] = useState(false);
@@ -183,6 +182,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       zoom={camera.zoom} saving={store.saving} error={store.error}
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
       onZoom={motion.zoomByStep} onFit={() => fitView()} onReset={resetZoom}
-      onHelp={() => void openHelpWindow(store.bridge, 'canvas')}/>
+      onHelp={onHelp}/>
   </div></ProgressProvider>;
 }

@@ -62,6 +62,16 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await editor.keyboard.type('정합 확인 메모');
     await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
     await expect.poll(() => library.locator('.note-card').filter({ hasText: '정합 확인 메모' }).count()).toBe(1);
+    await editor.keyboard.press('F1');
+    const noteHelp = editor.getByRole('dialog', { name: '단축키와 서식' });
+    await expect.poll(() => noteHelp.getByRole('radio', { name: '메모' }).getAttribute('aria-checked')).toBe('true');
+    const narrowBounds = await noteHelp.evaluate((item) => {
+      const box = item.getBoundingClientRect();
+      return box.left >= 10 && box.right <= innerWidth - 10 && box.top >= 10 && box.bottom <= innerHeight - 10;
+    });
+    expect(narrowBounds).toBe(true);
+    await editor.keyboard.press('Escape');
+    await noteHelp.waitFor({ state: 'hidden' });
     await quit(app);
 
     const reopened = await launch();
@@ -430,21 +440,39 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => canvas.locator('.reveal.is-open #outline-shortcuts kbd').count()).toBe(4);
       await outlineHelp.click();
       await expect.poll(() => canvas.locator('.reveal.is-open #outline-shortcuts').count()).toBe(0);
-      // 독의 캔버스 사용법은 실제 앱에서 도움말 창을 연다(preload 허용 목록 누락 회귀).
-      await canvas.getByRole('button', { name: '캔버스 사용법' }).click();
-      const help = await windowWith(app, '.help-screen');
+      // 캔버스 사용법은 같은 창 안에서 열고 닫을 때 독으로 포커스를 돌려준다.
+      const helpButton = canvas.getByRole('button', { name: '캔버스 사용법' });
+      const windowCount = app.windows().length;
+      await helpButton.click();
+      const help = canvas.getByRole('dialog', { name: '단축키와 서식' });
+      expect(app.windows().length).toBe(windowCount);
       // 캔버스에서 열면 캔버스 주제로 시작하고, 전체 목록은 묶음별로 접혀 있다가 펼친다.
       await expect.poll(() => help.getByRole('radio', { name: '캔버스' }).getAttribute('aria-checked')).toBe('true');
       const canvasTopic = help.getByRole('radio', { name: '캔버스' });
       await canvasTopic.press('ArrowLeft');
       expect(await help.getByRole('radio', { name: '메모' }).getAttribute('aria-checked')).toBe('true');
-      await help.keyboard.press('ArrowRight');
+      await canvas.keyboard.press('ArrowRight');
       expect(await canvasTopic.getAttribute('aria-checked')).toBe('true');
       expect(await help.locator('.help-basic').count()).toBe(4);
       expect(await help.locator('.help-reveal.is-open').count()).toBe(0);
+      const animatedCards = () => help.locator('.help-basic').evaluateAll((cards) => cards.flatMap((card, index) =>
+        card.getAnimations({ subtree: true }).some((animation) => animation instanceof CSSAnimation) ? [index] : []));
+      expect(await animatedCards()).toEqual([]);
+      await help.locator('.help-basic').nth(1).hover();
+      await expect.poll(animatedCards).toEqual([1]);
+      await help.locator('.help-basic').nth(2).hover();
+      await expect.poll(animatedCards).toEqual([2]);
+      await help.getByRole('heading', { name: '단축키와 서식' }).hover();
+      await expect.poll(animatedCards).toEqual([]);
+      await canvas.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+      await help.locator('.help-basic').first().hover();
+      expect(await animatedCards()).toEqual([]);
       await help.getByRole('button', { name: '프로젝트', exact: false }).first().click();
       await expect.poll(() => help.locator('.help-reveal.is-open .help-row').count()).toBe(5);
-      if (process.env.MEMOIVY_SHOT) await help.screenshot({ path: process.env.MEMOIVY_SHOT });
+      if (process.env.MEMOIVY_SHOT) await canvas.screenshot({ path: process.env.MEMOIVY_SHOT, animations: 'disabled' });
+      await canvas.keyboard.press('Escape');
+      await help.waitFor({ state: 'hidden' });
+      expect(await helpButton.evaluate((button) => button === document.activeElement)).toBe(true);
     } finally {
       await quit(app);
       rmSync(sampleDir, { recursive: true, force: true });
