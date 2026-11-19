@@ -389,7 +389,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await quit(app);
   });
 
-  test('좁고 낮은 캔버스에서도 긴 본문만 스크롤되고 펼침 버튼과 카메라가 움직이지 않는다', async () => {
+  test('좁고 낮은 캔버스에서도 펼침 버튼이 본문 위로 이동하고 카메라는 고정된다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-preview-size-'));
     const id = 'd0000000-0000-4000-8000-000000000001';
     const text = ['긴 메모', ...Array.from({ length: 32 }, (_, index) => `- [ ] 항목 ${index + 1}`)].join('\n');
@@ -410,10 +410,17 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await settle(canvas);
         const initialCamera = await camera();
         const initialButton = await disclosure.boundingBox();
+        const initialCard = await card.boundingBox();
+        const triggerAboveBody = () => disclosure.evaluate((button) => {
+          const body = button.closest('.preview-frame')?.querySelector('.preview-list');
+          return Boolean(body && button.getBoundingClientRect().bottom <= body.getBoundingClientRect().top + 1);
+        });
         await disclosure.click();
         await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true');
         await expect.poll(() => preview.evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
-        expect(await disclosure.boundingBox()).toEqual(initialButton);
+        await expect.poll(triggerAboveBody).toBe(true);
+        expect((await card.boundingBox())?.y).toBe(initialCard?.y);
+        expect(await disclosure.evaluate((button) => document.activeElement === button)).toBe(true);
         expect(await camera()).toBe(initialCamera);
         await preview.hover({ position: { x: 30, y: 20 } });
         await canvas.mouse.wheel(0, 250);
@@ -422,7 +429,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await disclosure.press('Space');
         await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false');
         await expect.poll(() => preview.evaluate((list) => list.scrollTop)).toBe(0);
-        expect(await disclosure.boundingBox()).toEqual(initialButton);
+        await expect.poll(() => disclosure.boundingBox()).toEqual(initialButton);
       }
     } finally {
       await quit(app);
@@ -469,7 +476,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(hitSize).toEqual(['36px', '36px']);
       const beforeNote = await disclosure.boundingBox();
       await disclosure.click();
-      expect(await disclosure.boundingBox()).toEqual(beforeNote);
+      await expect.poll(async () => (await disclosure.boundingBox())?.y ?? Infinity).toBeLessThan(beforeNote?.y ?? 0);
       expect(await preview.locator('.preview-heading').textContent()).toBe('작은 제목');
       expect(await preview.locator('.preview-bullet .preview-marker').textContent()).toBe('•');
       expect(await preview.locator('.preview-number .preview-marker').textContent()).toBe('1.');

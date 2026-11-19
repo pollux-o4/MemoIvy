@@ -74,7 +74,7 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
   background-color: var(--canvas-bg);
   cursor: grab;
   touch-action: none;
@@ -166,7 +166,8 @@
 .canvas-screen .canvas-note:hover .card-done, .canvas-screen .canvas-note.selected .card-done, .canvas-screen .canvas-note.done .card-done { opacity: 1; }
 .canvas-screen .canvas-note .card-done:hover { border-color: var(--canvas-success); color: var(--canvas-success-text); transform: scale(1.08); }
 .canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
-.canvas-screen .canvas-note .canvas-checklist-preview { margin: 11px 0 0; scrollbar-gutter: stable; }
+.canvas-screen .canvas-note .preview-frame { --preview-control-space: 19px; margin-top: 11px; }
+.canvas-screen .canvas-note .canvas-checklist-preview { scrollbar-gutter: stable; }
 /* 낮은 창에서는 펼친 카드 하나가 차지하는 높이를 줄인다. */
 .canvas-screen .canvas-note { --preview-growth-limit: clamp(48px, 32cqh, 160px); }
 .canvas-screen .canvas-note .canvas-checklist-preview.is-expanded {
@@ -174,12 +175,10 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.canvas-screen .canvas-note .preview-disclosure + .canvas-checklist-preview { margin-top: 5px; }
 .canvas-screen .canvas-note .canvas-checklist-preview li { min-height: 19px; color: var(--note-muted); }
 .canvas-screen .canvas-note .canvas-checklist-preview .preview-check { flex: 0 0 12px; width: 12px; height: 12px; margin: 1px 1px 0; border-radius: 3px; }
 .canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { font-size: 10px; }
 .canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.canvas-screen .canvas-note .preview-disclosure { margin-top: 1px; }
 .canvas-screen .canvas-note .preview-disclosure .disclosure { width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
 .canvas-screen .canvas-note .preview-disclosure .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
 /* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */

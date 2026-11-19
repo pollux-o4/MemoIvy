@@ -11,7 +11,8 @@
 .library-screen .preview { color: var(--memoivy-muted); font-size: .88em; line-height: 1.5; }
 .library-screen .preview-list { --preview-fade-start: calc(100% - 3px); }
 .library-screen .preview-list > li > small { font-size: inherit; }
-.library-screen .preview-check { z-index: 1; margin-top: 2px; border-color: var(--memoivy-hairline); }
+.note-card .preview-frame { pointer-events: none; }
+.library-screen .preview-check { pointer-events: auto; z-index: 1; margin-top: 2px; border-color: var(--memoivy-hairline); }
 .library-screen .preview-check:is(:hover, .is-checked, .is-doing) { border-color: var(--memoivy-accent); }
 .project-intro-preview { padding: 0 8px 8px; }
 .library-screen .disclosure { flex: 0 0 28px; width: 28px; height: 24px; padding: 4px; }

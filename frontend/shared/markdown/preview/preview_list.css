@@ -7,7 +7,23 @@
 .preview-list .preview-check::before { content: ""; position: absolute; inset: -2px; }
 .preview-list small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
 
-.preview-disclosure { display: grid; place-items: center; }
-.preview-disclosure > .disclosure { position: relative; z-index: 1; flex: none; }
+.preview-frame { position: relative; --preview-control-space: 28px; }
+.preview-frame.has-disclosure {
+  padding-block-end: var(--preview-control-space);
+  transition: padding-block-start var(--disclosure-duration) var(--disclosure-ease), padding-block-end var(--disclosure-duration) var(--disclosure-ease);
+}
+.preview-frame.has-disclosure.is-open { padding-block-start: var(--preview-control-space); padding-block-end: 0; }
+.preview-disclosure {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: var(--preview-trigger-offset, 0px);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: inset-block-start var(--disclosure-duration) var(--disclosure-ease);
+}
+.preview-frame.is-open > .preview-disclosure { inset-block-start: 0; }
+.preview-disclosure > .disclosure { position: relative; flex: none; pointer-events: auto; }
 /* 버튼 크기와 본문 배치는 그대로 두고 공통 포인터 영역을 제공한다. */
 .preview-disclosure > .disclosure::before { content: ""; position: absolute; top: 50%; left: 50%; width: 36px; height: 36px; transform: translate(-50%, -50%); }

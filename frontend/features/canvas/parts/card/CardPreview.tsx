@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect } from 'react';
-import { PreviewDisclosure, usePreviewDisclosure } from '../../../../shared/markdown/preview/PreviewDisclosure';
+import { PreviewFrame, usePreviewDisclosure } from '../../../../shared/markdown/preview/PreviewFrame';
 import type { PreviewItem } from '../../../../shared/markdown/preview/model';
 import { PreviewList } from '../../../../shared/markdown/preview/PreviewList';
 
@@ -19,8 +19,7 @@ export function CardPreview({ id, label, rows, empty, onGrow, onToggleTask }: { 
   const grow = expanded ? preview.extra : 0;
   useEffect(() => onGrow(grow), [grow, onGrow]);
   if (!rows.length) return empty ? <p>내용을 적어 보세요.</p> : null;
-  return <>
-    <PreviewDisclosure label={label} targetId={id} preview={preview}/>
+  return <PreviewFrame label={label} targetId={id} preview={preview}>
     <PreviewList ref={preview.ref} id={id} className={`canvas-checklist-preview ${preview.className}`} rows={rows} visibleRows={expanded ? rows.length : COLLAPSED_ROWS} onToggleTask={onToggleTask}/>
-  </>;
+  </PreviewFrame>;
 }
