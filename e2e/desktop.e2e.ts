@@ -121,6 +121,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const root = (await ids()).find((id) => !before.includes(id)) ?? '';
     const card = (id: string) => canvas.locator(`[data-note-id="${id}"]`);
     const handle = (id: string) => card(id).locator('.card-branch');
+    const box = async (locator: ReturnType<typeof card>) => { const found = await locator.boundingBox(); if (!found) throw new Error('보이지 않는 요소'); return found; };
     await canvas.locator('.canvas-screen').press('Escape');
     // 누르기: 하위 가지가 생기고 선 하나가 이어진다.
     const links0 = await linkCount();
@@ -130,10 +131,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(linkCount).toBe(links0 + 1);
     // 빈 곳에 놓기: 끄는 동안 미리보기 선이 보이고, 놓은 자리에 새 가지가 생긴다.
     await card(root).hover();
-    const box = (await handle(root).boundingBox())!;
-    await canvas.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const start = await box(handle(root));
+    await canvas.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
     await canvas.mouse.down();
-    await canvas.mouse.move(box.x + 60, box.y + 240, { steps: 8 });
+    await canvas.mouse.move(start.x + 60, start.y + 240, { steps: 8 });
     await expect.poll(() => canvas.locator('.canvas-connect-preview path').count()).toBe(1);
     await canvas.mouse.up();
     await expect.poll(async () => (await ids()).length).toBe(before.length + 3);
@@ -142,8 +143,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     // 카드에 놓기: 새 카드 없이 연결만 는다.
     const [first, second] = (await ids()).filter((id) => !before.includes(id) && id !== root);
     await card(second).hover();
-    const from = (await handle(second).boundingBox())!;
-    const to = (await card(first).boundingBox())!;
+    const from = await box(handle(second));
+    const to = await box(card(first));
     await canvas.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await canvas.mouse.down();
     await canvas.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });

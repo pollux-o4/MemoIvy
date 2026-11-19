@@ -1,9 +1,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
-import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import type { Note } from '../../shared/engine_contract';
-import { Icon } from '../../shared/Icon';
 import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
@@ -11,7 +9,10 @@ import { AlignmentBar } from './parts/alignment/AlignmentBar';
 import { canvasSlot, CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
 
 import { type CardActions, CanvasCard } from './parts/CanvasCard';
+import { CanvasDeleteDialog } from './parts/CanvasDeleteDialog';
 import { CanvasDock } from './parts/CanvasDock';
+import { CanvasEmpty } from './parts/CanvasEmpty';
+import { SelectionBox } from './parts/SelectionBox';
 import { CardMenu } from './parts/CardMenu';
 import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasLinks } from './parts/CanvasLinks';
@@ -183,10 +184,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     setSelected([]);
     setDeleteTarget([]);
   };
-  const deleteHasLinks = deleteTarget.length > 1 || store.notes.some((note) =>
-    deleteTarget.includes(note.id) && note.canvas.next.length > 0 || note.canvas.next.some((target) => deleteTarget.includes(target)),
-  );
-  const deleteSubject = deleteTarget.length === 1 ? store.notes.find((note) => note.id === deleteTarget[0]) : undefined;
   const hasProjects = store.notes.some((note) => note.canvas.project);
   // 가지 초점: 흐림은 world의 has-focus가 정하고 카드·선은 가지 안인지만 받는다. 초점이 바뀌어도 가지 밖 카드 200장은 다시 그리지 않는다.
   // 단축키는 화면 루트가 포커스를 받아 처리한다. application 역할은 보드에만 둬 제목 줄·도구 막대가 랜드마크로 남게 한다.
@@ -209,15 +206,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
       </div>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}
-      {selection.marquee && <div className="selection-box" style={{ left: Math.min(selection.marquee.a.x, selection.marquee.b.x), top: Math.min(selection.marquee.a.y, selection.marquee.b.y), width: Math.abs(selection.marquee.a.x - selection.marquee.b.x), height: Math.abs(selection.marquee.a.y - selection.marquee.b.y) }}/>}
-      {!notes.length && <div className="canvas-empty">
-        <div className="empty-mark"><Icon name="canvas"/></div>
-        <h2>이 캔버스는 비어 있어요</h2>
-        <p>새 메모를 만들거나 라이브러리에서 메모를 추가해 보세요.</p>
-        <button className="primary-button" onClick={() => void store.createNote({ parent: activeScope }).then((note) => note && selectAndReveal([note.id])).catch(() => undefined)}>
-          <Icon name="plus"/> 새 메모
-        </button>
-      </div>}
+      {selection.marquee && <SelectionBox a={selection.marquee.a} b={selection.marquee.b}/>}
+      {!notes.length && <CanvasEmpty onCreate={() => void store.createNote({ parent: activeScope }).then((note) => note && selectAndReveal([note.id])).catch(() => undefined)}/>}
     </div>
     {selectedNote && <CanvasInspector note={selectedNote} notes={notes} renameRequest={renameRequest} revision={store.snapshot?.revision} projects={moveTargets}
       onExternal={inspectorActions.external} onSaveText={inspectorActions.saveText} onColor={inspectorActions.color}
@@ -225,13 +215,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       onLift={scopedProject ? inspectorActions.lift : undefined} onMoveInto={inspectorActions.moveInto}
       onToggleDone={inspectorActions.toggleDone} onSignal={inspectorActions.signal} onDelete={inspectorActions.remove}
       onSelect={inspectorActions.select} onToggleLink={inspectorActions.toggleLink} onAddBranch={inspectorActions.addBranch} outline={inspectorOutline}/>}
-    {deleteTarget.length > 0 && <ConfirmDialog
-      question={deleteTarget.length === 1 ? '이 메모를 삭제할까요?' : `메모 ${deleteTarget.length}개를 삭제할까요?`}
-      subject={deleteSubject ? canvasTitle(deleteSubject) : undefined}
-      detail={deleteHasLinks
-        ? '삭제한 메모는 복구할 수 없습니다. 내용과 연결이 모두 사라져요.'
-        : '삭제한 메모는 복구할 수 없습니다.'}
-      acceptLabel="삭제" onCancel={() => setDeleteTarget([])} onAccept={() => void confirmDelete()}/>}
+    {deleteTarget.length > 0 && <CanvasDeleteDialog ids={deleteTarget} notes={store.notes} onCancel={() => setDeleteTarget([])} onAccept={() => void confirmDelete()}/>}
     <CanvasDock count={notes.length}
       links={notes.reduce((count, note) => count + note.canvas.next.filter((id) => noteById.has(id)).length, 0)}
       zoom={camera.zoom} saving={store.saving} error={store.error}

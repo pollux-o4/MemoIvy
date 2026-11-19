@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent, RefObject, SetStateAction } from 'react';
 import type { Note } from '../../../shared/engine_contract';
-import { CARD_HEIGHT, CARD_WIDTH, cardRect, clampCanvasDelta, type CanvasPoint } from '../model/align';
+import { cardRect, clampCanvasDelta, type CanvasPoint } from '../model/align';
+import { cardsInRange, topCardAt } from '../model/hit';
+import { useBoardPoint } from './useBoardPoint';
+import { type ConnectOutcome, DRAG_SLOP_PX, useConnectGesture } from './useConnectGesture';
 import { bounds } from '../model/motion';
 import { SNAP_PIXELS, snapRect, type SnapGuide } from '../model/snap';
 import type { Camera } from '../model/motion';
@@ -11,8 +14,6 @@ type Positions = Record<string, CanvasPoint>;
 type Drag = { start: CanvasPoint; origin: CanvasPoint; positions: Positions; shift: boolean };
 type Marquee = { a: CanvasPoint; b: CanvasPoint } | null;
 const COAST_WINDOW_MS = 120;
-/** 이 거리(화면 px) 넘게 움직여야 카드 끌기로 본다. 그 아래는 클릭. */
-const DRAG_SLOP_PX = 3;
 
 const noteAt = (event: { clientX: number; clientY: number }) => document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-note-id]')?.dataset.noteId;
 
@@ -21,6 +22,7 @@ const noteAt = (event: { clientX: number; clientY: number }) => document.element
  * 카드 끌기는 다른 카드 선에 붙고(Ctrl을 누르면 끔) 붙은 선을 guides로 내보낸다.
  * 결과 반영은 주입된 명령(onMovePositions·onMoveInto·onConnect)으로만 한다.
  */
+// shortcut: 잇기만 useConnectGesture로 분리, 화면 끌기·카드 끌기·범위 선택은 아직 mode 분기, 제스처가 하나 더 늘면 모드별 제스처 객체(State)로 나눈다.
 export function useCanvasPointer(options: {
   host: RefObject<HTMLDivElement | null>; camera: Camera; setCamera: (update: (current: Camera) => Camera) => void;
   setAutopan: (screen: [number, number] | null) => void; startCoast: (velocity: [number, number]) => void; isPanHeld: () => boolean;
@@ -30,12 +32,8 @@ export function useCanvasPointer(options: {
   notes: Note[]; allNotes: Note[]; positions: Positions; draftPositions: Positions; setDraftPositions: Dispatch<SetStateAction<Positions>>;
   canMoveInto: (target: string, ids: string[]) => boolean;
   onCardsMoved?: (ids: string[]) => void;
-  onMovePositions: (next: Positions) => void; onMoveInto: (ids: string[], parent: string, from: Positions) => void; onConnect: (from: string, to: string) => void;
-  /** 잇기를 빈 곳에 놓았다: 그 자리(캔버스 좌표)에 새 가지를 만든다. */
-  onConnectEmpty?: (from: string, at: CanvasPoint) => void;
-  /** 손잡이를 끌지 않고 눌렀다 뗐다(포인터를 보드가 잡아 버튼 click이 오지 않으므로 여기서 받는다). */
-  onConnectTap?: (from: string) => void;
-}) {
+  onMovePositions: (next: Positions) => void; onMoveInto: (ids: string[], parent: string, from: Positions) => void;
+} & ConnectOutcome) {
   const o = options;
   const [drag, setDrag] = useState<Drag | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -44,18 +42,9 @@ export function useCanvasPointer(options: {
   const cardDown = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
   const snapOff = useRef(false);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
-  /** 잇기 미리보기: 포인터(캔버스 좌표)와 그 아래 카드. moved는 누른 채 문턱을 넘었는지(아니면 손잡이 클릭). */
-  const [connectPreview, setConnectPreview] = useState<{ to: CanvasPoint; target?: string } | null>(null);
-  const connectDown = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
-
-  // 보드 원점은 누를 때만 잰다. 끌기 중 매 이동마다 getBoundingClientRect를 부르면 강제 레이아웃으로 프레임당 수 ms가 든다.
-  const boardOrigin = useRef<{ left: number; top: number } | null>(null);
-  const measureBoard = () => { const rect = o.host.current?.getBoundingClientRect(); boardOrigin.current = { left: rect?.left ?? 0, top: rect?.top ?? 0 }; return boardOrigin.current; };
-  const screenPoint = (event: { clientX: number; clientY: number }, fresh = false): CanvasPoint => {
-    const origin = fresh || !boardOrigin.current ? measureBoard() : boardOrigin.current;
-    return { x: event.clientX - origin.left, y: event.clientY - origin.top };
-  };
-  const worldPoint = (screen: CanvasPoint): CanvasPoint => ({ x: screen.x / o.camera.zoom + o.camera.x, y: screen.y / o.camera.zoom + o.camera.y });
+  const point = useBoardPoint(o.host, o.camera);
+  const { screenPoint, worldPoint } = point;
+  const connect = useConnectGesture({ ...o, point });
   const snapped = (current: Drag, dx: number, dy: number): { delta: CanvasPoint; guides: SnapGuide[] } => {
     const origins = Object.values(current.positions);
     const raw = clampCanvasDelta(origins, dx, dy);
@@ -72,7 +61,7 @@ export function useCanvasPointer(options: {
     setGuides(found);
     return Object.fromEntries(Object.entries(current.positions).map(([id, original]) => [id, { x: original.x + delta.x, y: original.y + delta.y }]));
   };
-  const reset = () => { cardDown.current = null; connectDown.current = null; setConnectPreview(null); setGuides([]); o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
+  const reset = () => { cardDown.current = null; connect.reset(); setGuides([]); o.setAutopan(null); o.setConnectFrom(null); setDropTarget(null); o.setMode('idle'); setDrag(null); o.setMarquee(null); };
   const beginPan = (event: ReactPointerEvent) => {
     o.setMode('pan'); panSamples.current = [{ x: event.clientX, y: event.clientY, at: performance.now() }];
     setDrag({ start: { x: event.clientX, y: event.clientY }, origin: { x: o.camera.x, y: o.camera.y }, positions: {}, shift: false });
@@ -98,13 +87,8 @@ export function useCanvasPointer(options: {
       reset();
       return true;
     },
-    beginConnection: (id: string, event?: ReactPointerEvent) => {
-      o.setConnectFrom(id); o.setMode('connect');
-      if (!event) return;
-      connectDown.current = { point: screenPoint(event, true), moved: false };
-      o.host.current?.setPointerCapture(event.pointerId);
-    },
-    connectPreview: o.mode === 'connect' && connectDown.current?.moved ? connectPreview : null,
+    beginConnection: connect.begin,
+    connectPreview: o.mode === 'connect' ? connect.preview : null,
     board: {
       onPointerDown: (event: ReactPointerEvent) => {
         if (wantsPan(event)) { beginPan(event); return; }
@@ -114,19 +98,7 @@ export function useCanvasPointer(options: {
         setDrag({ start: screen, origin: screen, positions: {}, shift: event.shiftKey }); event.currentTarget.setPointerCapture(event.pointerId);
       },
       onPointerMove: (event: ReactPointerEvent) => {
-        if (o.mode === 'connect') {
-          const down = connectDown.current;
-          if (!down || !o.connectFrom) return;
-          const point = screenPoint(event);
-          if (!down.moved && Math.hypot(point.x - down.point.x, point.y - down.point.y) <= DRAG_SLOP_PX) return;
-          down.moved = true;
-          const world = worldPoint(point);
-          // 놓을 카드는 위치로 판정한다(이동마다 elementFromPoint를 부르지 않는다). 위에 그려진 카드부터.
-          const target = [...o.notes].reverse().find((note) => note.id !== o.connectFrom && o.positions[note.id]
-            && world.x >= o.positions[note.id].x && world.x <= o.positions[note.id].x + CARD_WIDTH && world.y >= o.positions[note.id].y && world.y <= o.positions[note.id].y + CARD_HEIGHT);
-          setConnectPreview({ to: world, target: target?.id });
-          return;
-        }
+        if (o.mode === 'connect') { connect.move(event); return; }
         if (!drag) return;
         if (o.mode === 'pan') {
           const dx = event.clientX - drag.start.x; const dy = event.clientY - drag.start.y;
@@ -139,35 +111,22 @@ export function useCanvasPointer(options: {
           if (down && !down.moved && Math.hypot(point.x - down.point.x, point.y - down.point.y) > DRAG_SLOP_PX) { down.moved = true; o.onCardsMoved?.(Object.keys(drag.positions)); }
           // 끌기 문턱을 넘기 전(단순 클릭)에는 카드를 옮기거나 붙이지 않아 안내선도 뜨지 않는다.
           if (down && !down.moved) return;
-          // 놓을 프로젝트는 위치로 판정한다(elementFromPoint는 끌기 중 매 이동마다 강제 레이아웃을 일으킨다). 위에 그려진 카드부터 본다.
           const world = worldPoint(point);
-          const project = [...o.notes].reverse().find((note) => note.canvas.project && !drag.positions[note.id] && o.positions[note.id]
-            && world.x >= o.positions[note.id].x && world.x <= o.positions[note.id].x + CARD_WIDTH && world.y >= o.positions[note.id].y && world.y <= o.positions[note.id].y + CARD_HEIGHT);
+          const project = topCardAt(world, o.notes, o.positions, (note) => Boolean(note.canvas.project) && !drag.positions[note.id]);
           setDropTarget(project && o.canMoveInto(project.id, Object.keys(drag.positions)) ? project.id : null);
           o.setDraftPositions((current) => ({ ...current, ...draggedTo(drag, point) }));
         } else if (o.mode === 'marquee') o.setMarquee((current) => current ? { ...current, b: screenPoint(event) } : current);
       },
       onPointerUp: (event: ReactPointerEvent) => {
         o.setAutopan(null);
-        if (o.mode === 'connect') {
-          const target = noteAt(event);
-          const down = connectDown.current;
-          if (target && o.connectFrom && o.connectFrom !== target) o.onConnect(o.connectFrom, target);
-          else if (!target && o.connectFrom && down?.moved) o.onConnectEmpty?.(o.connectFrom, worldPoint(screenPoint(event)));
-          else if (o.connectFrom && down && !down.moved) o.onConnectTap?.(o.connectFrom);
-          connectDown.current = null; setConnectPreview(null);
-          o.setConnectFrom(null); o.setMode('idle');
-          return;
-        }
+        if (o.mode === 'connect') { connect.end(noteAt(event), event); return; }
         if (o.mode === 'pan' && panSamples.current.length > 1) {
           const [first] = panSamples.current; const last = panSamples.current[panSamples.current.length - 1]; const elapsed = (last.at - first.at) / 1000;
           if (elapsed > 0) o.startCoast([(last.x - first.x) / elapsed, (last.y - first.y) / elapsed]);
         }
         panSamples.current = []; cardPointer.current = null; cardDown.current = null;
         if (o.mode === 'marquee' && o.marquee) {
-          const a = worldPoint(o.marquee.a); const b = worldPoint(o.marquee.b);
-          const left = Math.min(a.x, b.x); const top = Math.min(a.y, b.y); const right = Math.max(a.x, b.x); const bottom = Math.max(a.y, b.y);
-          const inside = o.notes.filter((note) => { const point = o.positions[note.id]; return point.x < right && point.x + CARD_WIDTH > left && point.y < bottom && point.y + CARD_HEIGHT > top; }).map((note) => note.id);
+          const inside = cardsInRange(worldPoint(o.marquee.a), worldPoint(o.marquee.b), o.notes, o.positions);
           o.setSelected((current) => drag?.shift ? [...new Set([...current, ...inside])] : inside);
         }
         if (o.mode === 'cards' && drag) {
