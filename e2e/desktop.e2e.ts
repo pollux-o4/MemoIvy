@@ -103,6 +103,53 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => reopened.library.evaluate(() => document.documentElement.classList.contains('theme-dark'))).toBe(true);
     await quit(reopened.app);
   });
+  test('캔버스 마우스 가지: 손잡이 누르기·빈 곳에 놓기·카드에 놓기', async () => {
+    const { app, library } = await launch();
+    await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+    const canvas = await windowWith(app, '.canvas-screen');
+    const cards = canvas.locator('[data-note-id]');
+    const ids = () => cards.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.noteId ?? ''));
+    const linkCount = () => canvas.locator('.canvas-link').count();
+    const before = await ids();
+    await canvas.getByRole('button', { name: 'New' }).click();
+    await canvas.getByRole('menuitem', { name: /메모/ }).click();
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 1);
+    const root = (await ids()).find((id) => !before.includes(id)) ?? '';
+    const card = (id: string) => canvas.locator(`[data-note-id="${id}"]`);
+    const handle = (id: string) => card(id).locator('.card-branch');
+    await canvas.locator('.canvas-screen').press('Escape');
+    // 누르기: 하위 가지가 생기고 선 하나가 이어진다.
+    const links0 = await linkCount();
+    await card(root).hover();
+    await handle(root).click();
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 2);
+    await expect.poll(linkCount).toBe(links0 + 1);
+    // 빈 곳에 놓기: 끄는 동안 미리보기 선이 보이고, 놓은 자리에 새 가지가 생긴다.
+    await card(root).hover();
+    const box = (await handle(root).boundingBox())!;
+    await canvas.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await canvas.mouse.down();
+    await canvas.mouse.move(box.x + 60, box.y + 240, { steps: 8 });
+    await expect.poll(() => canvas.locator('.canvas-connect-preview path').count()).toBe(1);
+    await canvas.mouse.up();
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 3);
+    await expect.poll(linkCount).toBe(links0 + 2);
+    await expect.poll(() => canvas.locator('.canvas-connect-preview').count()).toBe(0);
+    // 카드에 놓기: 새 카드 없이 연결만 는다.
+    const [first, second] = (await ids()).filter((id) => !before.includes(id) && id !== root);
+    await card(second).hover();
+    const from = (await handle(second).boundingBox())!;
+    const to = (await card(first).boundingBox())!;
+    await canvas.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await canvas.mouse.down();
+    await canvas.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await expect.poll(() => card(first).getAttribute('class')).toContain('link-target');
+    await canvas.mouse.up();
+    await expect.poll(linkCount).toBe(links0 + 3);
+    expect((await ids()).length).toBe(before.length + 3);
+    await quit(app);
+  });
+
   test('캔버스 마인드맵: Tab·Enter 가지, 가지 개요, 실행 취소, 프로젝트 제자리 펼치기', async () => {
     const { app, library } = await launch();
     await library.getByRole('button', { name: '캔버스 열기' }).first().click();
@@ -159,7 +206,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     // 보이는 입구: 인스펙터의 하위 가지 버튼도 Tab과 같이 가지를 만든다(화면이 새 가지로 옮겨 가므로 마지막에 둔다).
     await card(root).click();
     const count = (await ids()).length;
-    await canvas.getByRole('button', { name: /하위 가지/ }).click();
+    await canvas.locator('.canvas-inspector').getByRole('button', { name: /하위 가지/ }).click();
     await expect.poll(async () => (await ids()).length).toBe(count + 1);
     await quit(app);
   });
