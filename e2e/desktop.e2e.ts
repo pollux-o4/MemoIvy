@@ -1,9 +1,10 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { _electron as electron, chromium, type ElectronApplication, type Page } from 'playwright';
+import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -12,14 +13,9 @@ const root = path.resolve(import.meta.dirname, '..');
 if (process.env.MEMOIVY_HEADLESS !== '1') throw new Error('Run via `mise run test:e2e` (virtual display only).');
 const { WAYLAND_DISPLAY: _wayland, ...headlessEnv } = process.env;
 const dataDir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-'));
-let vite: ChildProcess;
+let vite: ViteDevServer | undefined;
+let rendererUrl: string;
 
-async function waitForServer(url: string) {
-  for (const end = Date.now() + 30_000; Date.now() < end; await new Promise((r) => setTimeout(r, 200))) {
-    if (await fetch(url).then(() => true, () => false)) return;
-  }
-  throw new Error('vite dev server did not start');
-}
 /** 카메라 애니메이션이 멈출 때까지 기다린다(두 번 연속 같은 transform). */
 async function settle(page: Page): Promise<void> {
   const world = () => page.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
@@ -27,7 +23,7 @@ async function settle(page: Page): Promise<void> {
   await expect.poll(async () => { const now = await world(); const same = now === previous; previous = now; return same; }, { intervals: [120] }).toBe(true);
 }
 async function launch(dir = dataDir): Promise<{ app: ElectronApplication; library: Page }> {
-  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dir } as Record<string, string> });
+  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dir, MEMOIVY_RENDERER_URL: rendererUrl } as Record<string, string> });
   const library = await app.firstWindow();
   await library.waitForSelector('.library-screen');
   return { app, library };
@@ -47,10 +43,16 @@ async function windowWith(app: ElectronApplication, selector: string): Promise<P
 
 beforeAll(async () => {
   await new Promise<void>((resolve, reject) => spawn('cargo', ['build', '--manifest-path', 'engine/Cargo.toml', '--locked'], { cwd: root, stdio: 'inherit' }).on('exit', (code) => (code ? reject(new Error('engine build failed')) : resolve())));
-  vite = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js')], { cwd: root, stdio: 'ignore' });
-  await waitForServer('http://127.0.0.1:5173');
+  vite = await createServer({ configFile: path.join(root, 'vite.config.ts'), server: { port: 0, watch: null } });
+  await vite.listen(0);
+  const address = vite.httpServer?.address();
+  if (!address || typeof address === 'string') throw new Error('Vite did not expose a test server port');
+  rendererUrl = `http://127.0.0.1:${address.port}`;
 });
-afterAll(() => { vite?.kill(); rmSync(dataDir, { recursive: true, force: true }); });
+afterAll(async () => {
+  await vite?.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
 
 describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
   test('메모 작성 → 다른 창 동기화 → 재시작 후 복원', async () => {
@@ -184,7 +186,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const browser = await chromium.launch();
     try {
       const canvas = await browser.newPage({ viewport: { width: 900, height: 600 } });
-      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.goto(`${rendererUrl}/?window=canvas`);
       await canvas.locator('.canvas-link').first().waitFor();
       const world = () => canvas.locator('.canvas-world').evaluate((item) => (item as HTMLElement).style.transform);
       const before = await world();
@@ -218,7 +220,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const browser = await chromium.launch();
     try {
       const canvas = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.goto(`${rendererUrl}/?window=canvas`);
       await canvas.locator('.canvas-link').first().waitFor();
       const links = () => canvas.locator('.canvas-link').count();
       const cards = () => canvas.locator('[data-note-id]').count();
@@ -239,7 +241,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const browser = await chromium.launch();
     try {
       const canvas = await browser.newPage({ viewport: { width: 700, height: 600 } });
-      await canvas.goto('http://127.0.0.1:5173/?window=canvas');
+      await canvas.goto(`${rendererUrl}/?window=canvas`);
       await canvas.locator('.canvas-link').first().waitFor();
       await canvas.setViewportSize({ width: 360, height: 600 });
       const title = await canvas.locator('.canvas-header .window-title').boundingBox();
