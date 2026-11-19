@@ -79,3 +79,16 @@
 .canvas-screen .canvas-project-menu > .menu-popover { top: calc(100% + 4px); width: 248px; max-height: 280px; overflow-y: auto; }
 .canvas-screen .canvas-project-menu .menu-row { min-height: 36px; }
 .canvas-screen .project-menu-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+
+/* 3층 보조 · 가지 개요. 들여쓰기 한 단계 = 14px, 가는 안내선으로 부모-자식을 잇는다. */
+.canvas-screen .inspector-hint { color: color-mix(in srgb, var(--canvas-muted) 80%, transparent); font-size: 11px; }
+.canvas-screen .inspector-outline { display: grid; gap: 1px; margin: 0; padding: 0 2px; list-style: none; }
+.canvas-screen .inspector-outline li { padding-left: calc(var(--depth, 0) * 14px); background-image: repeating-linear-gradient(90deg, var(--canvas-hairline) 0 1px, transparent 1px 14px); background-size: calc(var(--depth, 0) * 14px) 100%; background-repeat: no-repeat; background-position: 11px 0; }
+.canvas-screen .inspector-outline button { display: flex; align-items: center; gap: 7px; width: 100%; height: 26px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--canvas-text); background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.canvas-screen .inspector-outline button:hover { background: var(--canvas-hover); }
+.canvas-screen .inspector-outline button:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: -2px; }
+.canvas-screen .inspector-outline button[aria-current="true"] { color: var(--canvas-accent); background: color-mix(in srgb, var(--canvas-accent) 12%, transparent); font-weight: 600; }
+.canvas-screen .outline-bullet { flex: 0 0 14px; height: 14px; display: grid; place-items: center; color: var(--canvas-muted); }
+.canvas-screen .outline-bullet:empty::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .55; }
+.canvas-screen .outline-bullet.has-children:empty::before { width: 6px; height: 6px; opacity: 1; background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+.canvas-screen .outline-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -16,7 +16,7 @@ export const ALIGN_GROUPS: readonly AlignGroup[] = [
   ] },
   { id: 'arrange', label: '배치', icon: 'tidy', rows: [
     [action('distribute-x', '가로 간격 같게', 'h', 'distributeX', 3, true), action('distribute-y', '세로 간격 같게', 'v', 'distributeY', 3, true)],
-    [action('grid', '격자로 정리', 't', 'tidy'), action('flow', '연결 순서로 배치', 'f', 'flow')],
+    [action('grid', '격자로 정리', 't', 'tidy'), action('flow', '연결 순서로 배치', 'f', 'flow'), action('mindmap', '마인드맵으로 배치', 'm', 'flow', 1)],
   ] },
 ];
 

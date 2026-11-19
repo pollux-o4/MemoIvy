@@ -24,7 +24,6 @@ export interface EdgeAnchors { key: string; from: Anchor; to: Anchor; bend: numb
 export type SideMemory = ReadonlyMap<string, { from: Side; to: Side }>;
 
 export type { LinkStyle } from '../../../../shared/link_style';
-import type { LinkStyle } from '../../../../shared/link_style';
 
 /** 선 모양 Strategy: 연결점 두 개로 SVG path d 문자열을 만든다. */
 export type PathStrategy = (anchors: EdgeAnchors) => string;

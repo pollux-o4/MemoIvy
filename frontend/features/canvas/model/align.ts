@@ -25,7 +25,7 @@ export function clampCanvasDelta(points: CanvasPoint[], dx: number, dy: number):
   const minY = Math.min(...points.map((point) => point.y)); const maxY = Math.max(...points.map((point) => point.y));
   return { x: Math.min(Math.max(dx, -minX), Math.max(-minX, 20_000 - maxX)), y: Math.min(Math.max(dy, -minY), Math.max(-minY, 20_000 - maxY)) };
 }
-export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-x' | 'distribute-y' | 'grid' | 'flow';
+export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-x' | 'distribute-y' | 'grid' | 'flow' | 'mindmap';
 
 export function vacantGroup(ids: string[], positions: Record<string, CanvasPoint>, occupied: CanvasPoint[]): Record<string, CanvasPoint> {
   const members = ids.flatMap((id) => positions[id] ? [[id, positions[id]] as const] : []);

@@ -13,8 +13,8 @@ interface LayoutFrame {
   children: string[];
 }
 
-const DEFAULT_COLUMN_GAP = 80;
-const DEFAULT_ROW_GAP = 24;
+export const DEFAULT_COLUMN_GAP = 80;
+export const DEFAULT_ROW_GAP = 24;
 
 /** 루트에서 오른쪽으로 뻗는 마인드맵 트리 좌표를 계산한다. */
 export function mindmapLayout(

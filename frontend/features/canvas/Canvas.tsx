@@ -17,7 +17,8 @@ import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasLinks } from './parts/CanvasLinks';
 import { CanvasNavigator } from './parts/CanvasNavigator';
 import { SnapGuides } from './parts/SnapGuides';
-import { branchSet, buildGraph, scopeEdges } from './model/links/graph';
+import { branchRoot, branchSet, buildGraph, outline, scopeEdges } from './model/links/graph';
+import { indentRow, outdentRow, type NextChange } from './model/links/outline_edit';
 import { readLinkStyle } from '../../shared/link_style';
 import { gridStyle } from './model/grid';
 import { canvasTitle } from './model/labels';
@@ -72,11 +73,24 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
 
   // 가지 초점: 카드 하나를 고르면 그 카드와 이어진 가지만 또렷하게, 나머지는 흐리게 둔다.
   const graph = useMemo(() => buildGraph(scopeEdges(store.notes, activeScope)), [store.notes, activeScope]);
+  // 제자리 펼치기: 프로젝트 하나의 하위 메모를 엿보는 동안에는 그 카드만 또렷하게 둔다.
+  const [peek, setPeek] = useState<string | undefined>(undefined);
+  if (peek && !noteById.has(peek)) setPeek(undefined);
   const focus = useMemo(() => {
+    if (peek) return new Set([peek]);
     if (selected.length !== 1) return undefined;
     const branch = branchSet(graph, selected[0]);
     return branch.size > 1 ? branch : undefined;
-  }, [graph, selected]);
+  }, [graph, selected, peek]);
+  // 가지 개요: 이 화면 단계에서 선택 카드의 가지 뿌리부터. 프로젝트는 접힌 항목(안쪽은 그 단계에서 따로 보인다).
+  const outlineRows = useMemo(() => selected.length === 1 && noteById.has(selected[0])
+    ? outline(graph, branchRoot(graph, selected[0]), (id) => Boolean(noteById.get(id)?.canvas.project)) : [], [graph, selected, noteById]);
+  const editOutline = (edit: typeof indentRow) => (id: string) => {
+    const changes: NextChange[] = edit(outlineRows, id, (item) => noteById.get(item)?.canvas.next ?? []);
+    if (!changes.length) return false;
+    commands.commit(changes.map(({ id: owner, next }) => ({ id: owner, canvas: { next } })));
+    return true;
+  };
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
   const selectedNotes = notes.filter((note) => selected.includes(note.id));
@@ -84,6 +98,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const openCard = (note: Note, editProject = false) => note.canvas.project && !editProject ? scopeState.navigate(note.id) : onOpenNote(note.id);
   const actions = useSelectionActions({ store, selected, selectedNote, openCard, clipboard, toggleDone: commands.toggleDone, requestDelete: setDeleteTarget, requestRename: () => setRenameRequest((count) => count + 1) });
   const createItem = (project: boolean) => { void store.createNote({ project, parent: activeScope }).then((note) => { if (note) { selectAndReveal([note.id]); onOpenNote(note.id); } }).catch(() => undefined); };
+  // 새 가지는 고르고 바로 이름 칸에 포커스한다(생각하고 Tab, 다시 생각).
+  const branch = (kind: 'child' | 'sibling') => { void commands.addBranch(kind).then((note) => { if (note) { selectAndReveal([note.id]); setRenameRequest((count) => count + 1); } }).catch(() => undefined); };
   const groupSelected = async () => {
     if (!selected.length || store.saving || mode !== 'idle' || scopeState.depth >= MAX_DEPTH) return;
     try { const project = await commands.group(); if (project) { setSelected([project.id]); onOpenNote(project.id); } } catch { /* 저장 오류는 상태 막대가 알린다 */ }
@@ -113,9 +129,11 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     removeSelected: actions.remove, toggleDone: actions.toggleDone,
     connectSelected: () => { if (selected.length === 1) setFocusConnectList(true); },
     fit: fitView, resetZoom, groupSelected: () => void groupSelected(), liftSelected,
-    nudge: commands.nudge, cancelInteraction: pointer.cancel,
+    nudge: commands.nudge, cancelInteraction: () => { if (peek) { setPeek(undefined); return true; } return pointer.cancel(); },
     copy: actions.copy, cut: actions.cut, paste: actions.paste, duplicate: actions.duplicate, rename: actions.rename,
     openMenu: () => cardMenu.openForSelection(selected),
+    addChild: () => { if (selected.length !== 1 || store.saving) return false; branch('child'); return true; },
+    addSibling: () => { if (!commands.canAddSibling() || store.saving) return false; branch('sibling'); return true; },
   });
 
   const fitScope = useEffectEvent(() => fitView());
@@ -164,7 +182,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
 >
       <div className="canvas-world" style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
         <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} dimmed={Boolean(focus && !focus.has(note.id))} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
+        {notes.map((note) => <CanvasCard key={note.id} note={note} dimmed={Boolean(focus && !focus.has(note.id))} peek={note.canvas.project ? { open: peek === note.id, onToggle: () => setPeek((current) => current === note.id ? undefined : note.id) } : undefined} dropTarget={pointer.dropTarget === note.id} onToggleDone={() => commands.toggleDone([note.id])} position={positions[note.id]} selected={selected.includes(note.id)} onPointerDown={pointer.beginCardDrag} fanQuiet={fan.quiet.includes(note.id)} onPointerLeave={fan.wake}
           onOpen={(item) => openCard(item)} onConnectStart={pointer.beginConnection}
           onContextMenu={(event, id) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); }}/>)}
         <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
@@ -188,7 +206,7 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
       onToggleDone={() => commands.toggleDone([selectedNote.id])}
       onSignal={() => { for (const id of selectedNote.canvas.next) triggerLink(`${selectedNote.id}:${id}`, false); }}
       onDelete={() => setDeleteTarget([selectedNote.id])} onSelect={(id) => selectAndReveal([id])}
-      onToggleLink={commands.link}/>}
+      onToggleLink={commands.link} outline={{ rows: outlineRows, onIndent: editOutline(indentRow), onOutdent: editOutline(outdentRow) }}/>}
     {deleteTarget.length > 0 && <ConfirmDialog
       question={deleteTarget.length === 1 ? '이 메모를 삭제할까요?' : `메모 ${deleteTarget.length}개를 삭제할까요?`}
       subject={deleteSubject ? canvasTitle(deleteSubject) : undefined}
