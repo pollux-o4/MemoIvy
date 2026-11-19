@@ -40,9 +40,12 @@ export function Help({ bridge, initialTopic, onClose }: { bridge: DesktopBridge;
   const content = <div className="help-sheet">
       <Segmented name="주제" className="help-topics" value={topic} onChange={choose} options={TOPIC_OPTIONS}/>
       <section className="help-basics" aria-label="기본">
-        <h2 className="help-section">기본</h2>
+        <div className="help-basics-heading">
+          <h2 className="help-section">기본</h2>
+          {essentials.some(([, , demo]) => demo) && <span className="help-demo-hint">마우스를 올리면 재생</span>}
+        </div>
         <ul>{essentials.map(([meaning, keys, demo]) => <li key={meaning} className="help-basic">
-          {demo && <HelpDemo kind={demo}/>}
+          {demo && <><HelpDemo kind={demo}/><span className="help-demo-play" aria-hidden="true">▶</span></>}
           <strong>{meaning}</strong>
           <ShortcutKeys keys={keys}/>
         </li>)}</ul>

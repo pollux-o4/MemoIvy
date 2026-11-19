@@ -458,6 +458,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const animatedCards = () => help.locator('.help-basic').evaluateAll((cards) => cards.flatMap((card, index) =>
         card.getAnimations({ subtree: true }).some((animation) => animation instanceof CSSAnimation) ? [index] : []));
       expect(await animatedCards()).toEqual([]);
+      const playbackHint = help.getByText('마우스를 올리면 재생');
+      await playbackHint.waitFor({ state: 'visible' });
+      expect(await help.locator('.help-demo-play:visible').count()).toBe(4);
       await help.locator('.help-basic').nth(1).hover();
       await expect.poll(animatedCards).toEqual([1]);
       await help.locator('.help-basic').nth(2).hover();
@@ -465,6 +468,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await help.getByRole('heading', { name: '단축키와 서식' }).hover();
       await expect.poll(animatedCards).toEqual([]);
       await canvas.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+      await playbackHint.waitFor({ state: 'hidden' });
+      expect(await help.locator('.help-demo-play:visible').count()).toBe(0);
       await help.locator('.help-basic').first().hover();
       expect(await animatedCards()).toEqual([]);
       await help.getByRole('button', { name: '프로젝트', exact: false }).first().click();
