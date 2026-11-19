@@ -1,6 +1,5 @@
-import { togglePreviewTask } from './model/preview';
-import { Icon } from '../../shared/Icon';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { SettingsButton } from '../../shared/SettingsButton';
+import { useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import type { Note } from '../../shared/engine_contract';
@@ -21,7 +20,7 @@ import { CanvasInspector } from './parts/inspector/CanvasInspector';
 import { CanvasNavigator } from './parts/CanvasNavigator';
 import { readLinkStyle } from '../../shared/link_style';
 import { canvasTitle } from './model/labels';
-import { canMoveInto } from './model/scope_model';
+import { canMoveInto, MAX_PROJECT_DEPTH } from './model/scope_model';
 import { useCardMenu } from './interaction/input/useCardMenu';
 import { useBranchFocus } from './interaction/state/useBranchFocus';
 import { useStableHandlers } from './interaction/state/useStableHandlers';
@@ -39,13 +38,11 @@ import { useFanQuiet } from './interaction/state/useFanQuiet';
 // 카드 치수의 원본은 model/align. CSS(카드·부채)는 이 변수만 읽는다.
 const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px`, '--card-radius': `${CARD_RADIUS}px` } as React.CSSProperties;
 
-const MAX_DEPTH = 3;
-
 /** 캔버스 화면 조립: 범위·선택·카메라·명령·포인터 훅을 묶고 화면 부품에 전달한다. */
 export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
-  const [focusConnectList, setFocusConnectList] = useState(false);
+  const openLinkPicker = useRef<(() => void) | null>(null);
   const [renameRequest, setRenameRequest] = useState(0);
   const [dragPositions, setDragPositions] = useState<Record<string, CanvasPoint>>({});
   const [pendingPositions, setPendingPositions] = useState<Record<string, CanvasPoint>>({});
@@ -74,7 +71,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   // 새 가지는 고르고 바로 이름 칸에 포커스한다(생각하고 Tab, 다시 생각).
   const branch = (kind: 'child' | 'sibling', from?: { seed: string; at?: CanvasPoint }) => { if (store.saving) return; void commands.addBranch(kind, from).then((note) => { if (note) { selectAndReveal([note.id]); setRenameRequest((count) => count + 1); } }).catch(() => undefined); };
   const groupSelected = async () => {
-    if (!selected.length || store.saving || mode !== 'idle' || scopeState.depth >= MAX_DEPTH) return;
+    if (!selected.length || store.saving || mode !== 'idle' || scopeState.depth >= MAX_PROJECT_DEPTH) return;
     try { const project = await commands.group(); if (project) { setSelected([project.id]); onOpenNote(project.id); } } catch { /* 저장 오류는 상태 막대가 알린다 */ }
   };
   const liftSelected = () => { if (scopedProject && selected.length) commands.moveInto(selected, scopedProject.canvas.parent ?? null); };
@@ -91,7 +88,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     openSelected: (shift) => { if (selectedNote) openCard(selectedNote, shift); },
     align: commands.align, undo: commands.history.undo, redo: commands.history.redo,
     removeSelected: actions.remove, toggleDone: actions.toggleDone,
-    connectSelected: () => { if (selected.length === 1) setFocusConnectList(true); },
+    connectSelected: () => openLinkPicker.current?.(),
     fit: fitView, resetZoom, groupSelected: () => void groupSelected(), liftSelected,
     nudge: commands.nudge, cancelInteraction: () => { if (peek) { setPeek(undefined); return true; } return pointer.cancel(); },
     copy: actions.copy, cut: actions.cut, paste: actions.paste, duplicate: actions.duplicate, rename: actions.rename,
@@ -107,10 +104,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
     open: (note: Note) => openCard(note),
     connectStart: pointer.beginConnection,
     addBranch: (id: string) => branch('child', { seed: id }),
-    toggleTask: (note: Note, line: number) => {
-      const text = togglePreviewTask(note.text, line);
-      if (text !== note.text) void actions.saveText(note, text, store.snapshot?.revision).catch(() => undefined);
-    },
+    toggleTask: actions.toggleTask,
     toggleDone: (id: string) => commands.toggleDone([id]),
     contextMenu: (event: React.MouseEvent, id: string) => { event.preventDefault(); cardMenu.openAt(selected.includes(id) ? selected : [id], { x: event.clientX, y: event.clientY }); },
     togglePeek: (id: string) => setPeek((current) => current === id ? undefined : id),
@@ -138,16 +132,6 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const moveTargets = useMemo(() => selectedNote ? store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && canMoveInto(note.id, [selectedNote.id], store.notes)) : [], [store.notes, activeScope, selectedNote]);
   const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent, onMove: inspectorActions.move, onShift: inspectorActions.shift }), [outlineRows, inspectorActions]);
 
-  useEffect(() => {
-    if (!focusConnectList || !selectedNote) return;
-    const frame = requestAnimationFrame(() => {
-      const select = host.current?.parentElement?.querySelector<HTMLSelectElement>('.inspector-add-link select');
-      select?.focus();
-      try { select?.showPicker(); } catch { /* focus remains the keyboard fallback */ }
-      setFocusConnectList(false);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [focusConnectList, selectedNote]);
   const confirmDelete = async () => {
     for (const id of deleteTarget) {
       try { await store.removeNote(id); } catch { break; }
@@ -164,8 +148,8 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
   return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="window-header canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<>
-      <button type="button" className="icon-button" title="설정" aria-label="설정" onClick={onOpenSettings}><Icon name="settings"/></button>
-      <CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_DEPTH}/>
+      <SettingsButton onClick={onOpenSettings}/>
+      <CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_PROJECT_DEPTH}/>
     </>}/>
     {selected.length > 1 && <AlignmentBar count={selected.length} onAlign={commands.align} onDelete={() => setDeleteTarget(selected)} onGroup={() => void groupSelected()} onLift={scopedProject ? liftSelected : undefined}/>}
     {(scopeState.path.length > 0 || hasProjects) && <CanvasNavigator path={scopeState.path} shortcuts={scopeState.shortcuts} scopedProject={scopedProject} onNavigate={scopeState.navigate} onTogglePin={(project) => void store.updateNote(project, undefined, { pinned: !project.canvas.pinned })}/>}
@@ -184,7 +168,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
       onClose={inspectorActions.close} onOpen={inspectorActions.open} onOpenAsNote={inspectorActions.openAsNote}
       onLift={scopedProject ? inspectorActions.lift : undefined} onMoveInto={inspectorActions.moveInto}
       onToggleDone={inspectorActions.toggleDone} onSignal={inspectorActions.signal} onDelete={inspectorActions.remove}
-      onSelect={inspectorActions.select} onToggleLink={inspectorActions.toggleLink} onAddBranch={inspectorActions.addBranch} outline={inspectorOutline}/>}
+      onSelect={inspectorActions.select} openLinkPicker={openLinkPicker} onToggleLink={inspectorActions.toggleLink} onAddBranch={inspectorActions.addBranch} outline={inspectorOutline}/>}
     {deleteTarget.length > 0 && <CanvasDeleteDialog ids={deleteTarget} notes={store.notes} onCancel={() => setDeleteTarget([])} onAccept={() => void confirmDelete()}/>}
     <CanvasDock count={notes.length}
       links={notes.reduce((count, note) => count + note.canvas.next.filter((id) => noteById.has(id)).length, 0)}

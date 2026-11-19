@@ -1,5 +1,7 @@
 import type { Note } from '../../../shared/engine_contract';
 
+export const MAX_PROJECT_DEPTH = 3;
+
 export function ancestry(id: string | null | undefined, notes: Note[]): Note[] {
   const byId = new Map(notes.map((note) => [note.id, note]));
   const chain: Note[] = [];
@@ -19,7 +21,7 @@ export function scopeDepth(scopeId: string | null, notes: Note[]): number {
 
 export function canMoveInto(targetId: string, movingIds: string[], notes: Note[]): boolean {
   const chain = ancestry(targetId, notes);
-  return chain.length < 3 && !chain.some((note) => movingIds.includes(note.id));
+  return chain.length < MAX_PROJECT_DEPTH && !chain.some((note) => movingIds.includes(note.id));
 }
 
 export function scopeShortcuts(pathIds: Set<string>, recent: string[], notes: Note[], limit = 5): string[] {

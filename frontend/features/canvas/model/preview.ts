@@ -2,7 +2,11 @@ import { createListItemReader, type ListItem, taskBoxOffset, type TaskState } fr
 import { plainText } from '../../../shared/model';
 
 /** depth는 편집기 목록 들여쓰기(list_item.depth)와 같은 값이다. 일반 줄은 0. */
-export type PreviewItem = { kind: 'task' | 'bullet' | 'number' | 'text'; text: string; depth: number; done?: boolean; mark?: string; task?: TaskState; sourceLine?: number };
+export type PreviewItem = { text: string; depth: number } & (
+  | { kind: 'task'; task: TaskState; sourceLine?: number }
+  | { kind: 'number'; mark: string }
+  | { kind: 'bullet' | 'text' }
+);
 
 /** `budget`을 빼면 모든 줄을 돌려준다(카드는 가림을 화면에서 처리한다). */
 export function canvasPreview(markdown: string, budget = Number.POSITIVE_INFINITY): { title: PreviewItem; rows: PreviewItem[]; remaining: number } {
@@ -21,7 +25,7 @@ function previewLine(line: string, item: ListItem | null | undefined, sourceLine
   const text = plainText(item ? line.slice(item.contentIndent) : line);
   if (!item) return { kind: 'text', text, depth: 0 };
   const { depth } = item;
-  if (item.task) return { kind: 'task', text, depth, done: item.task === 'x', task: item.task, sourceLine };
+  if (item.task) return { kind: 'task', text, depth, task: item.task, sourceLine };
   if (item.ordered) return { kind: 'number', text, depth, mark: `${item.number}${item.delimiter}` };
   return { kind: 'bullet', text, depth };
 }

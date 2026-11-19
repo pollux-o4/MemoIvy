@@ -1,5 +1,6 @@
 import type { Note } from '../../../../shared/engine_contract';
 import type { MemoStore } from '../../../../shared/useMemoivy';
+import { togglePreviewTask } from '../../model/preview';
 
 /**
  * 선택한 카드에 하는 동작의 단일 출처(Command 묶음). 키보드 단축키·카드 메뉴·드로어가 같은 명령을 부른다.
@@ -19,6 +20,11 @@ export function useSelectionActions({ store, selected, selectedNote, openCard, c
   };
   return {
     saveText, recolor,
+    toggleTask: (note: Note, line: number) => {
+      const text = togglePreviewTask(note.text, line);
+      // 렌더링한 텍스트의 revision을 보내 다른 창에서 바꾼 본문을 덮지 않는다.
+      if (text !== note.text) void saveText(note, text, store.snapshot?.revision).catch(ignore);
+    },
     open: () => { if (selectedNote) openCard(selectedNote); },
     /** 프로젝트도 들어가지 않고 메모 편집기로 연다(목록형 제목 클릭과 같은 경로). */
     openAsNote: () => { if (selectedNote) openCard(selectedNote, true); },

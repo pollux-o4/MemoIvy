@@ -15,7 +15,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 |---|---|
 | 카메라 | camera의 `useCanvasCamera`(카메라 기능의 단일 진입점), `useCanvasMotion`·`useCanvasWheel`·`useRevealSelection`·`useBoardPoint` |
 | 입력 | input의 `useCanvasPointer`(조작 모드별 포인터 처리), `useConnectGesture`(연결 끌기·대상 선택), `useCanvasKeyboard`·`useCardMenu` |
-| 명령·이력 | commands의 `useCanvasCommands`·`useCanvasHistory`·`useCanvasClipboard`·`useSelectionActions` |
+| 명령·이력 | commands의 `useCanvasCommands`·`useCanvasHistory`·`useCanvasClipboard`·`useSelectionActions`(본문 저장·체크 전환·선택 명령) |
 | 화면 상태 | state의 `useCanvasSelection`·`useCanvasScope`·`useBranchFocus`·`useFanQuiet`·`useStableHandlers` |
 
 ## 순수 모델 · `model/`
@@ -31,7 +31,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 카드 하단 배치는 `card_footer`에 모은다. 연결점은 `useCardHeights`가 관찰한 카드 높이를 반영한다. |
-| 떠 있는 패널 | inspector의 `CanvasInspector`·`InspectorOutline`·`useOutlineDrag`, `CanvasDock`·`CardMenu`·`CanvasNavigator` |
+| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 카드 하단 배치는 `card_footer`에 모은다. 본문 목록과 체크 상태는 카드와 인스펙터가 `PreviewList`를 공유한다. 연결점은 `useCardHeights`가 관찰한 카드 높이를 반영한다. |
+| 떠 있는 패널 | inspector의 `CanvasInspector`·`InspectorOutline`·`useOutlineDrag`·`LinkPicker`(버튼과 Ctrl+L의 공통 메뉴), `CanvasDock`·`CardMenu`·`CanvasNavigator` |
 
 동작 계약은 CANVAS-001~005에서, 실행·검증 절차는 OPS-004에서 찾는다.

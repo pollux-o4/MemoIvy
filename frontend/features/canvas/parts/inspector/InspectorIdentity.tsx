@@ -6,7 +6,7 @@ import { canvasTitle } from '../../model/labels';
 import { canvasPreview } from '../../model/preview';
 import { MarkdownField } from '../../../../shared/markdown/surface/MarkdownField';
 import { bindInput } from '../../../../shared/draft/inputBinding';
-import { PreviewList } from '../card/CardPreview';
+import { PreviewList } from '../PreviewList';
 import { useTitledText } from './useTitledText';
 
 /**

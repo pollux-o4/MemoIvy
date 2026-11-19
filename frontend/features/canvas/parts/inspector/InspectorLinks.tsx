@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import type { Note } from '../../../../shared/engine_contract';
 import { Icon } from '../../../../shared/Icon';
 import { canvasTitle } from '../../model/labels';
@@ -8,7 +9,8 @@ import { LinkPicker } from './LinkPicker';
  * 가지 개요에 들어오는 연결과 나무 자식을 표시한다. 나머지 나가는 연결은 여기서 관리한다.
  * 하위 가지 버튼은 캔버스 Tab의 보이는 입구: 단축키를 모르는 사람도 마인드맵을 시작하고, 제목에서 Tab을 배운다.
  */
-export function InspectorLinks({ note, notes, incomingInOutline, childrenInOutline, onSelect, onToggleLink, onSignal, onAddBranch }: {
+export function InspectorLinks({ note, notes, incomingInOutline, childrenInOutline, onSelect, openLinkPicker, onToggleLink, onSignal, onAddBranch }: {
+  openLinkPicker: Ref<() => void>;
   note: Note; notes: Note[]; incomingInOutline?: boolean; childrenInOutline?: ReadonlySet<string>; onSelect: (id: string) => void; onToggleLink: (note: Note, id: string) => void; onSignal: () => void; onAddBranch: () => void;
 }) {
   const linkedOut = note.canvas.next.flatMap((id) => notes.find((item) => item.id === id) ?? []);
@@ -27,6 +29,6 @@ export function InspectorLinks({ note, notes, incomingInOutline, childrenInOutli
         <button title={canvasTitle(item)} onClick={() => onSelect(item.id)}>{canvasTitle(item)}</button>
         <button className="inspector-disconnect" aria-label={`${canvasTitle(item)} 연결 해제`} title="이 연결 해제 · 메모는 유지" onClick={() => onToggleLink(note, item.id)}><Icon name="close" size={11}/></button>
       </span>)}</div>}
-    {candidates.length > 0 && <LinkPicker candidates={candidates} onPick={(id) => onToggleLink(note, id)}/>}
+    {candidates.length > 0 && <LinkPicker ref={openLinkPicker} candidates={candidates} onPick={(id) => onToggleLink(note, id)}/>}
   </section>;
 }

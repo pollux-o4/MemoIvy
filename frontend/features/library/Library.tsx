@@ -1,3 +1,4 @@
+import { SettingsButton } from '../../shared/SettingsButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import type { KeyboardEvent } from 'react';
@@ -46,7 +47,7 @@ export function Library({ store, onOpenNote, onOpenCanvas, onCreate, onOpenSetti
   };
 
   return <ProgressProvider notes={store.notes}><div className="library-screen">
-    <WindowHeader title="MemoIvy" bridge={store.bridge} onClose={() => store.bridge.windowAction('close')} actions={<><button className="icon-button canvas-launch" title="캔버스 열기" aria-label="캔버스 열기" onClick={() => onOpenCanvas()}><Icon name="canvas"/></button><button className="icon-button settings-launch" aria-label="설정" onClick={onOpenSettings}><Icon name="settings"/></button><CreationMenu onCreate={create} disabled={store.saving}/></>}/>
+    <WindowHeader title="MemoIvy" bridge={store.bridge} onClose={() => store.bridge.windowAction('close')} actions={<><button className="icon-button canvas-launch" title="캔버스 열기" aria-label="캔버스 열기" onClick={() => onOpenCanvas()}><Icon name="canvas"/></button><SettingsButton onClick={onOpenSettings}/><CreationMenu onCreate={create} disabled={store.saving}/></>}/>
     <main className="library-main">
       <label className="search-field"><Icon name="search" size={17}/>{/* biome-ignore lint/a11y/noAutofocus: 목록 창은 검색이 주 진입점이라 열자마자 입력을 받는다. */}<input id="library-search" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="메모 검색" aria-label="메모 검색" title="메모 검색 · Ctrl+F"/>{query && <button aria-label="검색 지우기" onClick={() => setQuery('')}><Icon name="close" size={15}/></button>}</label>
       {(searching || store.notes.length > 0) && <div className="count-bar"><span className="count">{searching ? `검색 결과 ${displayed.length}개` : `메모 ${store.notes.length}개${projects.length > 0 ? ` · 프로젝트 ${projects.length}개` : ''}`}</span>{!searching && projects.length > 0 && <div className="segmented" role="tablist" aria-label="목록 보기"><button ref={(element) => { tabRefs.current[0] = element; }} role="tab" tabIndex={mode === 'projects' ? 0 : -1} aria-selected={mode === 'projects'} className={mode === 'projects' ? 'selected' : ''} onClick={() => setMode('projects')} onKeyDown={moveTab}>프로젝트별</button><button ref={(element) => { tabRefs.current[1] = element; }} role="tab" tabIndex={mode === 'recent' ? 0 : -1} aria-selected={mode === 'recent'} className={mode === 'recent' ? 'selected' : ''} onClick={() => setMode('recent')} onKeyDown={moveTab}>최근</button></div>}</div>}

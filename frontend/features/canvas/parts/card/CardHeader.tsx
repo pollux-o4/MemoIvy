@@ -9,10 +9,10 @@ export function CardHeader({ title, marker, project, done, onEnter, onToggleDone
   const doneLabel = done ? '완료 취소' : '완료로 표시';
   return <header>
     {project && <span className="canvas-project-folder" aria-hidden="true"><Icon name="project" size={16}/></span>}
-    {marker.kind === 'task' && <span className="canvas-title-marker" aria-hidden="true">{marker.done ? '☑' : '☐'}</span>}
+    {marker.kind === 'task' && <span className="canvas-title-marker" aria-hidden="true">{marker.task === 'x' ? '☑' : '☐'}</span>}
     {marker.kind === 'number' && <span className="canvas-title-marker" aria-hidden="true">{marker.mark}</span>}
     {marker.kind === 'bullet' && <span className="canvas-title-marker" aria-hidden="true">•</span>}
-    <h3 className={marker.kind === 'task' && marker.done ? 'line-done' : ''}>{title}</h3>
+    <h3 className={marker.kind === 'task' && marker.task === 'x' ? 'line-done' : ''}>{title}</h3>
     {project && <button className="card-enter" title="프로젝트 열기 · 두 번 누르기 또는 Enter" aria-label={`${title} 프로젝트 들어가기`} onPointerDown={stop} onClick={onEnter}><Icon name="arrow" size={16}/></button>}
     <button className="card-done" title={doneLabel} aria-label={doneLabel} onPointerDown={stop} onClick={(event) => { event.stopPropagation(); onToggleDone(); }}><Icon name="check" size={14}/></button>
   </header>;

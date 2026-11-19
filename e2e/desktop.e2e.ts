@@ -485,6 +485,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(app.windows().filter((page) => page.url().includes('window=note'))).toHaveLength(0);
       // 여러 부모: 가지 개요는 한 갈래 나무 + "다른 곳에서도 이어짐"으로 나머지 부모를 모두 보이고, 연결 칸은 같은 부모를 되풀이하지 않는다.
       await canvas.locator('.canvas-note', { hasText: '여러 곳에서 모이는 메모' }).click();
+      await canvas.keyboard.press('Control+l');
+      const linkPicker = canvas.getByRole('menu', { name: '연결할 다음 메모' });
+      await linkPicker.waitFor({ state: 'visible' });
+      await expect.poll(() => linkPicker.locator('[role="menuitem"]:focus').count()).toBe(1);
+      await canvas.keyboard.press('Escape');
+      await linkPicker.waitFor({ state: 'hidden' });
+      expect(await canvas.getByRole('button', { name: '다음 메모 연결', exact: true }).evaluate((button) => button === document.activeElement)).toBe(true);
       const also = canvas.locator('.outline-also .inspector-chip');
       const dimmed = canvas.locator('.has-focus > .canvas-note:not(.in-focus)').first();
       await expect.poll(() => dimmed.evaluate((card) => getComputedStyle(card, '::after').opacity)).toBe('0.62');
