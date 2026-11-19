@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { App } from './App';
+import markdownImage from '../../docs/assets/gtk-reference/fixtures/image-used/assets/dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8.png?inline';
 import windowKinds from '../../desktop/window_kinds.json';
 import { createMockBridge, fixtureNoteIds } from '../shared/mock_bridge';
 import type { DesktopBridge, Note, Snapshot } from '../shared/engine_contract';
@@ -23,7 +24,18 @@ const makeSnapshot = (): Snapshot => {
   };
 };
 
-function storyBridge(snapshot?: Snapshot): DesktopBridge { return createMockBridge(snapshot); }
+function storyBridge(snapshot?: Snapshot): DesktopBridge {
+  const bridge = createMockBridge(snapshot);
+  return {
+    ...bridge,
+    request(op, params) {
+      if (op === 'readAsset' && params?.id === markdownImageId) {
+        return Promise.resolve({ data: markdownImage.split(',')[1], mime: 'image/png' });
+      }
+      return bridge.request(op, params);
+    },
+  };
+}
 function previewApp(screen: 'library' | 'note' | 'canvas' | 'files' | 'settings', id?: string, snapshot?: Snapshot, customSize?: number[]) {
   const kind = windowKinds[screen];
   const size = customSize ?? [kind.width, kind.height];
@@ -40,10 +52,41 @@ export const Canvas: Story = { render: () => previewApp('canvas') };
 export const Files: Story = { render: () => previewApp('files', undefined, makeSnapshot()) };
 export const Settings: Story = { render: () => previewApp('settings') };
 const markdownNoteId = '00000000-0000-4000-8000-000000000007';
+const markdownImageId = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
 const markdownSnapshot = (): Snapshot => ({
-  notes: [{ id: markdownNoteId, color: 'blue', modified: Math.floor(Date.now() / 1000), canvas: { position: null, next: [], done: false, parent: null },
-    text: '# 큰 제목\n## 리팩토링\n본문에 **굵게**, *기울임*, ~~취소선~~, [링크](https://example.com).\n### 셋째 단계는 본문 크기\n- 글머리 항목\n  Shift+Enter로 이어 쓴 줄\n  - 안쪽 항목\n- [ ] 할 일\n- [x] 끝난 일' }],
-  assets: [], revision: 1, savedRevision: 1, preferences: {},
+  notes: [{
+    id: markdownNoteId, color: 'blue', modified: 1794583991, canvas: { position: [80, 80], next: [], done: false, parent: null },
+    text: [
+      '마크다운 모음',
+      '# 큰 제목',
+      '## 작은 제목',
+      '### 셋째 단계',
+      '본문 · **굵게** · *기울임* · ~~취소선~~',
+      '가나다 · `가나다` · `console.log()`',
+      '[링크](https://example.com)',
+      '',
+      '- 글머리 항목',
+      '  - 중첩 항목',
+      '',
+      '1. 번호 항목',
+      '2. 두 번째 항목',
+      '',
+      '- [ ] 할 일',
+      '- [/] 진행 중',
+      '- [x] 끝난 일',
+      '',
+      '> 인용문',
+      '',
+      '```js',
+      'const greeting = "가나다";',
+      'console.log(greeting);',
+      '```',
+      '',
+      `![첨부 이미지|160](asset:${markdownImageId})`,
+    ].join('\n'),
+  }],
+  assets: [{ id: markdownImageId, name: 'reference.png', mime: 'image/png', bytes: 711, usedBy: [markdownNoteId], added: 1794583991 }],
+  revision: 1, savedRevision: 1, preferences: {},
 });
 const canvasProjectsSnapshot = (): Snapshot => {
   const now = Math.floor(Date.now() / 1000);
@@ -119,7 +162,9 @@ export const CanvasBranches: Story = { render: () => previewApp('canvas', undefi
 export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
 export const CanvasMindmap: Story = { render: () => previewApp('canvas', undefined, canvasMindmapSnapshot(), [1100, 900]) };
 export const CanvasBranchesStraight: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('straight'), [1100, 900]) };
-export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
+export const MarkdownHeadings: Story = { name: 'Markdown / Editor', render: () => previewApp('note', markdownNoteId, markdownSnapshot(), [400, 740]) };
+export const MarkdownLibrary: Story = { name: 'Markdown / Library', render: () => previewApp('library', undefined, markdownSnapshot(), [440, 740]) };
+export const MarkdownCanvas: Story = { name: 'Markdown / Canvas', render: () => previewApp('canvas', undefined, markdownSnapshot(), [800, 740]) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {
   render: () => previewApp('library', undefined, undefined, [360, 600]),
