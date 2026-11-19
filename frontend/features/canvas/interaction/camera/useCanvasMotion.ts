@@ -192,5 +192,5 @@ export function useCanvasMotion(host: RefObject<HTMLDivElement | null>, cards: R
   }, [animated, schedule]);
   const sampleForLink = useCallback((key: string) => linkSamples[key] ?? restingLink, [linkSamples]);
 
-  return { camera, cameraRef, setCamera, animateTo, zoomByStep, zoomAtScreen, panBy, startCoast, setAutopan, triggerLink, sampleForLink, animated };
+  return { camera, cameraRef, setCamera, animateTo, motionTarget, zoomByStep, zoomAtScreen, panBy, startCoast, setAutopan, triggerLink, sampleForLink, animated };
 }

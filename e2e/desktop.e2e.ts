@@ -232,6 +232,53 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  // 검증: PROJECT-001. 큰 보드에서 나갈 때 보던 배율과 위치를 복원한다.
+  test('프로젝트 복귀 시 이전 캔버스 위치와 확대율을 복원한다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-scope-camera-'));
+    const project = 'd0000000-0000-4000-8000-000000000001';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id: project, text: '복귀 프로젝트', color: 'yellow', modified: 100, canvas: { project: true, position: [170, 130] } },
+      { id: 'd0000000-0000-4000-8000-000000000002', text: '내부 메모', color: 'blue', modified: 100, canvas: { parent: project, position: [400, 200] } },
+      { id: 'd0000000-0000-4000-8000-000000000003', text: '멀리 있는 메모', color: 'blue', modified: 100, canvas: { position: [2400, 1800] } },
+    ]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기', exact: true }).click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      const camera = () => canvas.locator('.canvas-world').evaluate((world) => {
+        const matrix = new DOMMatrix(getComputedStyle(world).transform);
+        return [matrix.a, matrix.e, matrix.f];
+      });
+      await canvas.getByRole('button', { name: '확대', exact: true }).click();
+      await expect.poll(async () => (await camera())[0]).toBeGreaterThan(1.1);
+      await settle(canvas);
+      const before = await camera();
+      const enter = canvas.getByRole('button', { name: '복귀 프로젝트 프로젝트 들어가기', exact: true });
+      const home = canvas.getByRole('navigation', { name: '프로젝트 경로' }).getByRole('button', { name: '전체', exact: true });
+      const keyboardLeave = async () => {
+        const child = canvas.locator('.canvas-note').filter({ hasText: '내부 메모' });
+        await child.click();
+        await expect.poll(() => child.evaluate((card) => card.classList.contains('selected'))).toBe(true);
+        await canvas.locator('.canvas-screen').press('Alt+ArrowUp');
+        const snapshot = await canvas.evaluate(() => window.memoivy.request('snapshot'));
+        expect(snapshot.snapshot?.notes.find((note) => note.text === '내부 메모')?.canvas.position).toEqual([400, 200]);
+      };
+      for (const leave of [() => home.click(), keyboardLeave]) {
+        await enter.click();
+        await canvas.locator('.canvas-note').getByText('내부 메모', { exact: true }).waitFor();
+        await settle(canvas);
+        await leave();
+        await expect.poll(() => home.getAttribute('aria-current')).toBe('page');
+        await expect.poll(async () => (await camera()).map((value, index) => Math.abs(value - before[index]) < (index === 0 ? 0.005 : 1))).toEqual([true, true, true]);
+        await expect.poll(() => canvas.locator(`.canvas-note.selected[data-note-id="${project}"]`).count()).toBe(1);
+        await settle(canvas);
+      }
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   // 미리보기 창은 메모가 마운트 때 바로 있어 연결 신호 rAF가 StrictMode 재마운트 정리 중에 취소된다(Wayland 실기에서 발견).
   test('캔버스 휠·확대 버튼: 마운트 직후 예약한 프레임이 취소돼도 화면이 움직인다', async () => {
     const browser = await chromium.launch();

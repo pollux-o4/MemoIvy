@@ -15,21 +15,21 @@ const toRect = (r: DOMRect): Rect => ({ x: r.left, y: r.top, w: r.width, h: r.he
  * 가림 영역은 실행 시점의 실제 패널 크기로 잰다. 카메라·위치 변화에는 반응하지 않아 이동 중 끌려가지 않는다.
  */
 export function useRevealSelection(host: RefObject<HTMLDivElement | null>, target: { id: string; rect: Rect } | undefined,
-  camera: Camera, animateTo: (next: Camera) => void, idle: boolean) {
+  getCamera: () => Camera, animateTo: (next: Camera) => void, idle: boolean) {
   const [request, setRequest] = useState(0);
   const pending = useRef(false);
-  const latest = useRef({ target, camera, animateTo });
-  latest.current = { target, camera, animateTo };
+  const latest = useRef({ target, getCamera, animateTo });
+  latest.current = { target, getCamera, animateTo };
   // biome-ignore lint/correctness/useExhaustiveDependencies: 선택 id 변화·요청이 확인 계기다.
   useEffect(() => { if (target) pending.current = true; }, [target?.id, request]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 나머지는 실행 시점의 최신 값을 읽는다.
   useEffect(() => {
     const board = host.current;
-    const { target: current, camera: view, animateTo: move } = latest.current;
+    const { target: current, getCamera: readView, animateTo: move } = latest.current;
     if (!pending.current || !idle || !board || !current) return;
     pending.current = false;
     const overlays = [...board.parentElement?.querySelectorAll(OVERLAY_SELECTOR) ?? []].map((el) => toRect(el.getBoundingClientRect()));
-    const next = revealCamera(current.rect, view, visibleArea(toRect(board.getBoundingClientRect()), overlays));
+    const next = revealCamera(current.rect, readView(), visibleArea(toRect(board.getBoundingClientRect()), overlays));
     if (next) move(next);
   }, [target?.id, request, idle, host]);
   return useCallback(() => setRequest((value) => value + 1), []);

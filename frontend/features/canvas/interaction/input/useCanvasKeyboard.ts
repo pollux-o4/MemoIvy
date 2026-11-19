@@ -36,6 +36,7 @@ export function useCanvasKeyboard(actions: {
     if (event.target instanceof HTMLElement && event.target.closest('[role="alertdialog"], [role="menu"]')) return;
     if (event.key === ' ' && !isInteractiveTarget(event.target)) { spaceDown.current = true; event.preventDefault(); }
     if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]') && ['Delete', 'Backspace', 'Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    if (event.altKey && event.key === 'ArrowUp') { event.preventDefault(); actions.goBack(); return; }
     const mod = event.ctrlKey || event.metaKey;
     const command = mod && !event.altKey && !isTypingTarget(event.target) ? modCommands[`${event.shiftKey ? 'shift+' : ''}${event.key.toLowerCase()}`] : undefined;
     if (command) { event.preventDefault(); command(); return; }
@@ -58,7 +59,6 @@ export function useCanvasKeyboard(actions: {
     }
     const alignment = alignmentForKey(event);
     if (alignment) { event.preventDefault(); actions.align(alignment); }
-    if (event.altKey && event.key === 'ArrowUp') { event.preventDefault(); actions.goBack(); }
     if (event.altKey && event.key.toLowerCase() === 'g') { event.preventDefault(); event.shiftKey ? actions.liftSelected?.() : actions.groupSelected?.(); }
   };
   return { spaceDown, onKeyDown, onKeyUp: (event) => { if (event.key === ' ') spaceDown.current = false; }, onBlur: () => { spaceDown.current = false; } };

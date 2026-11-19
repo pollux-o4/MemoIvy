@@ -13,7 +13,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 카메라 | camera의 `useCanvasCamera`(카메라 기능의 단일 진입점), `useCanvasMotion`·`useCanvasWheel`·`useRevealSelection`·`useBoardPoint` |
+| 카메라 | camera의 `useCanvasCamera`(카메라 기능의 단일 진입점, 단계별 위치·확대율 복원과 복귀 카드 표시), `useCanvasMotion`·`useCanvasWheel`·`useRevealSelection`·`useBoardPoint` |
 | 입력 | input의 `useCanvasPointer`(조작 모드별 포인터 처리), `useConnectGesture`(연결 끌기·대상 선택), `useCanvasKeyboard`·`useCardMenu` |
 | 명령·이력 | commands의 `useCanvasCommands`·`useCanvasHistory`·`useCanvasClipboard`·`useSelectionActions`(본문 저장·체크 전환·선택 명령) |
 | 화면 상태 | state의 `useCanvasSelection`·`useCanvasScope`·`useBranchFocus`·`useFanQuiet`·`useStableHandlers` |

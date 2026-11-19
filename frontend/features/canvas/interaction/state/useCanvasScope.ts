@@ -14,14 +14,15 @@ export function useCanvasScope(notes: Note[], initial: string | undefined, selec
     return scopeShortcuts(new Set(path.map((item) => item.id)), recent, notes).flatMap((id) => byId.get(id) ?? []);
   }, [path, recent, notes]);
   const navigate = (id: string | null) => {
-    select([]);
+    if (id === activeScope) return;
+    const returnCard = path.find((item) => (item.canvas.parent ?? null) === id);
+    select(returnCard ? [returnCard.id] : []);
     setActiveScope(id);
     if (id) setRecent((items) => [id, ...items.filter((item) => item !== id)].slice(0, 5));
   };
   const leave = () => {
     if (!scopedProject) { onLeaveRoot(); return; }
-    setActiveScope(scopedProject.canvas.parent ?? null);
-    select([scopedProject.id]);
+    navigate(scopedProject.canvas.parent ?? null);
   };
   return { activeScope, scopedProject, path, depth, shortcuts, navigate, leave };
 }
