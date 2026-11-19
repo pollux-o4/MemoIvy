@@ -1,4 +1,6 @@
 import { WidgetType, type EditorView } from '@codemirror/view';
+import expandIcon from '../../../../../src/presentation/icons/actions/media/expand.svg?raw';
+import removeIcon from '../../../../../src/presentation/icons/actions/note/trash.svg?raw';
 import { deleteImageLine, imageMarkup, MAX_IMAGE_WIDTH, moveImageLine, resizeImageWidth } from './commands';
 
 export interface ImageHandlers {
@@ -55,14 +57,17 @@ export class AssetWidget extends WidgetType {
 
     const open = () => handlers?.view(hash);
     wrapper.addEventListener('dblclick', (event) => { event.preventDefault(); event.stopPropagation(); open(); });
-    wrapper.append(button('크게 보기', open));
-    const remove = button('메모에서 빼기', () => {
+    const tools = document.createElement('span');
+    tools.className = 'cm-image-tools';
+    tools.append(button('크게 보기', expandIcon, open));
+    const remove = button('메모에서 빼기', removeIcon, () => {
       handlers?.extract(hash, description);
       const text = view.state.doc.toString();
       view.dispatch({ changes: { from: 0, to: text.length, insert: deleteImageLine(text, from, to) } });
     });
     remove.disabled = view.state.readOnly || !view.contentDOM.isContentEditable;
-    wrapper.append(remove);
+    tools.append(remove);
+    wrapper.append(tools);
 
     if (image && wrapper.draggable) {
       const picture = image;
@@ -160,11 +165,13 @@ export function installImageDropHandlers(view: EditorView) {
   };
 }
 
-function button(label: string, action: () => void) {
+function button(label: string, icon: string, action: () => void) {
   const element = document.createElement('button');
   element.type = 'button';
   element.className = 'cm-image-tool';
-  element.textContent = label;
+  element.innerHTML = icon.replaceAll('COLOR', 'currentColor');
+  element.firstElementChild?.setAttribute('aria-hidden', 'true');
+  element.title = label;
   element.setAttribute('aria-label', label);
   element.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); action(); });
   return element;

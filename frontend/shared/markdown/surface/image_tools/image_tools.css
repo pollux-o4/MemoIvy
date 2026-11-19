@@ -9,9 +9,38 @@
 
 .cm-asset-preview img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
 .cm-asset-preview [role="img"] { min-width: 160px; min-height: 72px; display: grid; place-items: center; }
-.cm-image-tool, .cm-image-resize { position: absolute; z-index: 1; opacity: 0; transition: opacity 120ms ease; }
-.cm-asset-preview:hover .cm-image-tool, .cm-asset-preview:hover .cm-image-resize, .cm-image-tool:focus-visible, .cm-image-resize:focus-visible { opacity: 1; }
-.cm-image-tool { top: 6px; right: 6px; }
-.cm-image-tool + .cm-image-tool { right: 72px; }
-.cm-image-resize { right: 0; bottom: 0; width: 18px; height: 18px; cursor: se-resize; touch-action: none; }
+.cm-image-tools, .cm-image-resize {
+  position: absolute;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.cm-asset-preview:is(:hover, :focus-within) :is(.cm-image-tools, .cm-image-resize) { opacity: 1; }
+.cm-image-tools { inset-block-start: 18px; inset-inline-end: 4px; display: flex; gap: 4px; }
+.cm-image-tool, .cm-image-resize {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--note-text);
+  background: var(--memoivy-surface);
+  box-shadow: 0 1px 4px var(--memoivy-shadow-deep);
+}
+.cm-image-tool { cursor: pointer; }
+.cm-image-tool svg { width: 14px; height: 14px; pointer-events: none; }
+.cm-image-tool:disabled { opacity: .5; cursor: default; }
+.cm-image-tool:enabled:hover, .cm-image-resize:hover { color: var(--memoivy-accent); }
+.cm-image-tool:focus-visible, .cm-image-resize:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: 1px; }
+.cm-image-resize { inset-inline-end: 4px; inset-block-end: 4px; cursor: se-resize; touch-action: none; }
+.cm-image-resize::after { content: ''; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+@media (hover: none) {
+  .cm-image-tools, .cm-image-resize { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-image-tools, .cm-image-resize { transition: none; }
+}
 .cm-asset-preview[draggable="true"] { cursor: grab; }
