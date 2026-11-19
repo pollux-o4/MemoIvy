@@ -17,8 +17,10 @@ describe('inline image commands', () => {
     expect(deleteImageLine('이미지\n', 0, 3)).toBe('');
   });
 
-  it('moves an image reference before the target line', () => {
+  it('moves an image reference before or after a target line', () => {
     expect(moveImageLine('첫째\n이미지\n셋째\n', 3, 10)).toBe('첫째\n셋째\n이미지\n');
     expect(moveImageLine('첫째\n이미지\n셋째', 3, 0)).toBe('이미지\n첫째\n셋째');
+    expect(moveImageLine('첫째\n이미지\n셋째', 3, 7, true)).toBe('첫째\n셋째\n이미지');
+    expect(moveImageLine('첫째\n이미지\n셋째', 3, 3, true)).toBe('첫째\n이미지\n셋째');
   });
 });

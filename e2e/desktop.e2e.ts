@@ -502,6 +502,12 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => content.locator('.cm-line').allTextContents()).toContain('한 이어서 작성');
       await expect.poll(() => preview.count()).toBe(1);
       expect(await content.locator('.md-checkbox').count()).toBe(2);
+      const title = content.getByText('입력 확인', { exact: true });
+      await preview.dragTo(title, { sourcePosition: { x: 40, y: 30 }, targetPosition: { x: 20, y: 2 } });
+      await editor.keyboard.press('Control+Shift+m');
+      await expect.poll(() => content.locator('.cm-line').first().textContent()).toBe(image);
+      await editor.keyboard.press('Control+z');
+      await expect.poll(() => content.locator('.cm-line').first().textContent()).toBe('입력 확인');
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

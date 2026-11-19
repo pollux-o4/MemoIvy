@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { useAssetUrls } from '../../shared/useAssetUrls';
 import type { EditorView } from '@codemirror/view';
+import { imageMarkup } from '../../shared/markdown/surface/image_tools/commands';
 import { parseListItem } from '../../shared/markdown/list_item';
 
 export function useEditorAssets(store: MemoStore, change: (value: string) => void, currentDraft: () => string) {
@@ -21,18 +22,23 @@ export function useEditorAssets(store: MemoStore, change: (value: string) => voi
       if (!result.asset) return;
       const view = editorView.current;
       const line = view?.state.doc.lineAt(view.state.selection.main.head);
-      const body = `![${file.name.replace(/[\]|\n]/g, '')}](asset:${result.asset.id})`;
-      const dropPosition = drop && view ? view.posAtCoords({ x: view.contentDOM.getBoundingClientRect().left, y: drop.y }) : null;
+      const body = imageMarkup(file.name.replace(/[\]|\r\n]/g, ''), undefined, result.asset.id);
+      const dropPosition = drop && view ? view.posAtCoords({ x: view.contentDOM.getBoundingClientRect().left, y: drop.y }, false) : null;
       const targetLine = view && dropPosition !== null ? view.state.doc.lineAt(dropPosition) : line;
       if (view && targetLine) {
         const item = parseListItem(targetLine.text);
-        const trailingNewline = targetLine.number === view.state.doc.lines ? '\n' : '';
-        const insert = item
-          ? `\n${' '.repeat(item.contentIndent)}${body}${trailingNewline}`
-          : `${targetLine.text.trim() ? '\n' : ''}${body}\n\n`;
-        view.dispatch({ changes: { from: targetLine.to, to: targetLine.to, insert }, selection: { anchor: targetLine.to + insert.length } });
+        const indent = ' '.repeat(item?.contentIndent ?? 0);
+        const before = targetLine.text.trim() ? '\n' : '';
+        const insert = `${before}${indent}${body}\n${indent}`;
+        const from = before ? targetLine.to : targetLine.from;
+        view.dispatch({
+          changes: { from, to: targetLine.to, insert },
+          selection: { anchor: from + insert.length },
+          scrollIntoView: true,
+          userEvent: 'input.paste',
+        });
         view.focus();
-      } else change(`${currentDraft()}${currentDraft() ? '\n\n' : ''}${body}\n\n`);
+      } else change(`${currentDraft()}${currentDraft() ? '\n\n' : ''}${body}\n`);
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));

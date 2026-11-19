@@ -44,3 +44,18 @@
   .cm-image-tools, .cm-image-resize { transition: none; }
 }
 .cm-asset-preview[draggable="true"] { cursor: grab; }
+
+.cm-asset-preview[data-image-dragging] { opacity: .5; }
+.markdown-surface .cm-line[data-image-drop] { position: relative; }
+.markdown-surface .cm-line[data-image-drop]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--memoivy-accent);
+  pointer-events: none;
+  z-index: 2;
+}
+.markdown-surface .cm-line[data-image-drop="before"]::after { inset-block-start: 0; }
+.markdown-surface .cm-line[data-image-drop="after"]::after { inset-block-end: 0; }

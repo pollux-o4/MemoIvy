@@ -27,7 +27,7 @@ export function deleteImageLine(text: string, from: number, to: number) {
   return text.slice(end);
 }
 
-export function moveImageLine(text: string, sourceFrom: number, targetFrom: number) {
+export function moveImageLine(text: string, sourceFrom: number, targetFrom: number, after = false) {
   const lines = text.split('\n');
   const starts: number[] = [];
   let offset = 0;
@@ -39,6 +39,7 @@ export function moveImageLine(text: string, sourceFrom: number, targetFrom: numb
   const target = starts.indexOf(targetFrom);
   if (source < 0 || target < 0 || source === target) return text;
   const [image] = lines.splice(source, 1);
-  lines.splice(target > source ? target - 1 : target, 0, image);
+  const insertion = target + Number(after) - Number(target > source);
+  lines.splice(insertion, 0, image);
   return lines.join('\n');
 }

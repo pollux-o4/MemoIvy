@@ -29,7 +29,7 @@ export class AssetWidget extends WidgetType {
       && a.from === b.from && a.to === b.to && a.view === b.view && a.handlers === b.handlers;
   }
 
-  ignoreEvent() { return false; }
+  ignoreEvent(event: Event) { return event.type === 'mousedown'; }
 
   toDOM() {
     const { description, src, width, hash, from, to, view, handlers } = this.options;
@@ -128,40 +128,77 @@ export class AssetWidget extends WidgetType {
 }
 
 export function installImageDropHandlers(view: EditorView) {
+  let source: { line: number; doc: EditorView['state']['doc']; element: HTMLElement } | undefined;
+  let marker: HTMLElement | undefined;
+  const clearMarker = () => {
+    marker?.removeAttribute('data-image-drop');
+    marker = undefined;
+  };
+  const clearDrag = () => {
+    clearMarker();
+    source?.element.removeAttribute('data-image-dragging');
+    source = undefined;
+  };
   const dragStart = (event: DragEvent) => {
     const element = (event.target as HTMLElement | null)?.closest<HTMLElement>('.cm-asset-preview');
-    const hash = element?.dataset.assetHash;
-    if (!element || !hash || !event.dataTransfer) return;
-    const from = view.posAtDOM(element);
-    const line = view.state.doc.lineAt(from);
-    const match = /^\s*!\[([^\]]*)\]\(asset:([a-f\d]{64})\)$/i.exec(line.text);
-    if (!match) return;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/x-memoivy-image', String(line.from));
-    event.dataTransfer.setData('text/plain', imageMarkup(match[1].replace(/\|\d+$/, ''), Number(/\|(\d+)/.exec(match[1])?.[1]) || undefined, match[2]));
+    if (!element?.dataset.assetHash || !event.dataTransfer) return;
+    const doc = view.state.doc;
+    const line = doc.lineAt(view.posAtDOM(element));
+    source = { line: line.from, doc, element };
+    element.dataset.imageDragging = '';
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.setData('text/plain', line.text);
+  };
+  const targetAt = (event: DragEvent) => {
+    const element = (event.target as HTMLElement | null)?.closest<HTMLElement>('.cm-line');
+    const position = element ? view.posAtDOM(element) : view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (position == null) return;
+    const line = view.state.doc.lineAt(position);
+    const box = element?.getBoundingClientRect() ?? view.lineBlockAt(line.from);
+    return { line: line.from, after: event.clientY > ('y' in box ? box.y : view.documentTop + box.top) + box.height / 2, element };
   };
   const dragOver = (event: DragEvent) => {
-    if (event.dataTransfer?.types.includes('application/x-memoivy-image')) event.preventDefault();
+    if (!source) return;
+    event.preventDefault();
+    event.stopPropagation();
+    clearMarker();
+    const target = targetAt(event);
+    const allowed = source.doc === view.state.doc && target && target.line !== source.line && !view.state.readOnly;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = allowed ? 'move' : 'none';
+    if (allowed && target.element) {
+      marker = target.element;
+      marker.dataset.imageDrop = target.after ? 'after' : 'before';
+    }
+  };
+  const dragLeave = (event: DragEvent) => {
+    if (!(event.relatedTarget instanceof Node) || !view.dom.contains(event.relatedTarget)) clearMarker();
   };
   const drop = (event: DragEvent) => {
-    const source = Number(event.dataTransfer?.getData('application/x-memoivy-image'));
-    if (!Number.isInteger(source) || !event.dataTransfer?.types.includes('application/x-memoivy-image')) return;
+    if (!source) return;
     event.preventDefault();
-    if (view.state.readOnly || !view.contentDOM.isContentEditable) return;
-    const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
-    if (position == null) return;
-    const text = view.state.doc.toString();
-    const target = view.state.doc.lineAt(position).from;
-    const next = moveImageLine(text, source, target);
-    if (next !== text) view.dispatch({ changes: { from: 0, to: text.length, insert: next } });
+    event.stopPropagation();
+    const origin = source;
+    clearDrag();
+    if (origin.doc !== view.state.doc || view.state.readOnly || !view.contentDOM.isContentEditable) return;
+    const target = targetAt(event);
+    if (!target) return;
+    const text = origin.doc.toString();
+    const next = moveImageLine(text, origin.line, target.line, target.after);
+    if (next !== text) view.dispatch({ changes: { from: 0, to: text.length, insert: next }, userEvent: 'move.drop' });
+    view.focus();
   };
-  view.dom.addEventListener('dragstart', dragStart);
-  view.dom.addEventListener('dragover', dragOver);
-  view.dom.addEventListener('drop', drop);
+  view.dom.addEventListener('dragstart', dragStart, true);
+  view.dom.addEventListener('dragover', dragOver, true);
+  view.dom.addEventListener('dragleave', dragLeave);
+  view.dom.addEventListener('drop', drop, true);
+  view.dom.addEventListener('dragend', clearDrag);
   return () => {
-    view.dom.removeEventListener('dragstart', dragStart);
-    view.dom.removeEventListener('dragover', dragOver);
-    view.dom.removeEventListener('drop', drop);
+    clearDrag();
+    view.dom.removeEventListener('dragstart', dragStart, true);
+    view.dom.removeEventListener('dragover', dragOver, true);
+    view.dom.removeEventListener('dragleave', dragLeave);
+    view.dom.removeEventListener('drop', drop, true);
+    view.dom.removeEventListener('dragend', clearDrag);
   };
 }
 
