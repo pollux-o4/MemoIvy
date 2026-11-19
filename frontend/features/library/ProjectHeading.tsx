@@ -20,7 +20,7 @@ export function ProjectHeading({ id, label, childCount, note, store, onOpenNote,
         {hasTasks && <TaskCountLabel progress={level} title={text.title} className="task-chip">{text.short}</TaskCountLabel>}
       </strong>
       <span>{childCountLabel(childCount)}</span>
-      {hasTasks && <TaskProgress className="project-progress" label={label} progress={level}/>}
+      {hasTasks && <TaskProgress className="library-progress" label={label} progress={level}/>}
     </button>
     <button className="icon-button enter-project" title="캔버스에서 프로젝트 열기" aria-label={`${label} 캔버스 열기`} onClick={() => onOpenCanvas(id)}><Icon name="enter" size={17}/></button>
     <NoteMenu id={id} title={label} store={store}/>

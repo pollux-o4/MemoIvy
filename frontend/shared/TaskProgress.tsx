@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Progress } from './progress';
 import { useCompletionMoment } from './useCompletionMoment';
+import './task_progress.css';
 
 /**
  * 진행 막대. 목록형·캔버스가 함께 쓰고 겉모양은 className이 정한다.
  * 채움은 너비 대신 scaleX로 바꿔 motion.css의 전이가 레이아웃 없이 부드럽게 차오른다.
- * 모두 끝나는 순간에는 data-moment로 한 번만 빛이 지나간다(motion.css task-complete).
+ * 모두 끝나는 순간에는 data-moment로 한 번만 빛이 지나간다(task_progress.css).
  */
 export function TaskProgress({ label, progress, className }: { label: string; progress: Progress; className: string }) {
   const moment = useCompletionMoment(progress);

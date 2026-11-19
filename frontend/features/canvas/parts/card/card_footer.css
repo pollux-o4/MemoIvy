@@ -5,8 +5,13 @@
 .canvas-screen .canvas-project-meta small { display: inline-flex; align-items: center; gap: 5px; }
 .canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
 .canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success-text); font-weight: 600; }
-.canvas-screen .canvas-project-progress { position: absolute; inset-inline: 0; bottom: -3px; height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--note-text) 12%, transparent); }
-.canvas-screen .canvas-project-progress i { display: block; height: 100%; border-radius: inherit; background: var(--canvas-success); }
+.canvas-screen .canvas-project-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -3px;
+  --task-progress-track: color-mix(in srgb, var(--note-text) 12%, transparent);
+  --task-progress-fill: var(--canvas-success);
+}
 .canvas-screen .canvas-card-link { display: flex; flex: none; align-items: center; gap: 4px; margin-inline-start: auto; }
 .canvas-screen .canvas-card-link button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--note-muted); background: transparent; cursor: crosshair; }
 .canvas-screen .canvas-card-link button:hover { background: rgba(255, 255, 255, .45); }

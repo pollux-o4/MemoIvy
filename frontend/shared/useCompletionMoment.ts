@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-/** 완료 순간 효과가 머무는 시간. motion.css의 task-complete 애니메이션 길이와 같다. */
+/** 완료 순간 효과가 머무는 시간. task_progress.css의 task-swell 애니메이션 길이와 같다. */
 const MOMENT_MS = 900;
 
 /**

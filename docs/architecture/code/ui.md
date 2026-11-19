@@ -3,7 +3,7 @@
 | 관심사 | 탐색 키 |
 |---|---|
 | 창과 상태 연결 | `App`, `useMemoivy`, `DesktopBridge`, `WindowHeader` |
-| 목록·프로젝트 펼침 | `Library`, `useCollapsible`, `Disclosure` |
+| 목록·프로젝트 펼침 | `Library`, `useCollapsible`, `Disclosure`, `TaskProgress`(목록·캔버스 공통 모양과 완료 모션) |
 | 본문 편집·미리보기 | `Editor`, `MarkdownSurface`, `PreviewList` |
 | 캔버스 조작·연결선 | 웹 캔버스 코드 지도 |
 | 화면 검증 | `App.stories`, `Interactions.stories`, `desktop.e2e` |
