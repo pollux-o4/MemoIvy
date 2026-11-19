@@ -24,6 +24,20 @@ describe('library model', () => {
     expect(orderedLibraryChildren('project', items).map((item) => item.id)).toEqual(['recent', 'child']);
   });
 
+  it('indexes child relationships once while sorting many expanded projects', () => {
+    const notes = Array.from({ length: 100 }, (_, index) => note(`project-${index}`, '', 0, true))
+      .flatMap((project, index) => [project, note(`child-${index}`, '', index, false, project.id)]);
+    let parentReads = 0;
+    for (const item of notes) {
+      const parent = item.canvas.parent;
+      Object.defineProperty(item.canvas, 'parent', { get: () => { parentReads += 1; return parent; } });
+    }
+    const roots = orderedLibraryChildren(null, notes);
+    expect(roots[0].id).toBe('project-99');
+    for (const project of roots) expect(orderedLibraryChildren(project.id, notes)).toHaveLength(1);
+    expect(parentReads).toBeLessThan(notes.length * 3);
+  });
+
   it('uses project fallback titles in search locations', () => {
     const project = note('p', '', 1, true);
     const child = note('c', 'child', 2, false, 'p');

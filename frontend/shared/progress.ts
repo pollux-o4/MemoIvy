@@ -37,6 +37,14 @@ export function createProgress(notes: readonly Note[]): ProgressIndex {
   const children = createChildIndex(notes);
   const levels = new Map<string, Progress>();
   const details = new Map<string, Progress>();
+  const ownTasks = new WeakMap<Note, Progress>();
+  const tasksOf = (note: Note) => {
+    const cached = ownTasks.get(note);
+    if (cached) return cached;
+    const result = checklist(note.text);
+    ownTasks.set(note, result);
+    return result;
+  };
   const visiting = new Set<string>(); // 부모 순환을 끊는다.
 
   const add = (a: Progress, b: Progress): Progress => ({ done: a.done + b.done, total: a.total + b.total });
@@ -48,10 +56,10 @@ export function createProgress(notes: readonly Note[]): ProgressIndex {
   const of = (note: Note): Progress => {
     const cached = levels.get(note.id);
     if (cached) return cached;
-    if (!note.canvas.project) return checklist(note.text);
+    if (!note.canvas.project) return tasksOf(note);
     if (visiting.has(note.id)) return NONE;
     visiting.add(note.id);
-    const result = children(note.id).filter((child) => !visiting.has(child.id)).map(unit).reduce(add, checklist(note.text));
+    const result = children(note.id).filter((child) => !visiting.has(child.id)).map(unit).reduce(add, tasksOf(note));
     visiting.delete(note.id);
     levels.set(note.id, result);
     return result;
@@ -61,7 +69,7 @@ export function createProgress(notes: readonly Note[]): ProgressIndex {
     if (cached) return cached;
     if (visiting.has(note.id)) return NONE;
     visiting.add(note.id);
-    const result = children(note.id).map(detail).reduce(add, checklist(note.text));
+    const result = children(note.id).map(detail).reduce(add, tasksOf(note));
     visiting.delete(note.id);
     details.set(note.id, result);
     return result;
