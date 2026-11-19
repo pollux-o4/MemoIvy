@@ -22,7 +22,7 @@
 }
 
 .canvas-screen .canvas-header {
-  z-index: 3;
+  z-index: 4; /* 새로 만들기 메뉴가 아래 경로 막대(z 3) 위로 펼쳐진다. */
   flex: 0 0 54px;
   height: 54px;
   display: grid;
