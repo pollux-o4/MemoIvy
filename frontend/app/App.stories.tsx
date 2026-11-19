@@ -64,6 +64,7 @@ const markdownSnapshot = (): Snapshot => ({
       '본문 · **굵게** · *기울임* · ~~취소선~~',
       '가나다 · `가나다` · `console.log()`',
       '[링크](https://example.com)',
+      'https://naver.com',
       '',
       '- 글머리 항목',
       '  - 중첩 항목',

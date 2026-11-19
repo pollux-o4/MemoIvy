@@ -8,8 +8,12 @@ export function findLinkAt(text: string, position: number): LinkTarget | null {
   for (const match of text.matchAll(markdown)) {
     const raw = match[2];
     const url = raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw;
-    const start = (match.index ?? 0) + match[0].indexOf(raw) + (raw.startsWith('<') ? 1 : 0);
-    links.push({ from: start, to: start + url.length, url, label: match[1] });
+    const linkStart = match.index;
+    const destinationStart = match[0].indexOf(raw, match[1].length + 3);
+    const from = linkStart + destinationStart + (raw.startsWith('<') ? 1 : 0);
+    const link = { from, to: from + url.length, url, label: match[1] };
+    if (position >= linkStart && position < linkStart + match[0].length) return link;
+    links.push(link);
   }
   const bare = /(?:https?:\/\/|mailto:)[^\s<>()[\]]+/gi;
   for (const match of text.matchAll(bare)) {
