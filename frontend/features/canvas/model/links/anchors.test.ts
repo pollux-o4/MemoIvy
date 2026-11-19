@@ -24,6 +24,20 @@ describe('chooseSides', () => {
     expect(chooseSides(a, b, { from: 'right', to: 'left' })).toEqual({ from: 'right', to: 'left' });
   });
 
+  it('대각 경계를 오가며 끌어도 변은 한 번만 바뀐다', () => {
+    // 2차 완료 기준: 드래그 중 경계 근처에서 연결점이 깜빡이지 않는다.
+    const a = rect(0, 0, 200, 100);
+    const path = [...Array.from({ length: 40 }, (_, i) => 80 + i * 2), ...Array.from({ length: 40 }, (_, i) => 160 - i), ...Array.from({ length: 40 }, (_, i) => 120 + i * 2)];
+    let previous: ReturnType<typeof chooseSides> | undefined;
+    let switches = 0;
+    for (const dy of path) {
+      const sides = chooseSides(a, rect(200, dy, 200, 100), previous);
+      if (previous && sides.from !== previous.from) switches++;
+      previous = sides;
+    }
+    expect(switches).toBe(1);
+  });
+
   it('previous가 없으면 경계 근처에서도 기울기로 정상 선택한다', () => {
     const a = rect(0, 0, 200, 100);
     const b = rect(200, 110, 200, 100);
