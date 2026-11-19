@@ -4,15 +4,26 @@ export type LinkTarget = { from: number; to: number; url: string; label: string 
 /** Finds inline Markdown links and bare web/mail URLs without depending on parser node names. */
 export function findLinkAt(text: string, position: number): LinkTarget | null {
   const links: LinkTarget[] = [];
-  const markdown = /\[([^\]]+)\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+[^)]*)?\s*\)/g;
+  const markdown = /!?\[([^\]]*)\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+[^)]*)?\s*\)/g;
   for (const match of text.matchAll(markdown)) {
+    const hasBang = match[0].startsWith('!');
+    const markupEnd = match.index + match[0].length;
+    if (hasBang) {
+      const escapes = /\\+$/.exec(text.slice(0, match.index))?.[0].length ?? 0;
+      if (escapes % 2 === 0) {
+        // Suppress the bare URL fallback for image destinations as well.
+        if (position >= match.index && position < markupEnd) return null;
+        continue;
+      }
+    }
+    if (!match[1]) continue;
+
     const raw = match[2];
     const url = raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw;
-    const linkStart = match.index;
     const destinationStart = match[0].indexOf(raw, match[1].length + 3);
-    const from = linkStart + destinationStart + (raw.startsWith('<') ? 1 : 0);
+    const from = match.index + destinationStart + (raw.startsWith('<') ? 1 : 0);
     const link = { from, to: from + url.length, url, label: match[1] };
-    if (position >= linkStart && position < linkStart + match[0].length) return link;
+    if (position >= match.index + Number(hasBang) && position < markupEnd) return link;
     links.push(link);
   }
   const bare = /(?:https?:\/\/|mailto:)[^\s<>()[\]]+/gi;
