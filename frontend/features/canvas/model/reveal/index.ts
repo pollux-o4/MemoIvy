@@ -1,6 +1,6 @@
-import type { Camera } from '../motion';
+import type { Camera, Rect } from '../motion';
 
-export type Rect = { x: number; y: number; w: number; h: number };
+export type { Rect };
 
 /** 카드와 보이는 영역 가장자리 사이에 남길 화면 px. */
 export const REVEAL_MARGIN = 16;

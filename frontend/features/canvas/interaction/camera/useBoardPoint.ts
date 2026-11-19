@@ -1,6 +1,6 @@
 import { type RefObject, useRef } from 'react';
-import type { CanvasPoint } from '../model/align';
-import type { Camera } from '../model/motion';
+import type { CanvasPoint } from '../../model/align';
+import type { Camera } from '../../model/motion';
 
 /**
  * 포인터 좌표 변환: 화면(client) → 보드(screen) → 캔버스(world).

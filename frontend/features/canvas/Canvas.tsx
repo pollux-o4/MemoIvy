@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
 import './canvas.css';
 import type { Note } from '../../shared/engine_contract';
@@ -6,38 +6,33 @@ import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
 import { AlignmentBar } from './parts/alignment/AlignmentBar';
-import { canvasSlot, CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, cardRect, type CanvasPoint } from './model/align';
+import { CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, type CanvasPoint } from './model/align';
 
-import { type CardActions, CanvasCard } from './parts/CanvasCard';
+import type { CardActions } from './parts/CanvasCard';
+import { CanvasWorld } from './parts/CanvasWorld';
 import { CanvasDeleteDialog } from './parts/CanvasDeleteDialog';
 import { CanvasDock } from './parts/CanvasDock';
 import { CanvasEmpty } from './parts/CanvasEmpty';
 import { SelectionBox } from './parts/SelectionBox';
 import { CardMenu } from './parts/CardMenu';
 import { CanvasInspector } from './parts/inspector/CanvasInspector';
-import { CanvasLinks } from './parts/CanvasLinks';
 import { CanvasNavigator } from './parts/CanvasNavigator';
-import { ConnectPreview } from './parts/ConnectPreview';
-import { SnapGuides } from './parts/SnapGuides';
 import { readLinkStyle } from '../../shared/link_style';
-import { gridStyle } from './model/grid';
 import { canvasTitle } from './model/labels';
-import { bounds, fitting } from './model/motion';
 import { canMoveInto } from './model/scope_model';
-import { useCardMenu } from './interaction/useCardMenu';
-import { useBranchFocus } from './interaction/useBranchFocus';
-import { useStableHandlers } from './interaction/useStableHandlers';
-import { useSelectionActions } from './interaction/useSelectionActions';
-import { useCanvasClipboard } from './interaction/useCanvasClipboard';
-import { useCanvasCommands } from './interaction/useCanvasCommands';
-import { useCanvasKeyboard } from './interaction/useCanvasKeyboard';
-import { useCanvasMotion } from './interaction/useCanvasMotion';
-import { useCanvasPointer } from './interaction/useCanvasPointer';
-import { useCanvasScope } from './interaction/useCanvasScope';
-import { useCanvasSelection } from './interaction/useCanvasSelection';
-import { useCanvasWheel } from './interaction/useCanvasWheel';
-import { useRevealSelection } from './interaction/useRevealSelection';
-import { useFanQuiet } from './interaction/useFanQuiet';
+import { useCardMenu } from './interaction/input/useCardMenu';
+import { useBranchFocus } from './interaction/state/useBranchFocus';
+import { useStableHandlers } from './interaction/state/useStableHandlers';
+import { useSelectionActions } from './interaction/commands/useSelectionActions';
+import { useCanvasClipboard } from './interaction/commands/useCanvasClipboard';
+import { useCanvasCommands } from './interaction/commands/useCanvasCommands';
+import { useCanvasKeyboard } from './interaction/input/useCanvasKeyboard';
+import { useCanvasPointer } from './interaction/input/useCanvasPointer';
+import { useCanvasScope } from './interaction/state/useCanvasScope';
+import { useCanvasSelection } from './interaction/state/useCanvasSelection';
+import { useCanvasCamera } from './interaction/camera/useCanvasCamera';
+import { useCanvasLayout } from './interaction/state/useCanvasLayout';
+import { useFanQuiet } from './interaction/state/useFanQuiet';
 
 // 카드 치수의 원본은 model/align. CSS(카드·부채)는 이 변수만 읽는다.
 const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px`, '--card-radius': `${CARD_RADIUS}px` } as React.CSSProperties;
@@ -56,17 +51,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const scopeState = useCanvasScope(store.notes, scope, setSelected, onBack);
   const { activeScope, scopedProject } = scopeState;
   const notes = useMemo(() => store.notes.filter((note) => (note.canvas.parent ?? null) === activeScope), [store.notes, activeScope]);
-  const noteById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
-  // 저장 위치 객체는 메모가 바뀔 때만 새로 만든다. 끌기 중에는 움직인 카드의 위치 참조만 바뀐다.
-  const savedPositions = useMemo(() => Object.fromEntries(notes.map((note, index) =>
-    [note.id, note.canvas.position ? { x: note.canvas.position[0], y: note.canvas.position[1] } : canvasSlot(index)])), [notes]);
-  const positions = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, draftPositions[note.id] ?? savedPositions[note.id]])), [notes, draftPositions, savedPositions]);
-  const cardRects = useMemo(() => notes.map((note) => cardRect(positions[note.id])), [notes, positions]);
-  const selectedRects = useMemo(() => selected.flatMap((id) => positions[id] ? [cardRect(positions[id])] : []), [selected, positions]);
-  const motion = useCanvasMotion(host, cardRects, selectedRects);
-  const { camera, animateTo, triggerLink } = motion;
-  useCanvasWheel(host, motion);
-  const reveal = useRevealSelection(host, selected.length === 1 && selectedRects.length === 1 ? { id: selected[0], rect: selectedRects[0] } : undefined, camera, animateTo, mode === 'idle');
+  const { noteById, positions, cardRects, selectedRects } = useCanvasLayout(notes, draftPositions, selected);
+  const { motion, camera, triggerLink, reveal, fitView, resetZoom } = useCanvasCamera({ host, notes, noteById, scope: activeScope, cardRects, selected, selectedRects, idle: mode === 'idle' });
   const commands = useCanvasCommands({ store, notes, positions, selected, activeScope, setDraftPositions, triggerLink });
   const clipboard = useCanvasClipboard({ store, notes, positions, selected, activeScope, onPasted: (ids) => selectAndReveal(ids) });
   const movable = (target: string, ids: string[]) => canMoveInto(target, ids, store.notes);
@@ -88,16 +74,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     try { const project = await commands.group(); if (project) { setSelected([project.id]); onOpenNote(project.id); } } catch { /* 저장 오류는 상태 막대가 알린다 */ }
   };
   const liftSelected = () => { if (scopedProject && selected.length) commands.moveInto(selected, scopedProject.canvas.parent ?? null); };
-  const fitView = (onlySelection = false) => {
-    const board = host.current?.getBoundingClientRect();
-    const target = bounds(onlySelection ? selectedRects : cardRects);
-    if (board && target) animateTo(fitting(target, [board.width, board.height]));
-  };
-  const resetZoom = () => {
-    if (!host.current) return;
-    const { width, height } = host.current.getBoundingClientRect();
-    animateTo({ x: camera.x + width / camera.zoom / 2 - width / 2, y: camera.y + height / camera.zoom / 2 - height / 2, zoom: 1 });
-  };
   const fan = useFanQuiet();
   const pointer = useCanvasPointer({
     host, camera, setCamera: motion.setCamera, setAutopan: motion.setAutopan, startCoast: motion.startCoast, isPanHeld: () => keyboard.spaceDown.current,
@@ -152,20 +128,6 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
   const moveTargets = useMemo(() => selectedNote ? store.notes.filter((note) => note.canvas.project && note.canvas.parent !== activeScope && canMoveInto(note.id, [selectedNote.id], store.notes)) : [], [store.notes, activeScope, selectedNote]);
   const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent }), [outlineRows, inspectorActions]);
 
-  const fitScope = useEffectEvent(() => fitView());
-  const previousScope = useRef(activeScope);
-  useEffect(() => {
-    if (previousScope.current === activeScope) return;
-    previousScope.current = activeScope;
-    const frame = requestAnimationFrame(fitScope);
-    return () => cancelAnimationFrame(frame);
-  }, [activeScope]);
-  const seededLinks = useRef(false);
-  useEffect(() => {
-    if (seededLinks.current || !notes.length) return;
-    seededLinks.current = true;
-    for (const note of notes) for (const target of note.canvas.next) if (noteById.has(target)) triggerLink(`${note.id}:${target}`, false);
-  }, [notes, noteById, triggerLink]);
   useEffect(() => {
     if (!focusConnectList || !selectedNote) return;
     const frame = requestAnimationFrame(() => {
@@ -183,6 +145,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     setSelected([]);
     setDeleteTarget([]);
   };
+  const preview = pointer.connectPreview; const connectFrom = selection.connectFrom ? positions[selection.connectFrom] : undefined;
+  const connectView = useMemo(() => preview && connectFrom ? { from: connectFrom, to: preview.to, target: preview.target ? positions[preview.target] : undefined, targetId: preview.target } : null, [preview, connectFrom, positions]);
   const hasProjects = store.notes.some((note) => note.canvas.project);
   // 가지 초점: 흐림은 world의 has-focus가 정하고 카드·선은 가지 안인지만 받는다. 초점이 바뀌어도 가지 밖 카드 200장은 다시 그리지 않는다.
   // 단축키는 화면 루트가 포커스를 받아 처리한다. application 역할은 보드에만 둬 제목 줄·도구 막대가 랜드마크로 남게 한다.
@@ -195,15 +159,8 @@ export function Canvas({ store, scope, onOpenNote, onBack }: { store: MemoStore;
     <div ref={host} className={`canvas-board${mode === 'pan' ? ' panning' : ''}${pointer.connectPicking ? ' picking' : ''}`} role="application" aria-label="캔버스"
       {...pointer.board}
 >
-      <div className="canvas-grid" aria-hidden="true" style={gridStyle(camera) as React.CSSProperties}/>
-      <div className={`canvas-world${focus ? ' has-focus' : ''}`} style={{ transform: `translate(${-camera.x * camera.zoom}px, ${-camera.y * camera.zoom}px) scale(${camera.zoom})` }}>
-        <CanvasLinks notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} zoom={camera.zoom} selected={selected} sampleForLink={motion.sampleForLink} linkStyle={linkStyle} focus={focus}/>
-        {notes.map((note) => <CanvasCard key={note.id} note={note} position={positions[note.id]} selected={selected.includes(note.id)} dropTarget={pointer.dropTarget === note.id}
-          fanQuiet={fan.quiet.includes(note.id)} linkTarget={pointer.connectPreview?.target === note.id} focused={Boolean(focus?.has(note.id))} peeking={note.canvas.project ? peek === note.id : undefined} actions={cardActions}/>)}
-        {pointer.connectPreview && selection.connectFrom && positions[selection.connectFrom] && <ConnectPreview from={positions[selection.connectFrom]} to={pointer.connectPreview.to}
-          target={pointer.connectPreview.target ? positions[pointer.connectPreview.target] : undefined} linkStyle={linkStyle} zoom={camera.zoom}/>}
-        <SnapGuides guides={pointer.guides} zoom={camera.zoom}/>
-      </div>
+      <CanvasWorld camera={camera} notes={notes} allNotes={store.notes} scope={activeScope} positions={positions} selected={selected} focus={focus} peek={peek}
+        quiet={fan.quiet} dropTarget={pointer.dropTarget} connect={connectView} guides={pointer.guides} linkStyle={linkStyle} sampleForLink={motion.sampleForLink} actions={cardActions}/>
       {cardMenu.menu && <CardMenu at={cardMenu.menu.at} notes={selectedNotes} actions={actions} onClose={cardMenu.close}/>}
       {pointer.connectPicking && <p className="canvas-pick-hint" role="status">이을 메모를 누르세요 · 빈 곳은 새 가지 · Esc 취소</p>}
       {selection.marquee && <SelectionBox a={selection.marquee.a} b={selection.marquee.b}/>}

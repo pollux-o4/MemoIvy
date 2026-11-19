@@ -1,9 +1,9 @@
-import { onMotionPreferenceChange, prefersReducedMotion } from '../../../shared/appearance';
+import { onMotionPreferenceChange, prefersReducedMotion } from '../../../../shared/appearance';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, limitLead, LINK_SECONDS, linkProgress, panned, pulseSample, SIGNAL_SECONDS, zoomAt } from '../model/motion';
-import type { Camera, Rect } from '../model/motion';
-import { WHEEL_PAN } from '../model/wheel';
+import { CameraMotion, Coast, ZOOM_STEP, autopan, firstLayout, limitLead, LINK_SECONDS, linkProgress, panned, pulseSample, SIGNAL_SECONDS, zoomAt } from '../../model/motion';
+import type { Camera, Rect } from '../../model/motion';
+import { WHEEL_PAN } from '../../model/wheel';
 
 type LinkSample = { progress: number; travel: number; alpha: number; creating: boolean; pulsing: boolean };
 /** 휠을 빠르게 굴려도 화면이 따라잡을 거리. 약 네 칸(WHEEL_PAN×4)을 넘으면 더 쌓지 않는다. */

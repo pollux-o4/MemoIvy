@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import type { KeyboardEvent, MutableRefObject } from 'react';
-import type { Alignment } from '../model/align';
-import { alignmentForKey } from '../model/alignment_actions';
+import type { Alignment } from '../../model/align';
+import { alignmentForKey } from '../../model/alignment_actions';
 
 function isTypingTarget(target: EventTarget): boolean {
   return target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));

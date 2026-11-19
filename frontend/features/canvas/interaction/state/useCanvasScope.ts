@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import { ancestry, scopeDepth, scopeShortcuts } from '../model/scope_model';
+import type { Note } from '../../../../shared/engine_contract';
+import { ancestry, scopeDepth, scopeShortcuts } from '../../model/scope_model';
 
 /** 캔버스가 보고 있는 프로젝트 범위: 경로·깊이·바로가기와 들어가기/나가기. */
 export function useCanvasScope(notes: Note[], initial: string | undefined, select: (ids: string[]) => void, onLeaveRoot: () => void) {

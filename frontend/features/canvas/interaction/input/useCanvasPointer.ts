@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent, RefObject, SetStateAction } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import { cardRect, clampCanvasDelta, type CanvasPoint } from '../model/align';
-import { cardsInRange, topCardAt } from '../model/hit';
-import { useBoardPoint } from './useBoardPoint';
+import type { Note } from '../../../../shared/engine_contract';
+import type { CanvasPoint } from '../../model/align';
+import { dragDelta, keepRecent, type PointerSample, releaseVelocity } from '../../model/drag';
+import { cardsInRange, topCardAt } from '../../model/hit';
+import { useBoardPoint } from '../camera/useBoardPoint';
 import { type ConnectOutcome, DRAG_SLOP_PX, useConnectGesture } from './useConnectGesture';
-import { bounds } from '../model/motion';
-import { SNAP_PIXELS, snapRect, type SnapGuide } from '../model/snap';
-import type { Camera } from '../model/motion';
-import type { CanvasMode } from './useCanvasSelection';
+import type { SnapGuide } from '../../model/snap';
+import type { Camera } from '../../model/motion';
+import type { CanvasMode } from '../state/useCanvasSelection';
 
 type Positions = Record<string, CanvasPoint>;
 type Drag = { start: CanvasPoint; origin: CanvasPoint; positions: Positions; shift: boolean };
 type Marquee = { a: CanvasPoint; b: CanvasPoint } | null;
-const COAST_WINDOW_MS = 120;
 
 const noteAt = (event: { clientX: number; clientY: number }) => document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-note-id]')?.dataset.noteId;
 
@@ -37,7 +36,7 @@ export function useCanvasPointer(options: {
   const o = options;
   const [drag, setDrag] = useState<Drag | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const panSamples = useRef<Array<{ x: number; y: number; at: number }>>([]);
+  const panSamples = useRef<PointerSample[]>([]);
   const cardPointer = useRef<CanvasPoint | null>(null);
   const cardDown = useRef<{ point: CanvasPoint; moved: boolean } | null>(null);
   const snapOff = useRef(false);
@@ -45,15 +44,9 @@ export function useCanvasPointer(options: {
   const point = useBoardPoint(o.host, o.camera);
   const { screenPoint, worldPoint } = point;
   const connect = useConnectGesture({ ...o, point });
-  const snapped = (current: Drag, dx: number, dy: number): { delta: CanvasPoint; guides: SnapGuide[] } => {
-    const origins = Object.values(current.positions);
-    const raw = clampCanvasDelta(origins, dx, dy);
-    if (snapOff.current || !origins.length) return { delta: raw, guides: [] };
-    const others = o.notes.filter((note) => !current.positions[note.id] && o.positions[note.id]).map((note) => cardRect(o.positions[note.id]));
-    const moving = bounds(origins.map((point) => cardRect({ x: point.x + raw.x, y: point.y + raw.y })));
-    if (!moving) return { delta: raw, guides: [] };
-    const fit = snapRect(moving, others, SNAP_PIXELS / o.camera.zoom);
-    return { delta: clampCanvasDelta(origins, raw.x + fit.dx, raw.y + fit.dy), guides: fit.guides };
+  const snapped = (current: Drag, dx: number, dy: number) => {
+    const others = o.notes.flatMap((note) => !current.positions[note.id] && o.positions[note.id] ? [o.positions[note.id]] : []);
+    return dragDelta(Object.values(current.positions), others, dx, dy, o.camera.zoom, snapOff.current);
   };
   const draggedTo = (current: Drag, pointer: CanvasPoint): Positions => {
     const world = worldPoint(pointer);
@@ -109,7 +102,7 @@ export function useCanvasPointer(options: {
         if (o.mode === 'pan') {
           const dx = event.clientX - drag.start.x; const dy = event.clientY - drag.start.y;
           o.setCamera((current) => ({ ...current, x: drag.origin.x - dx / current.zoom, y: drag.origin.y - dy / current.zoom }));
-          const now = performance.now(); panSamples.current = [...panSamples.current.filter((sample) => now - sample.at <= COAST_WINDOW_MS), { x: event.clientX, y: event.clientY, at: now }];
+          panSamples.current = keepRecent(panSamples.current, { x: event.clientX, y: event.clientY, at: performance.now() });
         } else if (o.mode === 'cards') {
           snapOff.current = event.ctrlKey;
           const point = screenPoint(event); cardPointer.current = point; o.setAutopan([point.x, point.y]);
@@ -126,10 +119,8 @@ export function useCanvasPointer(options: {
       onPointerUp: (event: ReactPointerEvent) => {
         o.setAutopan(null);
         if (o.mode === 'connect') { connect.end(noteAt(event), event); return; }
-        if (o.mode === 'pan' && panSamples.current.length > 1) {
-          const [first] = panSamples.current; const last = panSamples.current[panSamples.current.length - 1]; const elapsed = (last.at - first.at) / 1000;
-          if (elapsed > 0) o.startCoast([(last.x - first.x) / elapsed, (last.y - first.y) / elapsed]);
-        }
+        const velocity = o.mode === 'pan' ? releaseVelocity(panSamples.current) : null;
+        if (velocity) o.startCoast(velocity);
         panSamples.current = []; cardPointer.current = null; cardDown.current = null;
         if (o.mode === 'marquee' && o.marquee) {
           const inside = cardsInRange(worldPoint(o.marquee.a), worldPoint(o.marquee.b), o.notes, o.positions);

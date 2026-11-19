@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CanvasNode } from '../../../shared/engine_contract';
+import type { CanvasNode } from '../../../../shared/engine_contract';
 
 export type CanvasChange = { id: string; canvas: Partial<CanvasNode> };
 type Command = { before: CanvasChange[]; after: CanvasChange[] };

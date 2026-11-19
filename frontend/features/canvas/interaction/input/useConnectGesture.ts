@@ -1,9 +1,9 @@
 import { type PointerEvent as ReactPointerEvent, type RefObject, useRef, useState } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import type { CanvasPoint } from '../model/align';
-import { topCardAt } from '../model/hit';
-import type { CanvasMode } from './useCanvasSelection';
-import type { useBoardPoint } from './useBoardPoint';
+import type { Note } from '../../../../shared/engine_contract';
+import type { CanvasPoint } from '../../model/align';
+import { topCardAt } from '../../model/hit';
+import type { CanvasMode } from '../state/useCanvasSelection';
+import type { useBoardPoint } from '../camera/useBoardPoint';
 
 /** 이 거리(화면 px) 넘게 움직여야 끌기로 본다. 그 아래는 누르기. */
 export const DRAG_SLOP_PX = 3;

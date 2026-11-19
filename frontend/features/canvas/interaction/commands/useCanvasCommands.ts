@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import type { MemoStore } from '../../../shared/useMemoivy';
-import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, type Alignment, type CanvasPoint, vacantGroup } from '../model/align';
-import { bounds } from '../model/motion';
-import { branchRoot, buildGraph, scopeEdges, treeParent } from '../model/links/graph';
-import { DEFAULT_COLUMN_GAP as BRANCH_GAP_X, DEFAULT_ROW_GAP as BRANCH_GAP_Y, mindmapLayout } from '../model/links/mindmap_layout';
+import type { Note } from '../../../../shared/engine_contract';
+import type { MemoStore } from '../../../../shared/useMemoivy';
+import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, type Alignment, type CanvasPoint, vacantGroup } from '../../model/align';
+import { bounds } from '../../model/motion';
+import { branchRoot, buildGraph, scopeEdges, treeParent } from '../../model/links/graph';
+import { DEFAULT_COLUMN_GAP as BRANCH_GAP_X, DEFAULT_ROW_GAP as BRANCH_GAP_Y, mindmapLayout } from '../../model/links/mindmap_layout';
 import { useCanvasHistory, type CanvasChange } from './useCanvasHistory';
 
 type Positions = Record<string, CanvasPoint>;

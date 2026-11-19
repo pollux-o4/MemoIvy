@@ -1,5 +1,5 @@
-import type { Note } from '../../../shared/engine_contract';
-import type { MemoStore } from '../../../shared/useMemoivy';
+import type { Note } from '../../../../shared/engine_contract';
+import type { MemoStore } from '../../../../shared/useMemoivy';
 
 /**
  * 선택한 카드에 하는 동작의 단일 출처(Command 묶음). 키보드 단축키·카드 메뉴·드로어가 같은 명령을 부른다.

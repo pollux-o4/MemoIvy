@@ -1,8 +1,8 @@
 import { useRef } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import type { MemoStore } from '../../../shared/useMemoivy';
-import { type CanvasPoint, savedPoint } from '../model/align';
-import { type ClipPayload, copyNotes, pastePositions, plainText } from '../model/clipboard';
+import type { Note } from '../../../../shared/engine_contract';
+import type { MemoStore } from '../../../../shared/useMemoivy';
+import { type CanvasPoint, savedPoint } from '../../model/align';
+import { type ClipPayload, copyNotes, pastePositions, plainText } from '../../model/clipboard';
 
 async function readSystemText(): Promise<string> {
   try { return await navigator.clipboard.readText(); } catch { return ''; }

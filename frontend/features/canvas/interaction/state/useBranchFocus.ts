@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import type { Note } from '../../../shared/engine_contract';
-import { branchRoot, branchSet, buildGraph, outline, scopeEdges } from '../model/links/graph';
-import { indentRow, type NextChange, outdentRow } from '../model/links/outline_edit';
+import type { Note } from '../../../../shared/engine_contract';
+import { branchRoot, branchSet, buildGraph, outline, scopeEdges } from '../../model/links/graph';
+import { indentRow, type NextChange, outdentRow } from '../../model/links/outline_edit';
 
 /**
  * 가지 초점·개요·제자리 펼치기(엿보기). 인접 그래프는 메모·단계가 바뀔 때만 한 번 만든다.

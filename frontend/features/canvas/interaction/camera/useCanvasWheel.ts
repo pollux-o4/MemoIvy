@@ -1,5 +1,5 @@
 import { type RefObject, useEffect, useRef } from 'react';
-import { wheelIntent } from '../model/wheel';
+import { wheelIntent } from '../../model/wheel';
 
 type Camera = { panBy: (delta: [number, number], smooth: boolean) => void; zoomAtScreen: (point: [number, number], factor: number) => void };
 

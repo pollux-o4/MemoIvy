@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import type { Camera } from '../model/motion';
-import { type Rect, revealCamera, visibleArea } from '../model/reveal';
+import type { Camera } from '../../model/motion';
+import { type Rect, revealCamera, visibleArea } from '../../model/reveal';
 
 /** 보드 위에 겹쳐 떠 카드를 가릴 수 있는 패널. */
 const OVERLAY_SELECTOR = '.canvas-inspector';
