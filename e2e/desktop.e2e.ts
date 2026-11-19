@@ -103,4 +103,52 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => reopened.library.evaluate(() => document.documentElement.classList.contains('theme-dark'))).toBe(true);
     await quit(reopened.app);
   });
+  test('캔버스 마인드맵: Tab·Enter 가지, 가지 개요, 실행 취소, 프로젝트 제자리 펼치기', async () => {
+    const { app, library } = await launch();
+    await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+    const canvas = await windowWith(app, '.canvas-screen');
+    const cards = canvas.locator('[data-note-id]');
+    const ids = () => cards.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.noteId ?? ''));
+    const before = await ids();
+    await canvas.getByRole('button', { name: 'New' }).click();
+    await canvas.getByRole('menuitem', { name: /메모/ }).click();
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 1);
+    const root = (await ids()).find((id) => !before.includes(id)) ?? '';
+    const card = (id: string) => canvas.locator(`[data-note-id="${id}"]`);
+    const outlineDepths = () => canvas.locator('.inspector-outline li').evaluateAll((items) => items.map((item) => (item as HTMLElement).style.getPropertyValue('--depth')));
+
+    // Tab: 하위 가지를 만들고 바로 이름 칸에 포커스한다.
+    await card(root).click();
+    await canvas.keyboard.press('Tab');
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 2);
+    await expect.poll(() => canvas.evaluate(() => document.activeElement?.classList.contains('inspector-title'))).toBe(true);
+    const child = (await ids()).find((id) => !before.includes(id) && id !== root) ?? '';
+    // Enter: 같은 부모의 형제. 부모 없는 카드의 Enter는 그대로 열기라 자식 카드에서 누른다.
+    await card(child).click();
+    await canvas.keyboard.press('Enter');
+    await expect.poll(async () => (await ids()).length).toBe(before.length + 3);
+    await expect.poll(outlineDepths).toEqual(['0', '1', '1']);
+    // 가지 개요 들여쓰기: 두 번째 가지를 첫 가지 아래로.
+    await canvas.locator('.inspector-outline button').nth(2).focus();
+    await canvas.keyboard.press('Tab');
+    await expect.poll(outlineDepths).toEqual(['0', '1', '2']);
+    await canvas.keyboard.press('Shift+Tab');
+    await expect.poll(outlineDepths).toEqual(['0', '1', '1']);
+    // 마인드맵 배치 후 실행 취소로 원위치.
+    await card(root).click();
+    const placed = await card(child).evaluate((item) => item.style.cssText);
+    await canvas.keyboard.press('Alt+m');
+    await canvas.keyboard.press('Control+z');
+    await expect.poll(() => card(child).evaluate((item) => item.style.cssText)).toBe(placed);
+    // 프로젝트 제자리 펼치기: 묶은 프로젝트를 펼치면 주변은 흐려지고 Esc로 접힌다.
+    await card(child).click();
+    await canvas.keyboard.press('Alt+g');
+    const project = canvas.locator('.canvas-note.project').filter({ has: canvas.locator('.canvas-peek') }).last();
+    await project.locator('.canvas-peek button').click();
+    await expect.poll(() => project.getAttribute('class')).toContain('is-peeking');
+    await expect.poll(() => canvas.locator('.canvas-note.is-dimmed').count()).toBeGreaterThan(0);
+    await canvas.locator('.canvas-screen').press('Escape');
+    await expect.poll(() => project.getAttribute('class')).not.toContain('is-peeking');
+    await quit(app);
+  });
 });
