@@ -94,6 +94,7 @@ const canvasLargeSnapshot = (): Snapshot => {
 export const CanvasLarge: Story = { render: () => previewApp('canvas', undefined, canvasLargeSnapshot(), [1400, 900]) };
 export const CanvasBranches: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot(), [1100, 900]) };
 export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
+export const CanvasBranchesStraight: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('straight'), [1100, 900]) };
 export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
 export const NarrowWindow: Story = {
