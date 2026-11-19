@@ -31,7 +31,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 카드 하단 배치는 `card_footer`에 모은다. 본문 미리보기는 카드·인스펙터·목록이 공유하는 `markdown/preview`에서 파싱·표시·체크 저장을 맡는다. 연결점은 `useCardHeights`가 변경된 카드만 관찰해 반영한다. 고속 휠 확대는 포인터 기준으로 입력을 순차 적용하고, 화면 갱신은 프레임당 한 번으로 합친다. 카드는 확대 중 재조립하지 않는다. 본문 높이는 `useCollapsible`이 클리핑 영역 대신 행을 관찰해 계산한다. |
+| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 카드 하단은 `CardSummary`와 `card_footer`에 모으고 공통 `TaskProgress`를 연결한다. 본문 미리보기는 카드·인스펙터·목록이 공유하는 `markdown/preview`에서 파싱·표시·체크 저장을 맡는다. 연결점은 `useCardHeights`가 변경된 카드만 관찰해 반영한다. 고속 휠 확대는 포인터 기준으로 입력을 순차 적용하고, 화면 갱신은 프레임당 한 번으로 합친다. 카드는 확대 중 재조립하지 않는다. 본문 높이는 `useCollapsible`이 클리핑 영역 대신 행을 관찰해 계산한다. |
 | 떠 있는 패널 | inspector의 `CanvasInspector`·`InspectorOutline`·`useOutlineDrag`·`LinkPicker`(버튼과 Ctrl+L의 공통 메뉴), `CanvasDock`·`CardMenu`·`CanvasNavigator` |
 
 동작 계약은 CANVAS-001~005에서, 실행·검증 절차는 OPS-004에서 찾는다.

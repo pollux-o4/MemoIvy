@@ -13,7 +13,7 @@ import { CardHeader } from './card/CardHeader';
 import { CardPreview } from './card/CardPreview';
 import { LinkHandle } from './card/LinkHandle';
 import { ProjectFan } from './card/ProjectFan';
-import { ProjectSummary } from './card/ProjectSummary';
+import { CardSummary } from './card/CardSummary';
 
 /** 카드가 부모에게 알리는 동작. Canvas가 한 번 만든 고정 객체라 카드 memo를 깨지 않는다. */
 export interface CardActions {
@@ -53,8 +53,7 @@ export const CanvasCard = memo(function CanvasCard({ note, position, selected, d
       <CardHeader title={title} marker={preview.title} project={project} done={note.canvas.done} onEnter={() => actions.open(note)} onToggleDone={() => actions.toggleDone(note.id)}/>
       <CardPreview id={`card-preview-${note.id}`} label={title} rows={preview.rows} empty={!note.text.trim()} onGrow={setGrow} onToggleTask={(line) => actions.toggleTask(note, line)}/>
       {(project || tasks.total > 0 || note.canvas.next.length > 0) && <footer className="canvas-card-footer">
-        {project ? <ProjectSummary label={title} count={children.length} progress={tasks} text={taskText}/>
-          : tasks.total > 0 && <div className="canvas-card-meta"><small title={taskText.title}>할 일 {taskText.short}</small></div>}
+        {(project || tasks.total > 0) && <CardSummary label={title} childCount={project ? children.length : undefined} progress={tasks} text={taskText}/>}
         {note.canvas.next.length > 0 && <LinkHandle title={title} count={note.canvas.next.length} onConnectStart={() => actions.connectStart(note.id)}/>}
       </footer>}
       <BranchHandle title={title} onConnectStart={(event) => actions.connectStart(note.id, event)} onAdd={() => actions.addBranch(note.id)}/>

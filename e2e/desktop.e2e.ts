@@ -705,6 +705,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => gauge.getAttribute('aria-valuenow')).toBe('0');
       expect(await gauge.getAttribute('aria-valuemax')).toBe('1');
       expect(await roots.getByRole('progressbar', { name: '최근 메모 진행률' }).count()).toBe(0);
+      await library.getByRole('button', { name: '작업 프로젝트 캔버스 열기', exact: true }).click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      const canvasGauge = canvas.getByRole('progressbar', { name: '작업 메모 진행률' });
+      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('0');
       const gaugeOffset = await gauge.evaluate((element: HTMLElement) => element.offsetTop);
       const preview = card.locator('.preview-list');
       const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
@@ -725,9 +729,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(await preview.locator('.preview-bullet').evaluate((row) => parseFloat(getComputedStyle(row).paddingInlineStart))).toBeGreaterThan(0);
       await expect.poll(() => card.locator('.task-chip').textContent()).toBe('1/1');
       expect(await gauge.getAttribute('aria-valuenow')).toBe('1');
+      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('1');
       expect(await gauge.evaluate((element: HTMLElement) => element.offsetTop)).toBe(gaugeOffset);
       await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('3/3');
-      expect(app.windows()).toHaveLength(1);
+      expect(app.windows().filter((page) => page.url().includes('window=note'))).toHaveLength(0);
       // 본문 영역의 포인터는 열기 버튼의 클릭 영역으로 전달된다.
       const heading = preview.locator('.preview-heading');
       const center = (item: Element) => {

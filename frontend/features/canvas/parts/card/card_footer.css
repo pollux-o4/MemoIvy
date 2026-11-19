@@ -4,8 +4,8 @@
 .canvas-screen .canvas-project-meta { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: space-between; gap: 6px; }
 .canvas-screen .canvas-project-meta small { display: inline-flex; align-items: center; gap: 5px; }
 .canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
-.canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success-text); font-weight: 600; }
-.canvas-screen .canvas-project-progress {
+.canvas-screen .canvas-card-footer .task-count.complete { color: var(--canvas-success-text); font-weight: 600; }
+.canvas-screen .canvas-card-progress {
   position: absolute;
   inset-inline: 0;
   bottom: -3px;
