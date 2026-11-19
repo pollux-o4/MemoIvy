@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { CARD_HEIGHT, CARD_WIDTH } from './align';
 import { snapRect } from './snap';
 
-const card = (x: number, y: number) => ({ x, y, w: 240, h: 156 });
+const card = (x: number, y: number) => ({ x, y, w: CARD_WIDTH, h: CARD_HEIGHT });
 
 describe('snapRect', () => {
   it('snaps top edges within threshold and draws one horizontal guide spanning both cards', () => {

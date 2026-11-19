@@ -18,6 +18,7 @@ function findPrecedingSibling(rows: readonly OutlineRow[], beforeIdx: number, de
 }
 
 /** 행을 바로 위 형제의 마지막 자식으로 들여쓴 next 변경 목록을 반환한다. */
+// shortcut: 들여쓰기·내어쓰기의 행 탐색은 비슷해도 바꾸는 간선 순서가 달라 공통화하지 않음, 두 편집 규칙이 함께 바뀔 때 재검토.
 export function indentRow(
   rows: readonly OutlineRow[],
   id: string,
@@ -46,6 +47,7 @@ export function indentRow(
 }
 
 /** 행을 조부모의 next에서 부모 바로 뒤로 내어쓴 next 변경 목록을 반환한다. */
+// shortcut: 들여쓰기·내어쓰기의 행 탐색은 비슷해도 바꾸는 간선 순서가 달라 공통화하지 않음, 두 편집 규칙이 함께 바뀔 때 재검토.
 export function outdentRow(
   rows: readonly OutlineRow[],
   id: string,

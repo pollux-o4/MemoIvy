@@ -5,6 +5,14 @@ import { mindmapLayout } from './mindmap_layout';
 const treeOf = (adj: Record<string, string[]>) => (id: string) => adj[id] ?? [];
 
 describe('mindmapLayout', () => {
+  it('terminates on circular links and places each card once', () => {
+    const children = treeOf({ a: ['b'], b: ['c'], c: ['a'] });
+    const pos = mindmapLayout('a', children, {}, { x: 0, y: 0 });
+    expect(Object.keys(pos).sort()).toEqual(['a', 'b', 'c']);
+    expect(pos.b.x).toBeGreaterThan(pos.a.x);
+    expect(pos.c.x).toBeGreaterThan(pos.b.x);
+  });
+
   it('루트는 origin에 놓인다', () => {
     const pos = mindmapLayout('root', treeOf({}), {}, { x: 120, y: 240 });
     expect(pos.root).toEqual({ x: 120, y: 240 });

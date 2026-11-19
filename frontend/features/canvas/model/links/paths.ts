@@ -79,6 +79,7 @@ const isCollinearBetween = (a: CanvasPoint, b: CanvasPoint, c: CanvasPoint): boo
 };
 
 /** 직교 경로의 꺾임 꼭짓점 목록을 계산한다. */
+// shortcut: 가로·세로 포트 분기는 축 대칭이지만 조건별 꺾임이 달라 명시적으로 유지, 포트 규칙 변경 시 중복 축소 검토.
 function orthogonalWaypoints(
   start: CanvasPoint,
   end: CanvasPoint,
