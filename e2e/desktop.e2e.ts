@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -8,6 +8,8 @@ import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '..');
+const attachmentHash = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
+const attachmentFile = path.join(root, 'fixtures/attachments', `${attachmentHash}.png`);
 // Wayland 세션에서 Electron은 DISPLAY(Xvfb)를 무시하고 실제 화면에 창을 띄워 입력을 가져간다.
 // mise run test:e2e 만 가상 X 화면을 보장하므로 그 밖의 실행은 거부한다.
 if (process.env.MEMOIVY_HEADLESS !== '1') throw new Error('Run via `mise run test:e2e` (virtual display only).');
@@ -23,7 +25,7 @@ async function settle(page: Page): Promise<void> {
   await expect.poll(async () => { const now = await world(); const same = now === previous; previous = now; return same; }, { intervals: [120] }).toBe(true);
 }
 async function launch(dir = dataDir): Promise<{ app: ElectronApplication; library: Page }> {
-  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dir, MEMOIVY_RENDERER_URL: rendererUrl } as Record<string, string> });
+  const app = await electron.launch({ args: ['--ozone-platform=x11', '.'], cwd: root, env: { ...headlessEnv, MEMOIVY_DATA_DIR: dir, XDG_DATA_HOME: dir, SNAP_USER_DATA: '', MEMOIVY_RENDERER_URL: rendererUrl } as Record<string, string> });
   const library = await app.firstWindow();
   await library.waitForSelector('.library-screen');
   return { app, library };
@@ -79,6 +81,55 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const reopened = await launch();
     await expect.poll(() => reopened.library.locator('.note-card').filter({ hasText: '정합 확인 메모' }).count()).toBe(1);
     await quit(reopened.app);
+  });
+
+  // 검증: DATA-001, DATA-003. 파일 선택만 대신하고 나머지는 실제 IPC와 엔진으로 실행한다.
+  test.each(['자동', '수동'])('이전 메모 %s 가져오기는 원본과 첨부를 보존한다', async (mode) => {
+    const temp = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-import-'));
+    const dir = path.join(temp, 'data');
+    const source = mode === '자동' ? dir : path.join(temp, 'legacy');
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    const filename = path.basename(attachmentFile);
+    const bytes = readFileSync(attachmentFile);
+    const notes = path.join(source, 'notes.json');
+    const asset = path.join(source, 'assets', filename);
+    const title = '이전 메모 가져오기 검증';
+    const text = `${title}\n\n![가져온 첨부](asset:${attachmentHash})`;
+    const original = JSON.stringify([{ id, text, color: 'blue', modified: 100 }]);
+    mkdirSync(path.dirname(asset), { recursive: true });
+    writeFileSync(notes, original);
+    writeFileSync(asset, bytes);
+
+    let running: ElectronApplication | undefined;
+    try {
+      const { app, library } = await launch(dir);
+      running = app;
+      if (mode === '수동') {
+        await app.evaluate(({ dialog }, file) => {
+          dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+        }, notes);
+        await library.getByRole('button', { name: '설정', exact: true }).click();
+        const settings = await windowWith(app, '.settings-screen');
+        await settings.getByRole('button', { name: '가져오기', exact: true }).click();
+        await settings.getByText('이전 메모를 가져왔습니다.').waitFor();
+      }
+      await library.getByRole('button', { name: title, exact: true }).waitFor();
+      await quit(app);
+      running = undefined;
+
+      const reopened = await launch(dir);
+      running = reopened.app;
+      await reopened.library.getByRole('button', { name: title, exact: true }).click();
+      const editor = await windowWith(reopened.app, '.editor-screen');
+      const image = editor.getByAltText('가져온 첨부');
+      await expect.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+      expect(readFileSync(notes, 'utf8')).toBe(original);
+      expect(readFileSync(`${notes}.memoivy-backup`, 'utf8')).toBe(original);
+      expect(readFileSync(asset)).toEqual(bytes);
+    } finally {
+      if (running) await quit(running);
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   test('인스펙터 소개 입력이 포커스를 잃기 전에도 카드에 실시간 반영되고 유지된다', async () => {
@@ -518,9 +569,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
   test('이미지 옆 한글 조합과 후속 입력이 첨부를 보존한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
     const id = 'd0000000-0000-4000-8000-000000000001';
-    const hash = 'dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8';
-    const image = `![첨부](asset:${hash})`;
-    const data = readFileSync(path.join(root, 'fixtures/attachments', `${hash}.png`)).toString('base64');
+    const image = `![첨부](asset:${attachmentHash})`;
+    const data = readFileSync(attachmentFile).toString('base64');
     const markdown = [
       '입력 확인', '**굵게**와 `인라인`',
       '- [ ] 실제 할 일', '  - [x] 하위 할 일',

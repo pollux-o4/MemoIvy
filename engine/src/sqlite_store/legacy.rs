@@ -17,10 +17,11 @@ use uuid::Uuid;
 
 pub(super) fn import(engine: &mut Engine, path: &Path) -> Result<Snapshot, ApiError> {
     let lp = lock_path_for(path);
-    if engine.lock_paths.insert(lp.clone()) {
+    if !engine.lock_paths.contains(&lp) {
         engine
             ._locks
             .push(lock_file(&lp).map_err(|e| err("LOCKED", e))?);
+        engine.lock_paths.insert(lp);
     }
     if !engine.empty_for_import().map_err(internal)? {
         return Err(err(

@@ -2,6 +2,7 @@ use super::legacy::backup_path;
 use super::*;
 use crate::domain::hash;
 use crate::sqlite_store::Engine;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde_json::{json, Value};
 use uuid::Uuid;
 fn open() -> (tempfile::TempDir, Engine) {
@@ -125,18 +126,19 @@ fn legacy_import_backup_and_invalid_import_preserve_source() {
     );
 }
 #[test]
-fn legacy_import_preserves_attachment_history_and_library_preferences() {
-    let (d, mut e) = open();
+fn legacy_import_auto_and_manual_preserve_notes_attachments_and_preferences_on_reopen() {
+    let d = tempfile::tempdir().unwrap();
     let legacy = d.path().join("notes.json");
     let note_id = Uuid::new_v4();
     let bytes = b"\x89PNG\r\n\x1a\nsynthetic";
     let id = hash(bytes);
-    let source = format!(
-        r#"[{{"id":"{note_id}","text":"![x](asset:{id})","color":"yellow","modified":42}}]"#
-    );
-    fs::write(&legacy, source).unwrap();
+    let text = format!("![x](asset:{id})");
+    let source =
+        format!(r#"[{{"id":"{note_id}","text":"{text}","color":"yellow","modified":42}}]"#);
+    fs::write(&legacy, &source).unwrap();
     fs::create_dir(d.path().join("assets")).unwrap();
-    fs::write(d.path().join("assets").join(format!("{id}.png")), bytes).unwrap();
+    let attachment = d.path().join("assets").join(format!("{id}.png"));
+    fs::write(&attachment, bytes).unwrap();
     fs::write(
         d.path().join("assets.json"),
         format!(
@@ -150,16 +152,39 @@ fn legacy_import_preserves_attachment_history_and_library_preferences() {
         format!(r#"{{"{note_id}":{{"count":3,"last":12}}}}"#),
     )
     .unwrap();
-    let s = e.import_legacy(&legacy).unwrap();
-    assert_eq!(s.assets.len(), 1);
-    assert_eq!(s.assets[0].added, 11);
-    assert_eq!(s.assets[0].used_by, vec![note_id.to_string()]);
-    assert_eq!(s.preferences["autoPrune"], true);
-    assert_eq!(s.preferences["expandedProjects"][0], note_id.to_string());
-    assert_eq!(
-        s.preferences["navigation"][note_id.to_string()]["lastVisited"],
-        12
-    );
+    for auto_import in [true, false] {
+        let data = tempfile::tempdir().unwrap();
+        let discovery = auto_import.then(|| legacy.clone());
+        let mut e = Engine::open(data.path(), discovery.clone()).unwrap();
+        if !auto_import {
+            let result = req(&mut e, "importLegacy", json!({"path":legacy})).unwrap();
+            assert_eq!(result["snapshot"]["notes"][0]["text"], text);
+        }
+        assert_eq!(e.snapshot().unwrap().revision, 1);
+        drop(e);
+
+        let mut e = Engine::open(data.path(), discovery).unwrap();
+        let s = e.snapshot().unwrap();
+        assert_eq!(s.revision, 1);
+        assert_eq!(s.notes[0].text, text);
+        assert_eq!(s.assets.len(), 1);
+        assert_eq!(s.assets[0].added, 11);
+        assert_eq!(s.assets[0].used_by, vec![note_id.to_string()]);
+        assert_eq!(s.preferences["autoPrune"], true);
+        assert_eq!(s.preferences["expandedProjects"][0], note_id.to_string());
+        assert_eq!(
+            s.preferences["navigation"][note_id.to_string()]["lastVisited"],
+            12
+        );
+        let asset = req(&mut e, "readAsset", json!({"id":id})).unwrap();
+        assert_eq!(
+            asset,
+            json!({"mime":"image/png", "data":STANDARD.encode(bytes)})
+        );
+        assert_eq!(fs::read(&legacy).unwrap(), source.as_bytes());
+        assert_eq!(fs::read(backup_path(&legacy)).unwrap(), source.as_bytes());
+        assert_eq!(fs::read(&attachment).unwrap(), bytes);
+    }
 }
 #[test]
 fn failed_legacy_transaction_keeps_empty_database_and_verified_backup() {
@@ -177,12 +202,19 @@ fn failed_legacy_transaction_keeps_empty_database_and_verified_backup() {
     assert_eq!(fs::read(backup_path(&legacy)).unwrap(), source.as_bytes());
 }
 #[test]
-fn imported_path_lock_is_retained_for_engine_lifetime() {
+fn legacy_import_retries_wait_for_source_lock_and_keep_it_until_close() {
     let data = tempfile::tempdir().unwrap();
     let source_dir = tempfile::tempdir().unwrap();
     let legacy = source_dir.path().join("notes.json");
     fs::write(&legacy, "[]").unwrap();
+    let writer = Engine::open(source_dir.path(), None).unwrap();
     let mut e = Engine::open(data.path(), None).unwrap();
+    for _ in 0..2 {
+        assert_eq!(e.import_legacy(&legacy).unwrap_err().code, "LOCKED");
+    }
+    assert!(!backup_path(&legacy).exists());
+    drop(writer);
+
     e.import_legacy(&legacy).unwrap();
     assert!(Engine::open(source_dir.path(), None).is_err());
 }

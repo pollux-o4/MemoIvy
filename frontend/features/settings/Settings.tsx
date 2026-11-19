@@ -13,6 +13,16 @@ export function Settings({ store, onClose }: { store: MemoStore; onClose: () => 
   const saved = readAppearance(store.snapshot?.preferences);
   const [draft, setDraft] = useState<AppearancePreference | null>(null);
   const appearance = draft ?? saved;
+  const [importState, setImportState] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle');
+  const importLegacy = async () => {
+    setImportState('pending');
+    try {
+      const result = await store.bridge.importLegacy();
+      setImportState(result ? 'done' : 'idle');
+    } catch {
+      setImportState('failed');
+    }
+  };
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const update = (patch: Partial<AppearancePreference>) => {
     const next = { ...appearance, ...patch };
@@ -31,6 +41,15 @@ export function Settings({ store, onClose }: { store: MemoStore; onClose: () => 
         <Row label="연결선 모양" hint="연결점은 카드 위치에 맞춰 자동으로 정해집니다."><Segmented name="연결선 모양" options={LINK_STYLE_OPTIONS} value={linkStyle} onChange={(value) => void store.request('preference', { key: LINK_STYLE_KEY, value }).catch(() => undefined)}/></Row>
       </Section>
       <Section title="기록">
+        <Row label="이전 메모" hint="빈 저장소에 notes.json과 같은 폴더의 첨부 파일을 가져옵니다.">
+          <button className="secondary-button" disabled={!window.memoivy || importState === 'pending'} onClick={() => void importLegacy()}>가져오기</button>
+        </Row>
+        <div className="settings-import-status" role="status">{{
+          idle: '',
+          pending: '가져오는 중…',
+          done: '이전 메모를 가져왔습니다.',
+          failed: '가져오지 못했습니다. 저장소가 비어 있고 파일을 읽을 수 있는지 확인해 주세요.',
+        }[importState]}</div>
         <Row label="백업" hint="메모와 첨부 파일을 한 파일로 저장합니다."><button className="secondary-button" disabled>준비 중</button></Row>
         <Row label="내보내기" hint="Markdown 파일로 내보냅니다."><button className="secondary-button" disabled>준비 중</button></Row>
       </Section>

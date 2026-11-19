@@ -216,6 +216,7 @@ function installIpc() {
     const info = fs.lstatSync(selected);
     if (!info.isFile() || info.isSymbolicLink()) throw new Error('Selected file must be a regular JSON file');
     try {
+      // shortcut: 자동 탐색한 JSON의 오류가 수동 가져오기 재시작도 막음, 가져오기 오류 복구를 개선할 때 자동 탐색 건너뛰기 검토.
       if (engineFailure && engineConfig) await launchEngine();
       const result = await requireEngine().request('importLegacy', { path: selected });
       if (result.snapshot) currentSnapshot = result.snapshot;
