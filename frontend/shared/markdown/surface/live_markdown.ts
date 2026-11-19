@@ -5,6 +5,7 @@ import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './ima
 
 const inlineCode = Decoration.mark({ class: 'md-inline-code' });
 const codeBlock = Decoration.line({ class: 'md-code-block' });
+const hiddenClosingFence = Decoration.line({ class: 'md-hidden-closing-fence' });
 const imageSource = Decoration.mark({ class: 'md-image-source' });
 
 export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: ImageHandlers) {
@@ -58,6 +59,13 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           // 링크 주소(URL)도 GTK처럼 커서 밖에서는 숨기고 링크 글자만 남긴다.
           const to = node.name === 'HeaderMark' && view.state.doc.sliceString(node.to, node.to + 1) === ' ' ? node.to + 1 : node.to;
           ranges.push({ from: node.from, to, value: hiddenMark });
+          const parent = node.node.parent;
+          if (node.name === 'CodeMark' && parent?.name === 'FencedCode' && node.from !== parent.from) {
+            const line = view.state.doc.lineAt(node.from);
+            if (!view.state.sliceDoc(line.from, node.from).trim() && !view.state.sliceDoc(node.to, line.to).trim()) {
+              ranges.push({ from: line.from, to: line.from, value: hiddenClosingFence });
+            }
+          }
         }
       } });
       return Decoration.set(ranges.sort((a, b) => a.from - b.from || a.to - b.to).map((item) => item.value.range(item.from, item.to)), true);
