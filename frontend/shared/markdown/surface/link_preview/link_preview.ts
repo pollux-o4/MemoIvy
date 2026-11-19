@@ -41,8 +41,9 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
       this.card.onCancel = () => this.finishEditing();
       this.card.onSave = (link, value) => {
         this.finishEditing();
-        if (link.url !== value) {
-          this.view.dispatch({ changes: { from: link.from, to: link.to, insert: value } });
+        const url = externalLinkUrl(value);
+        if (link.url !== url) {
+          this.view.dispatch({ changes: { from: link.from, to: link.to, insert: url } });
         }
       };
       this.view.dom.addEventListener('pointermove', this.pointerMove);
