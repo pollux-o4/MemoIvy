@@ -468,6 +468,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const editor = await windowWith(app, '.editor-screen');
       const content = editor.locator('.cm-content');
       const preview = editor.locator('.link-preview-card');
+      await app.evaluate(({ shell }) => {
+        shell.openExternal = async (url) => { process.env.MEMOIVY_TEST_OPENED_URL = url; };
+      });
       for (const label of ['링크', '네이버']) {
         await content.getByText(label, { exact: true }).hover();
         await preview.getByText(label, { exact: true }).waitFor({ timeout: 3_000 });
@@ -477,6 +480,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         // 링크 전환과 닫기 타이머가 모두 만료될 시간을 준다.
         await new Promise((resolve) => setTimeout(resolve, 450));
         expect(await preview.getByText(label, { exact: true }).isVisible()).toBe(true);
+        if (label === '링크') {
+          await preview.getByRole('button', { name: '열기', exact: true }).click({ timeout: 3_000 });
+          await expect.poll(() => app.evaluate(() => process.env.MEMOIVY_TEST_OPENED_URL)).toBe('https://example.com');
+        }
         await content.getByText('링크 확인', { exact: true }).hover();
         await preview.waitFor({ state: 'hidden' });
       }

@@ -28,6 +28,11 @@ function storyBridge(snapshot?: Snapshot): DesktopBridge {
   const bridge = createMockBridge(snapshot);
   return {
     ...bridge,
+    async openExternal(url) {
+      const target = URL.parse(url);
+      if (!target || !['https:', 'http:', 'mailto:'].includes(target.protocol) || target.username || target.password) return;
+      window.open(target.href, '_blank', 'noopener,noreferrer');
+    },
     request(op, params) {
       if (op === 'readAsset' && params?.id === markdownImageId) {
         return Promise.resolve({ data: markdownImage.split(',')[1], mime: 'image/png' });

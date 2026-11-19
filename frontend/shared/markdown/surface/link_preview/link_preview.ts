@@ -148,7 +148,7 @@ export function linkPreview(handlers: { open(url: string): void }): Extension {
 
     private scheduleHide() {
       this.clearHide();
-      if (this.pointerOverCard || (this.shown && this.card.editing)) return;
+      if (!this.shown || this.pointerOverCard || this.card.editing) return;
       this.hideTimer = window.setTimeout(() => this.hide(), 220);
     }
 
