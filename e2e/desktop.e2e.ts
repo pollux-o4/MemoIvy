@@ -458,6 +458,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(await search.boundingBox()).toEqual(searchPosition);
       await canvas.keyboard.press('ArrowRight');
       expect(await canvasTopic.getAttribute('aria-checked')).toBe('true');
+      await search.focus();
+      expect(await search.evaluate((input) => getComputedStyle(input).outlineStyle)).toBe('none');
+      expect(await help.locator('.help-search:focus-within').count()).toBe(1);
       await search.fill('Ctrl + Enter');
       const results = help.getByRole('region', { name: '검색 결과' });
       expect(await results.locator('li').count()).toBe(2);

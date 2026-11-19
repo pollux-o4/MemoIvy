@@ -70,6 +70,7 @@
 .help-search { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px; min-height: 36px; margin-bottom: 12px; border: 1px solid var(--memoivy-hairline); border-radius: 8px; color: var(--memoivy-muted); }
 .help-search:focus-within { border-color: var(--memoivy-accent); }
 .help-search input { flex: 1; min-width: 0; border: 0; padding: 6px 0; outline: none; background: transparent; color: var(--memoivy-text); font: inherit; }
+.help-search input:focus-visible { outline: none; }
 .help-search input::placeholder { color: var(--memoivy-muted); }
 .help-search .icon-button { width: 26px; height: 26px; }
 .help-content { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding-bottom: 16px; }
