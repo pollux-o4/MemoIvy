@@ -389,6 +389,47 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await quit(app);
   });
 
+  test('좁고 낮은 캔버스에서도 긴 본문만 스크롤되고 펼침 버튼과 카메라가 움직이지 않는다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-preview-size-'));
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    const text = ['긴 메모', ...Array.from({ length: 32 }, (_, index) => `- [ ] 항목 ${index + 1}`)].join('\n');
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      const window = await app.browserWindow(canvas);
+      const card = canvas.getByRole('article', { name: '긴 메모 카드' });
+      const preview = card.locator('.canvas-checklist-preview');
+      const disclosure = card.locator('.preview-disclosure button');
+      const camera = () => canvas.locator('.canvas-world').evaluate((world: HTMLElement) => world.style.transform);
+      for (const size of [[460, 420], [980, 360], [420, 660]]) {
+        await window.evaluate((win, [width, height]) => win.setSize(width, height), size);
+        await expect.poll(() => canvas.evaluate(() => [innerWidth, innerHeight])).toEqual(size);
+        await canvas.getByRole('button', { name: '전체 보기' }).click();
+        await settle(canvas);
+        const initialCamera = await camera();
+        const initialButton = await disclosure.boundingBox();
+        await disclosure.click();
+        await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true');
+        await expect.poll(() => preview.evaluate((list) => list.scrollHeight > list.clientHeight)).toBe(true);
+        expect(await disclosure.boundingBox()).toEqual(initialButton);
+        expect(await camera()).toBe(initialCamera);
+        await preview.hover({ position: { x: 30, y: 20 } });
+        await canvas.mouse.wheel(0, 250);
+        await expect.poll(() => preview.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+        expect(await camera()).toBe(initialCamera);
+        await disclosure.press('Space');
+        await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false');
+        await expect.poll(() => preview.evaluate((list) => list.scrollTop)).toBe(0);
+        expect(await disclosure.boundingBox()).toEqual(initialButton);
+      }
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('목록 본문은 목록 표식을 유지하고 프로젝트를 펼치면 소개의 할 일을 보여준다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-markdown-preview-'));
     const project = 'd0000000-0000-4000-8000-000000000001';
@@ -399,7 +440,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     ]));
     const { app, library } = await launch(dir);
     try {
+      const window = await app.browserWindow(library);
+      await window.evaluate((win) => win.setSize(360, 420));
+      await expect.poll(() => library.evaluate(() => [innerWidth, innerHeight])).toEqual([360, 420]);
+      const projectDisclosure = library.locator('.project-section > .disclosure');
+      const beforeProject = await projectDisclosure.boundingBox();
       await library.getByRole('button', { name: '작업 프로젝트 펼치기' }).click();
+      expect(await projectDisclosure.boundingBox()).toEqual(beforeProject);
       const intro = library.locator('.project-intro-preview');
       const tasks = intro.getByRole('checkbox');
       await tasks.first().waitFor();
@@ -414,13 +461,15 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
       await noteTask.click();
       await expect.poll(() => noteTask.getAttribute('aria-checked')).toBe('true');
-      const disclosure = card.getByRole('button', { name: '작업 메모 본문 펼치기' });
+      const disclosure = card.locator('.preview-disclosure button');
       const hitSize = () => disclosure.evaluate((button) => {
         const area = getComputedStyle(button, '::before');
         return [area.width, area.height];
       });
       await expect.poll(hitSize).toEqual(['36px', '36px']);
+      const beforeNote = await disclosure.boundingBox();
       await disclosure.click();
+      expect(await disclosure.boundingBox()).toEqual(beforeNote);
       expect(await preview.locator('.preview-heading').textContent()).toBe('작은 제목');
       expect(await preview.locator('.preview-bullet .preview-marker').textContent()).toBe('•');
       expect(await preview.locator('.preview-number .preview-marker').textContent()).toBe('1.');

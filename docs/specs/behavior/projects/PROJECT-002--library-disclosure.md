@@ -10,3 +10,5 @@
 - 검증: `mise run test project_002`, `mise run test:arch`. 실제 앱 E2E는 `timeout 60s dbus-run-session -- xvfb-run -a python3 -m tools.behavior.lifecycle.project_002_ui_smoke`; X11·Openbox·xdotool·Pillow 필요, 도구 경로는 기존 MEMOIVY 환경변수 사용. 밝은/어두운 테마에서 카드 표시 수·키보드 연속 조작·중첩 상태·검색·최근·재시작·360px 창·손상·쓰기 실패 복구·메모 보존을 확인하고 PNG를 남긴다. `project_002_sections_toggle_in_place_and_keep_preview`는 프로젝트 안의 카드 구조·기본 접힘·지연 생성·재사용·미리보기 유지·불필요한 재생성 방지를 검증한다. 실제 Wayland·스크린리더 검증은 포함하지 않는다.
 
 - 웹 목록의 프로젝트를 펼치면 소개 본문을 하위 메모 위에 표시한다. 소개의 체크박스를 목록에서 바꾸면 기존 진행 집계에 반영한다. 소개만 있는 프로젝트도 같은 버튼으로 펼친다. 검증은 Electron e2e `목록 본문`을 따른다.
+
+- 웹 목록에서는 하위 내용을 펼치기 전에 프로젝트 헤더 바로 아래에 버튼을 둔다. 펼쳐도 버튼의 위치와 포커스를 유지한다.

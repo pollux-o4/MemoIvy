@@ -8,7 +8,7 @@ function isTypingTarget(target: EventTarget): boolean {
 }
 
 function isInteractiveTarget(target: EventTarget): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest('button, input, textarea, select, [contenteditable="true"]'));
+  return target instanceof HTMLElement && Boolean(target.closest('button, input, textarea, select, [contenteditable="true"], .canvas-checklist-preview.is-expanded'));
 }
 
 export function useCanvasKeyboard(actions: {

@@ -23,6 +23,7 @@ export function ProjectSection({ project, notes, store, expandedIds, onToggle, o
     <article className={`project-section${nested ? ' nested' : ''}`}>
       <ProjectHeading id={project.id} label={label} childCount={children.length} note={project} store={store} onOpenNote={onOpenNote} onOpenCanvas={onOpenCanvas}/>
       {(rows.length > 0 || children.length > 0) && <>
+        <Disclosure expanded={expanded} onToggle={toggle} targetId={regionId} label={label}/>
         <div className={`project-contents${expanded ? ' expanded' : ''}`} id={regionId} aria-hidden={!expanded} inert={!expanded}>
           <div className="project-content-inner">
             {everExpanded && rows.length > 0 && <PreviewList className="preview project-intro-preview" rows={rows} onToggleTask={(line) => savePreviewTask(store, project, line)}/>}
@@ -33,7 +34,6 @@ export function ProjectSection({ project, notes, store, expandedIds, onToggle, o
             </div>)}
           </div>
         </div>
-        <Disclosure expanded={expanded} onToggle={toggle} targetId={regionId} label={label}/>
       </>}
     </article>
   </ProjectStack>;

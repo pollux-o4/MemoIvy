@@ -11,6 +11,11 @@ export function useCanvasWheel(host: RefObject<HTMLDivElement | null>, camera: C
     const board = host.current;
     if (!board) return;
     const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey && Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.target instanceof Element) {
+        const preview = event.target.closest<HTMLElement>('.canvas-checklist-preview.is-expanded');
+        // 본문 스크롤과 카메라 이동을 같은 휠 제스처에서 섞지 않는다.
+        if (preview && preview.scrollHeight > preview.clientHeight + 1) return;
+      }
       event.preventDefault();
       const intent = wheelIntent(event, window.devicePixelRatio || 1);
       if (intent.kind === 'zoom') {

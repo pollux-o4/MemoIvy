@@ -32,11 +32,11 @@ export function NoteCard({ note, path, store, onOpenCanvas, nested = false, onOp
         {task.total > 0 && <TaskCountLabel progress={task} title={taskText.title} className="task-chip">{taskText.short}</TaskCountLabel>}
       </button>
       {note.canvas.project && <span className="preview">{childCountLabel(progress.children(note.id).length)}</span>}
+      <PreviewDisclosure label={label} targetId={id} preview={preview}/>
       {rows.length > 0 && <PreviewList ref={preview.ref} className={`preview ${preview.className}`} id={id} rows={rows}
         visibleRows={preview.expanded ? rows.length : collapsedRows} onToggleTask={(line) => savePreviewTask(store, note, line)}/>}
       {!note.canvas.project && !note.text.trim() && <span className="preview">열어서 내용을 적어 보세요</span>}
       {note.canvas.project && task.total > 0 && <TaskProgress className="project-progress" label={label} progress={task}/>}
     </div>{note.canvas.project && onOpenCanvas && <button className="icon-button enter-project" title="캔버스에서 프로젝트 열기" aria-label={`${label} 캔버스 열기`} onClick={() => onOpenCanvas(note.id)}><Icon name="enter" size={17}/></button>}<NoteMenu id={note.id} title={label} store={store}/></div>
-    <PreviewDisclosure label={label} targetId={id} preview={preview}/>
   </article>;
 }
