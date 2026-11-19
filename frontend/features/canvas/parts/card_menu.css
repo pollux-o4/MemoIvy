@@ -1,0 +1,11 @@
+/* 카드 오른쪽 클릭 메뉴(CardMenu). 표면·행은 공통 menu-surface/menu-row. */
+.canvas-screen .card-menu { position: absolute; z-index: 40; width: var(--card-menu-width); animation: card-menu-in 120ms var(--ease-out-expo, ease-out); }
+.canvas-screen .card-menu .menu-row > span { white-space: nowrap; }
+.canvas-screen .card-menu .menu-hint { font-size: 11px; }
+.canvas-screen .card-menu hr { height: 1px; margin: 5px 4px; border: 0; background: var(--canvas-hairline); }
+.canvas-screen .card-menu-colors { display: flex; gap: 8px; padding: 6px 10px 4px 33px; }
+.canvas-screen .card-menu-colors button { width: 18px; height: 18px; border: 0; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--canvas-text) 14%, transparent); transition: transform 100ms; }
+.canvas-screen .card-menu-colors button:hover, .canvas-screen .card-menu-colors button:focus-visible { transform: scale(1.15); outline: 0; }
+.canvas-screen .card-menu-colors button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--memoivy-raised), 0 0 0 4px var(--canvas-accent); }
+@keyframes card-menu-in { from { opacity: 0; transform: scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .canvas-screen .card-menu { animation: none; } }

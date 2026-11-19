@@ -1,0 +1,48 @@
+/* 색은 light-dark() 한 곳에서 정한다. 테마 선택은 color-scheme만 바꾼다. */
+:root {
+  color-scheme: light dark;
+  font-family: "Noto Sans CJK KR", "Noto Sans KR", sans-serif;
+  font-size: 13.333px;
+  font-synthesis: style; /* 한글 글꼴엔 기울임체가 없어 GTK(Pango)처럼 기울임만 합성한다 */
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
+  color: var(--memoivy-text);
+  --memoivy-bg: light-dark(#f5f5f7, #1a1b1e);
+  --memoivy-surface: light-dark(#fff, #26272b);
+  --memoivy-raised: light-dark(#fff, #2e2f34);
+  --memoivy-text: light-dark(#1d1d1f, #f2f2f4);
+  --memoivy-muted: light-dark(#636366, #a5a7ae);
+  --memoivy-hairline: light-dark(rgba(0,0,0,.09), rgba(255,255,255,.1));
+  --memoivy-hover: light-dark(rgba(0,0,0,.055), rgba(255,255,255,.07));
+  --memoivy-press: light-dark(rgba(0,0,0,.1), rgba(255,255,255,.13));
+  --memoivy-accent: light-dark(#0a6cff, #1f6fe5);
+  --memoivy-danger: light-dark(#c8242f, #ff8d94);
+  --memoivy-danger-fill: light-dark(#c8242f, #c8303b);
+  --memoivy-on-accent: #ffffff;
+  --memoivy-danger-hover: light-dark(rgba(200, 36, 47, .1), rgba(255, 141, 148, .13));
+  --memoivy-keycap: light-dark(rgba(0, 0, 0, .055), rgba(255, 255, 255, .09));
+  --memoivy-success: light-dark(#1f9d5c, #35b673);
+  /* 작은 글자용 성공 색: 연한 성공 바탕 위에서도 WCAG AA(4.5:1)를 넘는다. 테두리·채움은 --memoivy-success. */
+  --memoivy-success-text: light-dark(#136b3c, #4fcb89);
+  --memoivy-shadow: light-dark(rgba(27,34,48,.1), rgba(0,0,0,.28));
+  --memoivy-shadow-deep: light-dark(rgba(27,34,48,.2), rgba(0,0,0,.48));
+  --note-text: light-dark(#2a2a2c, #f1f0ec);
+  --note-muted: light-dark(rgba(42,42,44,.68), rgba(241,240,236,.7));
+  --note-yellow: light-dark(#fff3c4, #3f3a28);
+  --note-pink: light-dark(#fde2e9, #442f38);
+  --note-blue: light-dark(#dcebfd, #2b3a4b);
+  --note-green: light-dark(#e0f2dc, #2d3f32);
+  --note-purple: light-dark(#ebe3fa, #393149);
+  --dot-yellow: light-dark(#e9bf3f, #d9b13a);
+  --dot-pink: light-dark(#ec86a2, #e07b97);
+  --dot-blue: light-dark(#5fa3ee, #5c9de6);
+  --dot-green: light-dark(#72bd6d, #68b064);
+  --dot-purple: light-dark(#a386e0, #9a7fd6);
+  --font-caption: .8em;
+  --font-meta: .88em;
+  --font-body: .96em;
+  --font-title: 1.04em;
+  --font-display: 1.14em;
+}
+.theme-light { color-scheme: light; }
+.theme-dark { color-scheme: dark; }

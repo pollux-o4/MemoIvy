@@ -1,0 +1,303 @@
+.canvas-screen {
+  --canvas-bg: var(--memoivy-bg);
+  --canvas-surface: var(--memoivy-surface);
+  --canvas-text: var(--memoivy-text);
+  --canvas-muted: var(--memoivy-muted);
+  --canvas-hairline: var(--memoivy-hairline);
+  --canvas-hover: var(--memoivy-hover);
+  --canvas-accent: var(--memoivy-accent);
+  --canvas-danger: var(--memoivy-danger);
+  --canvas-success: var(--memoivy-success);
+  --canvas-success-text: var(--memoivy-success-text);
+  --canvas-shadow: var(--memoivy-shadow);
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--canvas-text);
+  background: var(--canvas-bg);
+  outline: none;
+  font-family: inherit;
+}
+
+.canvas-screen .canvas-header {
+  z-index: 4; /* 새로 만들기 메뉴가 아래 경로 막대(z 3) 위로 펼쳐진다. */
+  flex: 0 0 54px;
+  height: 54px;
+  display: grid;
+  align-items: center;
+  padding: 0 19px;
+  border: 0;
+  color: var(--canvas-text);
+  background: var(--canvas-bg);
+  -webkit-app-region: drag;
+}
+
+.canvas-screen .canvas-header button { -webkit-app-region: no-drag; }
+.canvas-screen .canvas-header .window-controls { gap: 5px; justify-self: start; }
+.canvas-screen .canvas-header .window-controls button {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--canvas-muted);
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.canvas-screen .canvas-header .window-controls button:hover { background: var(--canvas-hover); color: var(--canvas-text); }
+.canvas-screen .canvas-header .window-controls button:first-child:hover { color: var(--canvas-danger); }
+.canvas-screen .canvas-header .window-title { min-width: 0; max-width: 100%; color: var(--canvas-text); font-size: 14px; font-weight: 650; }
+.canvas-screen .canvas-header .header-actions { justify-self: end; display: flex; align-items: center; }
+.canvas-screen .canvas-header .header-actions .primary-button {
+  min-width: 74px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--canvas-accent);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 650;
+}
+.canvas-screen .canvas-header .header-actions .primary-button:hover { background: #0861e3; box-shadow: none; transform: none; }
+
+.canvas-screen .canvas-board {
+  container-type: size;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: clip;
+  background-color: var(--canvas-bg);
+  cursor: grab;
+  touch-action: none;
+}
+.canvas-screen .canvas-board.panning { cursor: grabbing; }
+/* 격자 변수는 이 층에만 둔다: 보드에 두면 화면 이동마다 상속 변수가 바뀌어 카드 전체 스타일을 다시 계산한다. */
+.canvas-screen .canvas-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 점 격자: 타일 안쪽 반 칸 위치에 점을 찍어 타일 경계에서 잘리지 않게 한다(GTK draw_grid와 같은 배치). */
+  --canvas-grid-dot: light-dark(rgba(26, 27, 30, .16), rgba(255, 255, 255, .13));
+  --grid-minor-dot: color-mix(in srgb, var(--canvas-grid-dot) var(--grid-minor-opacity), transparent);
+  --grid-half: calc(var(--grid-gap) / 2);
+  background-image:
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--canvas-grid-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px),
+    radial-gradient(circle at var(--grid-half) var(--grid-half), var(--grid-minor-dot) .9px, transparent 1.2px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position:
+    calc(var(--grid-x) - var(--grid-half)) calc(var(--grid-y) - var(--grid-half)),
+    calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) - var(--grid-half)),
+    calc(var(--grid-x) - var(--grid-half)) calc(var(--grid-y) + var(--grid-half)),
+    calc(var(--grid-x) + var(--grid-half)) calc(var(--grid-y) + var(--grid-half));
+}
+.canvas-screen .canvas-world { position: absolute; top: 0; left: 0; width: 1px; height: 1px; transform-origin: 0 0; will-change: transform; }
+.canvas-screen .canvas-links { position: absolute; top: 0; left: 0; width: 20000px; height: 20000px; overflow: visible; color: var(--canvas-muted); pointer-events: none; }
+.canvas-screen .canvas-guides { position: absolute; top: 0; left: 0; z-index: 2; width: 1px; height: 1px; overflow: visible; pointer-events: none; stroke: color-mix(in srgb, var(--canvas-danger) 90%, transparent); shape-rendering: crispEdges; }
+.canvas-screen .canvas-links path { fill: none; stroke: currentColor; stroke-width: 1.5; }
+/* 연결선 상태: 색은 g의 color 하나로 정해 선과 화살촉이 함께 바뀐다. 초점 전환은 펼침과 같은 시간·곡선. */
+.canvas-screen .canvas-link { color: color-mix(in srgb, var(--canvas-muted) 62%, transparent); transition: color var(--disclosure-duration) var(--disclosure-ease), opacity var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .canvas-link.is-highlighted { color: var(--canvas-accent); }
+.canvas-screen .has-focus .canvas-link:not(.in-focus) { opacity: .18; }
+.canvas-screen .canvas-link .link-arrive { stroke: var(--canvas-accent); }
+.canvas-screen .canvas-link .link-arrive.is-done { stroke: var(--canvas-success); }
+/* 흐림은 카드 위 배경색 덮개(--card-dim)로: 카드 자체 opacity를 내리면 뒤 간선이 비친다.
+   filter는 카드마다 다시 칠해 200장 초점 전환이 프레임 예산을 넘으므로 덮개 opacity만 바꾼다. */
+.canvas-screen .canvas-note::after { content: ""; position: absolute; inset: 0; z-index: 4; border-radius: inherit; background: var(--canvas-bg); opacity: var(--card-dim, 0); pointer-events: none; transition: opacity var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .has-focus > .canvas-note:not(.in-focus) { --card-dim: .62; }
+.canvas-screen .has-focus > .canvas-note:not(.in-focus):hover { --card-dim: .2; }
+@media (prefers-reduced-motion: reduce) { .canvas-screen .canvas-link, .canvas-screen .canvas-note::after { transition: none; } }
+:root[data-motion="reduce"] .canvas-screen .canvas-link, :root[data-motion="reduce"] .canvas-screen .canvas-note::after { transition: none; }
+
+.canvas-screen .canvas-note {
+  position: absolute;
+  z-index: 1;
+  /* 카드 안 배치를 카드 안에 가둔다: 끌기 중 한 장의 left/top이 바뀌어도 레이아웃이 다른 카드로 번지지 않는다(200장 기준 3.6→1.5ms). */
+  contain: layout style;
+  width: var(--card-width, 240px);
+  height: var(--card-height, 156px);
+  overflow: hidden;
+  padding: 13px 14px 11px;
+  border: 1px solid rgba(0, 0, 0, .035);
+  border-radius: var(--card-radius);
+  color: var(--note-text);
+  background: var(--card-tone, var(--note-yellow));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 1px 2px var(--canvas-shadow), 0 6px 18px var(--canvas-shadow);
+  cursor: grab;
+  user-select: none;
+  opacity: 1;
+  transform: none;
+  transition: height var(--disclosure-duration) var(--disclosure-ease), box-shadow 170ms ease-out, opacity var(--disclosure-duration) var(--disclosure-ease), filter var(--disclosure-duration) var(--disclosure-ease), transform 200ms cubic-bezier(.2, .9, .3, 1.15), outline-color 120ms ease-out;
+  outline: 1.5px solid transparent;
+  outline-offset: 1px;
+}
+.canvas-screen .canvas-note:hover { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05), 0 2px 4px var(--canvas-shadow), 0 10px 26px var(--canvas-shadow); }
+/*
+ * 선택: 파란 테두리 대신 카드 색을 짙게 한 1px 테두리 + 같은 색의 부드러운 후광 + 살짝 뜬 그림자.
+ * 카드 색과 어울려 내용보다 튀지 않고, 어떤 색 카드에서도 "집어 든" 느낌으로 읽힌다.
+ */
+.canvas-screen .canvas-note { --card-edge: color-mix(in srgb, var(--card-tone, var(--canvas-surface)), var(--canvas-text) 28%); }
+.canvas-screen .canvas-note.selected { z-index: 2; outline-color: transparent;
+  box-shadow: 0 0 0 1px var(--card-edge), 0 0 0 5px color-mix(in srgb, var(--card-edge) 18%, transparent), 0 4px 8px var(--canvas-shadow), 0 16px 34px var(--canvas-shadow); }
+/* 키보드 이동(Tab) 포커스는 선택과 구분되는 강조색 후광. 마우스로 고른 선택에는 겹쳐 그리지 않는다. */
+.canvas-screen .canvas-note:focus { outline: none; }
+.canvas-screen .canvas-note:focus-visible:not(.selected) { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px color-mix(in srgb, var(--canvas-accent) 70%, transparent), 0 6px 18px var(--canvas-shadow); }
+.canvas-screen .canvas-note.drop-target { outline: 2px dashed var(--canvas-accent); outline-offset: 5px; transform: scale(1.035); }
+.canvas-screen .canvas-note.done { --card-dim: .16; }
+.canvas-screen .canvas-note > header { min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 7px; }
+.canvas-screen .canvas-note.project > header h3 { flex: 1; }
+.canvas-screen .canvas-note.project .card-done { margin-left: 0; }
+.canvas-screen .canvas-title-marker { flex: 0 0 auto; color: var(--note-muted); font-size: 11px; }
+.canvas-screen .canvas-note h3 { min-width: 0; overflow: hidden; margin: 0; color: var(--note-text); font-size: 14px; font-weight: 600; line-height: normal; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .canvas-note.done h3 { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--note-text) 50%, transparent); }
+.canvas-screen .canvas-note h3.line-done { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--note-text) 50%, transparent); }
+.canvas-screen .canvas-note > p { display: -webkit-box; overflow: hidden; margin: 12px 0 0; color: var(--note-muted); font-size: 12px; font-weight: 400; line-height: 1.42; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.canvas-screen .canvas-note .card-done { flex: 0 0 20px; width: 20px; height: 20px; display: grid; place-items: center; margin-left: auto; padding: 0; border: 1.5px solid color-mix(in srgb, var(--note-text) 34%, transparent); border-radius: 50%; color: transparent; background: transparent; opacity: 0; cursor: pointer; transition: opacity 130ms ease-out, background-color 130ms ease-out, border-color 130ms ease-out, transform 130ms cubic-bezier(.2,.9,.3,1.3); }
+.canvas-screen .canvas-note:hover .card-done, .canvas-screen .canvas-note.selected .card-done, .canvas-screen .canvas-note.done .card-done { opacity: 1; }
+.canvas-screen .canvas-note .card-done:hover { border-color: var(--canvas-success); color: var(--canvas-success-text); transform: scale(1.08); }
+.canvas-screen .canvas-note.done .card-done { border-color: transparent; color: #fff; background: var(--canvas-success); }
+.canvas-screen .canvas-note .preview-frame { --preview-control-space: 19px; margin-top: 11px; }
+.canvas-screen .canvas-note .canvas-checklist-preview { scrollbar-gutter: stable; }
+/* 낮은 창에서는 펼친 카드 하나가 차지하는 높이를 줄인다. */
+.canvas-screen .canvas-note { --preview-growth-limit: clamp(48px, 32cqh, 160px); }
+.canvas-screen .canvas-note .canvas-checklist-preview.is-expanded {
+  max-height: min(var(--preview-full-height), calc(var(--preview-collapsed-height) + var(--preview-growth-limit)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.canvas-screen .canvas-note .canvas-checklist-preview li { min-height: 19px; color: var(--note-muted); }
+.canvas-screen .canvas-note .canvas-checklist-preview .preview-check { flex: 0 0 12px; width: 12px; height: 12px; margin: 1px 1px 0; border-radius: 3px; }
+.canvas-screen .canvas-note .canvas-checklist-preview li .preview-marker { font-size: 10px; }
+.canvas-screen .canvas-note .canvas-checklist-preview small { display: -webkit-box; min-width: 0; overflow: hidden; color: var(--note-muted); font-size: 11px; line-height: normal; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.canvas-screen .canvas-note .preview-disclosure .disclosure { width: 28px; height: 18px; padding: 0; color: var(--note-muted); transition: color 130ms ease-out, background-color 130ms ease-out; }
+.canvas-screen .canvas-note .preview-disclosure .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
+/* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */
+/* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */
+.canvas-screen .canvas-note.is-expanded { z-index: 3; }
+.canvas-screen .canvas-note { height: calc(var(--card-height, 156px) + min(var(--preview-extra, 0px), var(--preview-growth-limit))); }
+.canvas-screen .canvas-project-folder { display: inline-grid; flex: none; color: var(--note-text); opacity: .8; }
+/* 가지 손잡이: 카드 오른쪽 가운데. 올리거나 고르거나 키보드로 들어오면 보인다. 누르면 하위 가지, 끌면 잇기. */
+/* 버튼의 판정 영역은 고정하고, 안쪽 그림만 확대한다. */
+.canvas-screen .card-branch { position: absolute; top: 50%; right: 6px; z-index: 1; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: crosshair; opacity: 0; transform: translateY(-50%); transition: opacity var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .card-branch-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; color: #fff; background: var(--canvas-accent); box-shadow: 0 1px 3px var(--canvas-shadow); pointer-events: none; transform: scale(var(--branch-scale, .85)); transition: transform var(--disclosure-duration) var(--disclosure-ease); }
+.canvas-screen .canvas-note:is(:hover, .selected, :focus-within) .card-branch { opacity: 1; --branch-scale: 1; }
+.canvas-screen .canvas-note .card-branch:hover { --branch-scale: 1.12; }
+.canvas-screen .card-branch:focus-visible { opacity: 1; outline: 2px solid var(--canvas-surface); outline-offset: 1px; }
+.canvas-screen .canvas-panning .card-branch, .canvas-screen .canvas-board.panning .card-branch { opacity: 0; }
+.canvas-screen .canvas-note.link-target { outline-color: var(--canvas-accent); }
+.canvas-screen .canvas-connect-preview { position: absolute; top: 0; left: 0; z-index: 3; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.canvas-screen .canvas-connect-preview path { fill: none; stroke: var(--canvas-accent); stroke-dasharray: 6 5; }
+.canvas-screen .canvas-connect-preview .connect-ghost { fill: color-mix(in srgb, var(--canvas-accent) 8%, transparent); stroke: color-mix(in srgb, var(--canvas-accent) 60%, transparent); stroke-dasharray: 5 4; }
+@media (prefers-reduced-motion: reduce) { .canvas-screen :is(.card-branch, .card-branch-face) { transition: none; } }
+.canvas-screen .card-enter { width: 18px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; color: var(--note-text); background: transparent; cursor: pointer; }
+.canvas-screen .card-enter:hover { color: var(--canvas-accent); }
+.canvas-screen .selection-box { position: absolute; z-index: 5; border: 1px solid var(--canvas-accent); background: rgba(10, 108, 255, .1); pointer-events: none; }
+.canvas-screen .canvas-empty { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
+.canvas-screen .canvas-empty > * { pointer-events: auto; }
+.canvas-screen .canvas-empty h2 { margin: 16px 0 7px; color: var(--canvas-muted); font-size: 15px; }
+.canvas-screen .canvas-empty p { margin: 0 0 18px; color: var(--canvas-muted); font-size: 11px; }
+
+/* 캔버스 위에 떠 있는 표면(도구 막대·검사 패널)의 유일한 원본: 불투명 바탕이라 아래 카드가 비치지 않는다. */
+.canvas-screen .floating { border: 1px solid var(--canvas-hairline); background: var(--canvas-surface, #fff); box-shadow: 0 4px 12px var(--canvas-shadow); }
+.canvas-screen .canvas-dock {
+  position: absolute;
+  z-index: 8;
+  bottom: 18px;
+  left: 19px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 4px;
+  border-radius: 12px;
+  color: var(--canvas-muted);
+}
+.canvas-screen .canvas-dock button { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; color: var(--canvas-text); background: transparent; cursor: pointer; }
+.canvas-screen .canvas-dock button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .canvas-dock .zoom-value { width: 48px; min-width: 48px; color: var(--canvas-text); text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.canvas-screen .canvas-dock > i { flex: 0 0 1px; height: 18px; margin: 0 5px; border: 0; background: var(--canvas-hairline); }
+/* 아이콘은 한 크기(18px)로 맞춰 시각 무게를 통일한다. 도움말 원형은 같은 무게로 보이게 한 단계 작게. */
+.canvas-screen .canvas-dock button > svg { width: 18px; height: 18px; }
+.canvas-screen .canvas-dock .canvas-help-button > svg { width: 17px; height: 17px; }
+.canvas-screen .canvas-dock .canvas-fit-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.canvas-screen .canvas-dock .canvas-help-button { width: 30px; height: 30px; border: 0; border-radius: 8px; }
+.canvas-screen .canvas-dock button:disabled { opacity: .32; cursor: default; }
+.canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { color: var(--canvas-muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.canvas-screen .canvas-dock .canvas-summary { margin-left: 8px; }
+.canvas-screen .canvas-dock .canvas-status { margin: 0 8px 0 12px; }
+.canvas-screen .canvas-dock .canvas-status.failed { color: var(--canvas-danger); }
+/* 다중 선택 막대: 한 표면이 면(첫 면 ↔ 묶음)에 따라 폭을 바꾸며 모양을 잇는다. 동작 정의는 model/alignment_actions.ts. */
+.canvas-screen .alignment-bar {
+  position: absolute;
+  z-index: 8;
+  top: 66px;
+  left: 50%;
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 5px;
+  border: 1px solid var(--canvas-hairline);
+  border-radius: 12px;
+  background: var(--canvas-surface);
+  box-shadow: 0 4px 12px var(--canvas-shadow);
+  interpolate-size: allow-keywords;
+  transition: width 260ms var(--ease-out-expo);
+}
+.canvas-screen .alignment-face { display: flex; align-items: center; gap: 4px; white-space: nowrap; opacity: 1; translate: 0 0; transition: opacity 160ms ease-out, translate 260ms var(--ease-out-expo); }
+@starting-style {
+  .canvas-screen .alignment-face[data-dir="in"] { opacity: 0; translate: 10px 0; }
+  .canvas-screen .alignment-face[data-dir="out"] { opacity: 0; translate: -10px 0; }
+}
+.canvas-screen .alignment-count, .canvas-screen .alignment-title { padding: 0 6px; color: var(--canvas-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.canvas-screen .alignment-title { padding-left: 0; color: var(--canvas-text); font-weight: 600; }
+.canvas-screen .alignment-row { display: flex; gap: 2px; padding-left: 6px; border-left: 1px solid var(--canvas-hairline); }
+.canvas-screen .alignment-bar button { height: 28px; min-width: 28px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--canvas-text); font: inherit; font-size: 12px; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
+.canvas-screen .alignment-bar button:hover { background: var(--canvas-hover); }
+.canvas-screen .alignment-bar button:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: -2px; }
+.canvas-screen .alignment-bar button:disabled { opacity: .32; cursor: default; background: transparent; }
+.canvas-screen .alignment-group > svg:last-child { margin-left: -2px; color: var(--canvas-muted); }
+.canvas-screen .alignment-back > svg { rotate: 180deg; }
+.canvas-screen .alignment-bar button.danger { color: var(--canvas-danger); }
+.canvas-screen .alignment-bar button.danger:hover { background: var(--canvas-danger); color: #fff; }
+.canvas-screen .alignment-face > i { width: 1px; height: 18px; margin: 0 2px; background: var(--canvas-hairline); }
+
+.canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 44px; display: flex; align-items: center; padding: 2px 12px 10px; }
+/* 경로: 머리 막대 닫기 버튼과 왼쪽을 맞추고, 모든 항목을 32px 높이·한 줄 기준선에 둔다. */
+.canvas-screen .canvas-navigator { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; font-size: 13px; line-height: 1; }
+.canvas-screen .canvas-navigator span { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.canvas-screen .canvas-navigator i { width: 14px; color: color-mix(in srgb, var(--canvas-muted) 70%, transparent); font-style: normal; text-align: center; }
+.canvas-screen .canvas-navigator button { display: inline-flex; align-items: center; max-width: 200px; height: 32px; overflow: hidden; padding: 0 10px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.canvas-screen .canvas-navigator button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .canvas-navigator button[aria-current="page"] { color: var(--canvas-text); font-weight: 600; background: var(--canvas-hover); }
+.canvas-screen .canvas-navigator .canvas-home { gap: 6px; padding-left: 8px; }
+.canvas-screen .canvas-navigator .canvas-pin { justify-content: center; width: 32px; margin-left: 2px; padding: 0; color: var(--canvas-accent); font-size: 15px; }
+/* 바로가기 묶음은 앞이 홈·경로·별 무엇이든 첫 칩부터 8px 띄운다. */
+.canvas-screen .canvas-navigator :not(.canvas-shortcut) + .canvas-shortcut { margin-left: 8px; }
+.canvas-screen .canvas-navigator .canvas-shortcut { max-width: 140px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--canvas-surface); box-shadow: 0 0 0 1px var(--canvas-hairline); }
+
+@container (max-width: 620px) {
+  .canvas-screen .canvas-header { padding: 0 10px; }
+  .canvas-screen .canvas-header .window-controls { gap: 2px; }
+  .canvas-screen .canvas-dock { bottom: 8px; left: 8px; gap: 3px; padding: 0 5px; }
+  .canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { display: none; }
+  .canvas-screen .canvas-navigator-row { min-height: 40px; padding: 0 10px 8px; }
+  .canvas-screen .canvas-navigator { max-width: 100%; }
+}
+
+
+/* 잇기 고르기: 다음 누르기가 대상을 정한다는 것을 커서와 안내로 알린다. */
+.canvas-screen .canvas-board.picking, .canvas-screen .canvas-board.picking * { cursor: crosshair; }
+.canvas-screen .canvas-pick-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 6; margin: 0; padding: 6px 12px; border-radius: 999px;
+  background: var(--canvas-accent); color: #fff; font-size: 12px; pointer-events: none; white-space: nowrap; }

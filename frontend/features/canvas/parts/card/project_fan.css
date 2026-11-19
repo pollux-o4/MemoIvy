@@ -1,0 +1,24 @@
+/* 프로젝트 = 종이 더미(목록과 같은 문법) · 뒤 종이는 ProjectFan이 그린다.
+   쉴 때: 오른쪽 아래로 비낀 1~2장. 카드에 올리거나(250ms 뒤) 키보드 포커스하면: 최근 하위 메모가 위로 부채처럼 떠올라 제목이 한 줄씩 보인다.
+   클릭(누름)은 부채를 건드리지 않는다. 실제로 끈 카드만 접고(.fan-quiet), 포인터가 그 카드를 떠나야 다시 펼친다. 모션은 transform·opacity만 써서 합성 단계에서 끝난다. */
+.canvas-screen .canvas-note.project { z-index: 2; }
+.canvas-screen .canvas-fan { position: absolute; z-index: 1; width: var(--card-width); height: var(--card-height); pointer-events: none; }
+.canvas-screen .canvas-fan-sheet { position: absolute; inset: 0; border-radius: var(--card-radius); background: color-mix(in srgb, var(--card-tone) 92%, black); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--note-text) 12%, transparent), 0 1px 3px var(--canvas-shadow); opacity: 0; transform: translate(5px, 5px); transition: transform 320ms var(--ease-out-expo), opacity 200ms ease-out; will-change: transform; }
+.canvas-screen .canvas-fan-sheet.resting { opacity: 1; }
+.canvas-screen .canvas-fan-sheet.near.resting { transform: translate(5px, 5px) rotate(.6deg); }
+.canvas-screen .canvas-fan-sheet.mid.resting { transform: translate(var(--project-stack-offset), var(--project-stack-offset)) rotate(1.2deg); background: color-mix(in srgb, var(--card-tone) 84%, black); }
+.canvas-screen .canvas-fan-title { position: absolute; top: 7px; right: 64px; left: 12px; display: flex; align-items: center; gap: 6px; overflow: hidden; color: var(--note-text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; opacity: 0; transition: opacity 160ms ease-out; }
+.canvas-screen .canvas-fan-title.empty { color: var(--note-muted); font-weight: 500; }
+.canvas-screen .canvas-fan-title i { flex: none; width: 3px; height: 12px; border-radius: 2px; background: var(--sheet-accent); }
+.canvas-screen .canvas-fan-more { position: absolute; top: 6px; right: 10px; padding: 1px 7px; border-radius: 999px; color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); font-size: 10px; opacity: 0; transition: opacity 160ms ease-out; }
+.canvas-screen .canvas-note.project:is(:hover, :focus-visible) { z-index: 7; }
+/* 펼침 상태 선택자는 한 번만 쓰고 안쪽에 각 장의 자리를 둔다. */
+.canvas-screen .canvas-note.project:is(:hover, :focus-visible):not(.fan-quiet) + .canvas-fan {
+  z-index: 6;
+  & .canvas-fan-sheet { opacity: 1; background: color-mix(in srgb, var(--card-tone) 80%, light-dark(#fff, var(--note-text))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--note-text) 16%, transparent), 0 6px 18px var(--canvas-shadow); transition-delay: 250ms; }
+  & .near { transform: translate(-3px, -28px) rotate(-1deg); }
+  & .mid { transform: translate(10px, -55px) rotate(2.5deg); }
+  & .far { transform: translate(-8px, -82px) rotate(-3.5deg); }
+  & :is(.canvas-fan-title, .canvas-fan-more) { opacity: 1; transition-delay: 370ms; }
+}
+@media (prefers-reduced-motion: reduce) { .canvas-screen .canvas-fan-sheet, .canvas-screen .canvas-fan-title, .canvas-screen .canvas-fan-more { transition: none !important; } }

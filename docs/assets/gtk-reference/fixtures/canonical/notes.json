@@ -1,0 +1,62 @@
+[
+  {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    "text": "아이디어를 모으고\n떠오르는 생각을 가볍게 적어 두세요. 작은 메모가 다음 작업의 시작이 됩니다.",
+    "color": "yellow",
+    "modified": 1794576000,
+    "canvas": {
+      "position": [
+        180,
+        100
+      ],
+      "next": [
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"
+      ],
+      "done": true
+    }
+  },
+  {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
+    "text": "생각을 연결하고\n관련된 메모를 캔버스에 놓고 다음 메모로 이어 보세요.",
+    "color": "blue",
+    "modified": 1794576000,
+    "canvas": {
+      "position": [
+        460,
+        210
+      ],
+      "next": [
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3"
+      ],
+      "done": false
+    }
+  },
+  {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
+    "text": "하나씩 완성하기\n- [x] 아이디어 기록하기\n- [x] 메모 사이 연결 만들기\n- [ ] 다음 작업 시작하기",
+    "color": "green",
+    "modified": 1794576000,
+    "canvas": {
+      "position": [
+        740,
+        100
+      ],
+      "next": [],
+      "done": false
+    }
+  },
+  {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4",
+    "text": "오늘의 작은 기록\n여유롭게, 내 속도로 중요한 생각은 남기고, 다음에 할 일을 정리합니다.",
+    "color": "pink",
+    "modified": 1794576000,
+    "canvas": {
+      "position": [
+        460,
+        440
+      ],
+      "next": [],
+      "done": false
+    }
+  }
+]

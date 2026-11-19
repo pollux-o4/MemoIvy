@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn canvas_001_rejects_invalid_graph_and_positions() {
         let mut notes = vec![Note::new()];
-        for p in [[f64::NAN, 0.], [-1., 0.], [LIMIT + 1., 0.]] {
+        for p in [[f64::NAN, 0.], [-LIMIT - 1., 0.], [LIMIT + 1., 0.]] {
             notes[0].canvas.position = Some(p);
             assert!(!valid(&notes));
         }

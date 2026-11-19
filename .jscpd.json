@@ -1,0 +1,9 @@
+{
+  "path": ["frontend", "desktop", "engine/src", "tools"],
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/*.stories.tsx", "**/*.test.*"],
+  "format": ["typescript", "tsx", "javascript", "css", "rust"],
+  "minTokens": 60,
+  "threshold": 2,
+  "reporters": ["console"],
+  "absolute": false
+}

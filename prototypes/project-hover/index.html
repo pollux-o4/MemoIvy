@@ -1,0 +1,197 @@
+<!doctype html>
+<!--
+  PROTOTYPE — 버려도 되는 코드. 질문: "오른쪽 아래로 겹친 종이 더미는 유지하면서, 호버(또는 키보드 포커스) 때 하위 메모를 어떻게 보여 줄까?"
+  4개 시안을 ?variant=1..4 로 전환(하단 바 · ←/→ 키). 목록 창(440×600)과 캔버스 카드에서 같은 데이터로 비교한다.
+  하위 메모는 최근 수정 순 최대 3개. 호버 250ms 뒤 펼침, 포커스도 같은 동작, 모션 줄이기면 즉시 표시.
+  결정된 안만 frontend/features/library·canvas 로 옮기고 이 폴더는 버린다.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · 프로젝트 호버</title>
+<style>
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+:root {
+  --bg: light-dark(#f5f5f7, #1a1b1e);
+  --surface: light-dark(#fff, #26272b);
+  --raised: light-dark(#fff, #303136);
+  --text: light-dark(#1d1d1f, #f2f2f4);
+  --muted: light-dark(#636366, #a5a7ae);
+  --hairline: light-dark(rgba(0,0,0,.09), rgba(255,255,255,.1));
+  --accent: light-dark(#0a6cff, #1f6fe5);
+  --shadow: light-dark(rgba(27,34,48,.12), rgba(0,0,0,.35));
+  --canvas: light-dark(#ecedf0, #141518);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  font-family: "Noto Sans KR", "Pretendard", system-ui, sans-serif; font-size: 13px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 24px; padding: 24px 16px 110px; background: light-dark(#dcdde2, #0d0e10); color: var(--text); }
+h2 { margin: 0 0 8px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.pane { width: min(440px, 100%); }
+.window { height: 600px; overflow: hidden auto; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--hairline), 0 12px 40px var(--shadow); }
+.canvas { position: relative; height: 600px; overflow: hidden; border-radius: 14px; background: radial-gradient(circle, color-mix(in srgb, var(--text) 10%, transparent) 1px, transparent 1px) 0 0 / 20px 20px, var(--canvas); box-shadow: 0 0 0 1px var(--hairline), 0 12px 40px var(--shadow); }
+.count { margin: 16px 20px 8px; color: var(--muted); font-size: 11px; }
+.list { display: flex; flex-direction: column; gap: 10px; padding: 0 20px 20px; }
+.icon { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 메모 카드 */
+.memo { display: flex; gap: 10px; padding: 12px 12px 12px 14px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline); }
+.memo .stripe { width: 3px; border-radius: 3px; flex: none; background: var(--c); }
+.memo b { display: block; margin-bottom: 3px; }
+.memo p { margin: 0; color: var(--muted); font-size: 12px; }
+
+/* 프로젝트: 쉴 때는 오른쪽 아래로 비낀 종이 더미(모든 시안 공통) */
+.proj { position: relative; margin: 0 8px 8px 0; outline: none; }
+.proj .sheet { position: absolute; inset: 0; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline), 0 1px 3px var(--shadow); transition: transform 320ms var(--ease), opacity 220ms ease-out, box-shadow 220ms; }
+.proj .sheet.s1 { transform: translate(4px, 4px) rotate(.6deg); opacity: .85; }
+.proj .sheet.s2 { transform: translate(8px, 8px) rotate(1.2deg); opacity: .6; }
+.proj .front { position: relative; z-index: 3; padding: 14px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline), 0 2px 6px var(--shadow); cursor: pointer; }
+.proj .head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.proj .head .icon { color: var(--c); }
+.proj .meta { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.proj:focus-visible .front { box-shadow: 0 0 0 2px var(--accent); }
+.sheet .t { position: absolute; left: 12px; right: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity 180ms ease-out; }
+.sheet .t i { width: 3px; height: 12px; border-radius: 2px; background: var(--c); flex: none; }
+
+/* 캔버스 위치 */
+.canvas .proj { position: absolute; width: 200px; margin: 0; }
+.canvas .proj .front { min-height: 120px; background: color-mix(in srgb, var(--c) 22%, var(--surface)); }
+.canvas .proj .sheet { background: color-mix(in srgb, var(--c) 30%, var(--surface)); }
+.canvas .memo { position: absolute; width: 200px; min-height: 110px; }
+
+/* ── 시안 1 · 부채: 뒤 종이가 위로 부채처럼 엇갈려 떠올라 각 장 윗부분에 제목이 한 줄씩 보인다 ── */
+.v1 .proj.open { z-index: 20; }
+.v1 .proj .sheet.s0 { transform: translate(4px, 4px); opacity: 0; }
+.v1 .proj.open .sheet { opacity: 1; box-shadow: inset 0 0 0 1px var(--hairline), 0 6px 18px var(--shadow); }
+.v1 .proj.open .sheet.s0 { transform: translate(-8px, -78px) rotate(-4deg); }
+.v1 .proj.open .sheet.s2 { transform: translate(10px, -52px) rotate(2.5deg); }
+.v1 .proj.open .sheet.s1 { transform: translate(-3px, -26px) rotate(-1deg); }
+.v1 .sheet .t { top: 6px; }
+.v1 .proj.open .sheet .t { opacity: 1; transition-delay: 120ms; }
+
+/* ── 시안 2 · 옆 미니 카드: 뒤 종이가 오른쪽으로 빠져나와 작은 카드 세 장으로 세로 정렬된다 ── */
+.v2 .proj.open { z-index: 20; }
+.v2 .proj .sheet { transform-origin: top left; }
+.v2 .proj .sheet.s0 { transform: translate(4px, 4px); opacity: 0; }
+.v2 .proj.open .sheet { opacity: 1; box-shadow: inset 0 0 0 2px var(--hairline), 0 8px 20px var(--shadow); }
+.v2 .proj.open .sheet.s1 { transform: translate(calc(100% + 12px), 0) scale(.5); }
+.v2 .proj.open .sheet.s2 { transform: translate(calc(100% + 12px), 66px) scale(.5); }
+.v2 .proj.open .sheet.s0 { transform: translate(calc(100% + 12px), 132px) scale(.5); }
+.v2 .sheet .t { top: 14px; left: 20px; right: 20px; font-size: 22px; color: var(--text); gap: 10px; }
+.v2 .sheet .t i { width: 6px; height: 24px; }
+.v2 .proj.open .sheet .t { opacity: 1; transition-delay: 140ms; }
+.v2 .list .proj.open .sheet { transform: translate(4px, 4px); opacity: .85; }
+.v2 .list .proj.open .sheet .t { opacity: 0; }
+
+/* ── 시안 3 · 미리보기 팝오버: 더미는 살짝 들썩이고, 오른쪽에 떠 있는 작은 카드에 최근 하위 목록 ── */
+.v3 .proj.open .sheet.s1 { transform: translate(6px, 6px) rotate(1deg); }
+.v3 .proj.open .sheet.s2 { transform: translate(12px, 12px) rotate(2deg); }
+.v3 .proj .sheet.s0 { display: none; }
+.pop { position: absolute; z-index: 30; width: 220px; padding: 6px; border-radius: 12px; background: var(--raised); box-shadow: 0 0 0 1px var(--hairline), 0 14px 36px var(--shadow); opacity: 0; scale: .96; translate: 0 -4px; pointer-events: none; transition: opacity 140ms ease-out, scale 220ms var(--ease), translate 220ms var(--ease); }
+.pop.show { opacity: 1; scale: 1; translate: 0 0; pointer-events: auto; }
+.pop .row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: 12px; }
+.pop .row:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.pop .row i { width: 3px; height: 14px; border-radius: 2px; background: var(--c); }
+.pop .row span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop .row small { color: var(--muted); font-size: 10px; }
+.pop .foot { padding: 6px 8px 2px; color: var(--muted); font-size: 10px; border-top: 1px solid var(--hairline); margin-top: 4px; }
+
+/* ── 시안 4 · 아래로 탭 펼침: 뒤 종이가 카드 아래로 내려와 폴더 탭처럼 제목 띠를 보인다(목록을 밀지 않고 위에 겹침) ── */
+.v4 .proj.open { z-index: 20; }
+.v4 .proj .sheet.s0 { transform: translate(4px, 4px); opacity: 0; }
+.v4 .proj.open .sheet { opacity: 1; box-shadow: inset 0 0 0 1px var(--hairline), 0 4px 12px var(--shadow); }
+.v4 .proj.open .sheet.s0 { transform: translate(6px, 30px); }
+.v4 .proj.open .sheet.s1 { transform: translate(12px, 58px); }
+.v4 .proj.open .sheet.s2 { transform: translate(18px, 86px); }
+.v4 .proj .sheet.s0 { z-index: 2; } .v4 .proj .sheet.s1 { z-index: 1; } .v4 .proj .sheet.s2 { z-index: 0; }
+.v4 .sheet .t { bottom: 8px; }
+.v4 .proj.open .sheet .t { opacity: 1; transition-delay: 100ms; }
+
+@media (prefers-reduced-motion: reduce) { .sheet, .sheet .t, .pop { transition: none !important; } }
+
+/* 상태·전환 바(디자인 대상 아님) */
+.state { position: fixed; top: 12px; right: 12px; padding: 8px 10px; border-radius: 8px; background: #111; color: #9fe; font: 11px/1.5 ui-monospace, monospace; white-space: pre; z-index: 50; }
+.switcher { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 999px; background: #111; color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,.35); font-size: 12px; z-index: 60; max-width: calc(100vw - 32px); }
+.switcher button { border: 0; border-radius: 999px; padding: 6px 12px; color: #fff; background: #2a2a2e; font: inherit; cursor: pointer; }
+.switcher .label { min-width: 190px; text-align: center; }
+</style>
+</head>
+<body>
+<section class="pane"><h2>목록 창 440×600</h2><div class="window"><div class="count">메모 6개 · 프로젝트 2개</div><div class="list" id="list"></div></div></section>
+<section class="pane"><h2>캔버스</h2><div class="canvas" id="canvas"></div></section>
+<div class="pop" id="pop"></div>
+<div class="state" id="state"></div>
+<div class="switcher"><button id="prev" aria-label="이전 시안">←</button><span class="label" id="label"></span><button id="next" aria-label="다음 시안">→</button><button id="theme">테마</button></div>
+<script>
+const VARIANTS = { 1: '부채', 2: '옆 미니 카드', 3: '미리보기 팝오버', 4: '아래로 탭 펼침' };
+const C = { yellow: '#e0b030', blue: '#5b8def', green: '#4caf6a', pink: '#e06b8f' };
+const projects = [
+  { id: 'p1', title: '아이디어를 모으고', color: 'yellow', kids: [['오늘의 회의 메모', 'blue', '2분 전'], ['참고 링크 모음', 'green', '어제'], ['초안 v2', 'pink', '3일 전'], ['예전 메모', 'blue', '2주 전']] },
+  { id: 'p2', title: '새 프로젝트', color: 'green', kids: [] },
+];
+const memos = [['오늘의 작은 기록', 'pink', '여유롭게, 내 속도로 중요한 생각을 남기고.'], ['생각을 연결하고', 'blue', '관련된 메모를 캔버스에 놓고 이어 보세요.']];
+const folder = '<svg class="icon" viewBox="0 0 16 16"><path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>';
+const recent = (p) => p.kids.slice(0, 3);
+const sheetTitle = (k) => k ? `<span class="t"><i style="--c:${C[k[1]]}"></i>${k[0]}</span>` : '';
+
+function projHTML(p, style = '') {
+  const r = recent(p);
+  // s0은 하위가 3개일 때만 쓰는 앞장(쉴 때는 숨김). 비어도 쉴 때 1장은 보인다.
+  return `<div class="proj" tabindex="0" data-id="${p.id}" style="--c:${C[p.color]};${style}">
+    ${r.length > 2 ? `<div class="sheet s0">${sheetTitle(r[2])}</div>` : ''}
+    ${r.length > 1 ? `<div class="sheet s2">${sheetTitle(r[1])}</div>` : ''}
+    <div class="sheet s1">${sheetTitle(r[0]) || '<span class="t">비어 있음</span>'}</div>
+    <div class="front"><div class="head">${folder}${p.title}</div><div class="meta">메모 ${p.kids.length}개</div></div></div>`;
+}
+const memoHTML = (m, style = '') => `<div class="memo" style="--c:${C[m[1]]};${style}"><span class="stripe"></span><div><b>${m[0]}</b><p>${m[2]}</p></div></div>`;
+
+document.getElementById('list').innerHTML = projHTML(projects[0]) + memoHTML(memos[0]) + projHTML(projects[1]) + memoHTML(memos[1]);
+document.getElementById('canvas').innerHTML = projHTML(projects[0], 'left:40px;top:150px') + projHTML(projects[1], 'left:40px;top:380px') + memoHTML(memos[0], 'left:200px;top:300px') + memoHTML(memos[1], 'left:230px;top:40px');
+
+const pop = document.getElementById('pop');
+let variant = Number(new URLSearchParams(location.search).get('variant')) || 1;
+let open = null, timer = null, via = '-';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function setOpen(el, how) {
+  if (open && open !== el) open.classList.remove('open');
+  open = el; via = how;
+  if (el) el.classList.add('open');
+  if (variant === 3 && el) {
+    const p = projects.find((x) => x.id === el.dataset.id); const r = el.getBoundingClientRect();
+    pop.innerHTML = (recent(p).map((k) => `<div class="row" style="--c:${C[k[1]]}"><i></i><span>${k[0]}</span><small>${k[2]}</small></div>`).join('') || '<div class="row"><span>아직 메모가 없어요</span></div>') + `<div class="foot">최근 수정 순 · 전체 ${p.kids.length}개</div>`;
+    pop.style.left = `${Math.min(r.right + 10, innerWidth - 230) + scrollX}px`; pop.style.top = `${r.top + scrollY}px`;
+    pop.classList.add('show');
+  } else pop.classList.remove('show');
+  render();
+}
+function close(el) { clearTimeout(timer); if (open === el) { el.classList.remove('open'); open = null; pop.classList.remove('show'); render(); } }
+document.querySelectorAll('.proj').forEach((el) => {
+  el.addEventListener('pointerenter', () => { clearTimeout(timer); timer = setTimeout(() => setOpen(el, 'hover'), reduce ? 0 : 250); });
+  el.addEventListener('pointerleave', (e) => { if (variant === 3 && pop.contains(e.relatedTarget)) return; close(el); });
+  el.addEventListener('focus', () => setOpen(el, 'focus'));
+  el.addEventListener('blur', () => close(el));
+  el.addEventListener('pointerdown', () => close(el)); // 끌기·선택 시작하면 접는다
+});
+pop.addEventListener('pointerleave', () => open && close(open));
+
+function render() {
+  document.body.className = `v${variant}`;
+  document.getElementById('label').textContent = `${variant} · ${VARIANTS[variant]}`;
+  document.getElementById('state').textContent = `variant=${variant}\nopen=${open ? open.dataset.id : '-'}\nvia=${via}\ntheme=${document.documentElement.dataset.theme || 'system'}`;
+}
+function go(d) {
+  const keys = Object.keys(VARIANTS).map(Number); variant = keys[(keys.indexOf(variant) + d + keys.length) % keys.length];
+  history.replaceState(null, '', `?variant=${variant}`); if (open) setOpen(open, via); render();
+}
+document.getElementById('prev').onclick = () => go(-1);
+document.getElementById('next').onclick = () => go(1);
+document.getElementById('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark'; render(); };
+addEventListener('keydown', (e) => { if (e.target.matches?.('input,textarea,[contenteditable]')) return; if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); });
+render();
+</script>
+</body>
+</html>

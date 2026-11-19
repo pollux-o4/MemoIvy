@@ -1,0 +1,115 @@
+/*
+ * 선택 드로어. 층마다 간격으로 구분하고(선·배경 반복 최소화), 무게는 위에서 아래로 줄어든다:
+ * 이름(14px 굵게) > 주 동작(강조 버튼) > 연결·정리(작은 머리글 묶음) > 삭제(조용한 위험 글자).
+ */
+.canvas-screen .canvas-inspector { position: absolute; z-index: 7; top: 54px; right: 16px; width: 272px; max-height: calc(100% - 140px); overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 12px; border-radius: 14px; }
+@media (max-width: 720px) { .canvas-screen .canvas-inspector { right: 8px; width: min(272px, calc(100% - 16px)); } }
+
+/* 1층 · 정체성 */
+.canvas-screen .inspector-identity { display: flex; flex-direction: column; gap: 8px; }
+.canvas-screen .inspector-title-row { display: flex; align-items: center; gap: 6px; }
+.canvas-screen .inspector-color { flex: none; width: 18px; height: 18px; margin: 0 2px 0 4px; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--canvas-text) 14%, transparent); cursor: pointer; transition: transform 120ms; }
+.canvas-screen .inspector-color:hover, .canvas-screen .inspector-color[aria-expanded="true"] { transform: scale(1.12); }
+.canvas-screen .inspector-title, .canvas-screen .inspector-intro { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 8px; color: var(--canvas-text); background: transparent; font: inherit; transition: background-color 120ms, border-color 120ms; }
+.canvas-screen .inspector-title { flex: 1; height: 34px; padding: 0 8px; font-size: 15px; font-weight: 700; text-overflow: ellipsis; }
+.canvas-screen .inspector-intro { min-height: 64px; max-height: 320px; overflow: auto; resize: vertical; --note-text: var(--canvas-text); --note-muted: var(--canvas-muted); }
+.canvas-screen .inspector-title:hover, .canvas-screen .inspector-intro:hover { background: var(--canvas-hover); }
+.canvas-screen .inspector-title:focus, .canvas-screen .inspector-intro:focus-within { outline: 0; border-color: var(--canvas-accent); background: var(--canvas-bg); }
+.canvas-screen .inspector-intro::placeholder, .canvas-screen .inspector-title::placeholder { color: color-mix(in srgb, var(--canvas-muted) 80%, transparent); }
+.canvas-screen .inspector-head-action { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; color: var(--canvas-muted); background: transparent; cursor: pointer; }
+.canvas-screen .inspector-head-action:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-palette { display: flex; gap: 8px; padding: 2px 6px; }
+.canvas-screen .inspector-palette button { width: 22px; height: 22px; border: 0; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--canvas-text) 14%, transparent); }
+.canvas-screen .inspector-palette button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px var(--canvas-accent); }
+.canvas-screen .inspector-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot-yellow); }
+.canvas-screen .inspector-dot.pink { background: var(--dot-pink); }.canvas-screen .inspector-dot.blue { background: var(--dot-blue); }.canvas-screen .inspector-dot.green { background: var(--dot-green); }.canvas-screen .inspector-dot.purple { background: var(--dot-purple); }
+.canvas-screen .inspector-preview { --preview-gutter: 23px; padding: 0 8px; }
+.canvas-screen .inspector-preview li { align-items: center; gap: 7px; height: 20px; color: var(--canvas-muted); }
+.canvas-screen .inspector-preview li > span { flex: 0 0 16px; width: 16px; display: grid; place-items: center; color: var(--canvas-muted); font-size: 11px; }
+.canvas-screen .inspector-preview .preview-check { flex: 0 0 14px; width: 14px; height: 14px; }
+.canvas-screen .inspector-preview small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 2층 · 상태와 주 동작 */
+.canvas-screen .inspector-primary { display: flex; flex-direction: column; gap: 8px; }
+.canvas-screen .inspector-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 0 8px; color: var(--canvas-muted); font-size: 12px; }
+.canvas-screen .inspector-done { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--canvas-hairline); border-radius: 999px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-done:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-done[aria-pressed="true"] { border-color: transparent; color: var(--canvas-success-text); background: color-mix(in srgb, var(--canvas-success) 14%, transparent); }
+.canvas-screen .inspector-main { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 0; border-radius: 10px; color: #fff; background: var(--canvas-accent); font-weight: 600; cursor: pointer; transition: background-color 120ms; }
+.canvas-screen .inspector-main:hover { background: color-mix(in srgb, var(--canvas-accent), black 10%); }
+.canvas-screen .inspector-main span { flex: 1; text-align: left; }
+.canvas-screen .inspector-main kbd { font: 11px ui-monospace, monospace; opacity: .75; }
+
+/* 3·4층 · 묶음(연결·정리) */
+.canvas-screen .inspector-group { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--canvas-hairline); }
+.canvas-screen .inspector-group > header { display: flex; align-items: center; justify-content: space-between; min-height: 24px; padding: 0 2px 0 8px; }
+.canvas-screen .inspector-group > header b { color: var(--canvas-muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.canvas-screen .inspector-mini { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--canvas-muted); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-actions { display: inline-flex; gap: 2px; }
+.canvas-screen .inspector-mini kbd { margin-left: 2px; padding: 0 4px; border-radius: 4px; color: var(--canvas-muted); background: var(--canvas-hover); font: inherit; font-size: 10px; line-height: 16px; }
+.canvas-screen .inspector-mini:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 4px 0 8px; }
+.canvas-screen .inspector-chips > small { width: 30px; color: var(--canvas-muted); font-size: 11px; }
+.canvas-screen .inspector-chip, .canvas-screen .inspector-chip > button { max-width: 180px; height: 26px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; color: var(--canvas-text); font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-chip { padding: 0 9px; border-radius: 999px; background: var(--canvas-hover); }
+.canvas-screen .inspector-chip.removable { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; }
+.canvas-screen .inspector-chip > button { padding: 0; background: transparent; }
+.canvas-screen button.inspector-chip:hover, .canvas-screen .inspector-chip.removable:hover { background: color-mix(in srgb, var(--canvas-text) 12%, transparent); }
+.canvas-screen .inspector-disconnect { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--canvas-muted); }
+.canvas-screen .inspector-chip > .inspector-disconnect { padding: 0; }
+.canvas-screen .inspector-disconnect:hover { color: var(--canvas-danger); background: var(--canvas-hover); }
+.canvas-screen .inspector-add-trigger { width: 100%; height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease-out, color 90ms ease-out; }
+.canvas-screen .inspector-add-trigger span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .inspector-add-trigger:hover, .canvas-screen .inspector-add-trigger[aria-expanded="true"] { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-add-trigger:focus-visible { outline: 2px solid var(--memoivy-accent); outline-offset: -2px; }
+.canvas-screen .inspector-add-trigger[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+/* 스크롤하는 인스펙터 안에서 잘리지 않도록 트리거 아래에 펼친다. */
+.canvas-screen .inspector-link-menu { position: static; min-width: 0; max-height: 220px; margin-top: 4px; overflow-y: auto; }
+.canvas-screen .inspector-link-menu .menu-row > .inspector-dot { flex: 0 0 10px; }
+.canvas-screen .inspector-link-menu .menu-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-screen .inspector-action { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; overflow: hidden; padding: 0 8px; border: 0; border-radius: 8px; color: var(--canvas-text); background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.canvas-screen .inspector-action:hover { background: var(--canvas-hover); }
+
+/* 5층 · 위험 */
+.canvas-screen .canvas-inspector > footer { padding-top: 10px; border-top: 1px solid var(--canvas-hairline); }
+.canvas-screen .inspector-delete { min-height: 30px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--canvas-danger); background: transparent; font-size: 12px; cursor: pointer; }
+.canvas-screen .inspector-delete:hover { background: color-mix(in srgb, var(--canvas-danger) 12%, transparent); }
+
+/* 정리 · 프로젝트로 옮기기 팝오버 */
+.canvas-screen .canvas-project-menu > .menu-popover { top: calc(100% + 4px); width: 248px; max-height: 280px; overflow-y: auto; }
+.canvas-screen .canvas-project-menu .menu-row { min-height: 36px; }
+.canvas-screen .project-menu-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+
+/* 3층 보조 · 가지 개요. 들여쓰기 한 단계 = --outline-step, 안내선은 부모 글머리 중심(버튼 여백 8 + 글머리 반폭 7)을 지나 부모-자식을 잇는다. */
+.canvas-screen .inspector-hint { color: color-mix(in srgb, var(--canvas-muted) 80%, transparent); font-size: 11px; }
+.canvas-screen .inspector-outline { --outline-step: 16px; display: grid; gap: 0; margin: 0; padding: 0 2px; list-style: none; }
+.canvas-screen .inspector-outline li { padding-left: calc(var(--depth, 0) * var(--outline-step)); padding-block: .5px; background-image: repeating-linear-gradient(90deg, var(--canvas-hairline) 0 1px, transparent 1px var(--outline-step)); background-size: calc(var(--depth, 0) * var(--outline-step)) 100%; background-repeat: no-repeat; background-position: 15px 0; }
+.canvas-screen .inspector-help { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; border: 0; padding: 0; color: var(--canvas-muted); background: none; cursor: pointer; }
+.canvas-screen .inspector-help[aria-expanded="true"] { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .outline-shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; margin: 0 0 6px; padding: 10px 12px; border-radius: 8px; background: var(--canvas-hover); font-size: 11px; }
+.canvas-screen .outline-shortcuts > div { display: contents; }
+.canvas-screen .outline-shortcuts dt { justify-self: start; }
+.canvas-screen .outline-shortcuts dd { margin: 0; color: var(--canvas-muted); }
+.canvas-screen .inspector-help:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .outline-status:empty { display: none; }
+.canvas-screen .outline-status { padding: 2px 8px 0; }
+.canvas-screen .outline-also { margin-top: 4px; }
+.canvas-screen .outline-also > small { width: auto; margin-right: 2px; }
+.canvas-screen .outline-merge { flex: none; margin-left: auto; padding: 0 6px; border-radius: 999px; color: var(--canvas-muted); background: var(--canvas-hover); font-size: 10px; font-weight: 600; }
+.canvas-screen .inspector-outline li { position: relative; display: flex; align-items: center; }
+/* 끌어 옮기기: 놓일 자리는 행 위·아래의 강조선, 끄는 행은 흐리게. */
+.canvas-screen .inspector-outline li.is-dragging { opacity: .45; }
+.canvas-screen .inspector-outline li:is(.drop-before, .drop-after)::after { content: ''; position: absolute; right: 4px; left: calc(var(--depth, 0) * var(--outline-step) + 8px); height: 2px; border-radius: 1px; background: var(--canvas-accent); pointer-events: none; }
+.canvas-screen .inspector-outline li.drop-before::after { top: -1px; }
+.canvas-screen .inspector-outline li.drop-after::after { bottom: -1px; }
+.canvas-screen .inspector-outline button[data-row][draggable="true"] { cursor: grab; }
+.canvas-screen .inspector-outline li > .inspector-disconnect { flex: none; margin-left: 2px; padding: 0; border: 0; background: transparent; opacity: 0; cursor: pointer; }
+.canvas-screen .inspector-outline li:hover > .inspector-disconnect, .canvas-screen .inspector-outline li > .inspector-disconnect:focus-visible { opacity: 1; }
+.canvas-screen .inspector-outline button[data-row] { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; height: 26px; padding: 0 8px; border: 0; border-radius: 7px; color: var(--canvas-text); background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.canvas-screen .inspector-outline button[data-row]:hover { background: var(--canvas-hover); }
+.canvas-screen .inspector-outline button[data-row]:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: -2px; }
+.canvas-screen .inspector-outline button[aria-current="true"] { color: var(--canvas-accent); background: color-mix(in srgb, var(--canvas-accent) 12%, transparent); font-weight: 600; }
+.canvas-screen .outline-bullet { flex: 0 0 14px; height: 14px; display: grid; place-items: center; color: var(--canvas-muted); }
+.canvas-screen .outline-bullet:empty::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .55; }
+.canvas-screen .outline-bullet.has-children:empty::before { width: 6px; height: 6px; opacity: 1; background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+.canvas-screen .outline-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

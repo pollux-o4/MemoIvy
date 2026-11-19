@@ -147,3 +147,8 @@ scenario!(
     project_003_new_menu_and_empty_project,
     super::canvas::tests::project_003_new_menu_and_empty_project
 );
+
+scenario!(
+    capture_gtk_reference_assets,
+    super::visual_reference::capture_gtk_reference_assets
+);

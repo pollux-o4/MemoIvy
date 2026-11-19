@@ -1,0 +1,197 @@
+{
+  "revision": 11,
+  "items": [
+    {
+      "id": "p1",
+      "topic": "구조",
+      "statement": "이름 검색만으로 모듈의 책임과 경계를 파악할 수 있게 명명한다",
+      "evidence": [
+        "모듈 구분을 이름 검색으로 명확히 알 수 있어야 유지보수가 쉽다고 요청함"
+      ],
+      "sources": [
+        "desktop-migration"
+      ],
+      "by": "ai",
+      "confirmed": true,
+      "retired": false,
+      "updatedAt": "2026-11-13T14:33:43.535Z"
+    },
+    {
+      "id": "p2",
+      "topic": "사용 경험",
+      "statement": "자동 저장은 조용히 처리하고 실패했을 때만 사용자를 방해한다",
+      "evidence": [
+        "스티커 메모의 장점은 과정 없는 자동 저장이며 실패할 때만 방해하도록 요청함"
+      ],
+      "sources": [
+        "desktop-migration"
+      ],
+      "by": "ai",
+      "confirmed": true,
+      "retired": false,
+      "updatedAt": "2026-11-13T14:33:43.593Z"
+    },
+    {
+      "id": "p3",
+      "topic": "결정",
+      "statement": "합의한 방향 안의 구현 선택은 재허락 없이 진행한다",
+      "evidence": [
+        "전환 방향이 잡혀 있으므로 공개 계약 변경도 허락을 다시 받지 말라고 요청함"
+      ],
+      "sources": [
+        "desktop-migration"
+      ],
+      "by": "ai",
+      "confirmed": true,
+      "retired": false,
+      "updatedAt": "2026-11-13T14:33:43.660Z"
+    },
+    {
+      "id": "p4",
+      "topic": "검증",
+      "statement": "검증은 변경 위험에 필요한 최소 범위로 제한한다",
+      "evidence": [
+        "요청 처리를 불필요한 검사 추가로 확대한 것을 지적함"
+      ],
+      "sources": [
+        "desktop-migration"
+      ],
+      "by": "ai",
+      "confirmed": true,
+      "retired": false,
+      "updatedAt": "2026-11-13T14:35:52.277Z"
+    },
+    {
+      "id": "p9",
+      "topic": "구조",
+      "statement": "직접 고안하기 전에 업계에서 검증된 알고리즘과 패턴을 찾아 따른다",
+      "evidence": [
+        "간선 경로를 임의 규칙으로 제안하자 업계 표준 방식을 반영하라고 함"
+      ],
+      "sources": [
+        "canvas-link-anchors"
+      ],
+      "by": "ai",
+      "confirmed": false,
+      "retired": false,
+      "updatedAt": "2026-11-19T05:12:18.156Z"
+    },
+    {
+      "id": "p10",
+      "topic": "결정",
+      "statement": "원래 목표에 속한 기능은 범위에서 빼지 말고 마일스톤으로 나눠 담는다",
+      "evidence": [
+        "마인드맵 기능을 제외 범위로 뺐다가 차수로 나눠 포함하라는 지적을 받음",
+        "마우스 가지 잇기를 지시서 완료 기준에 추가하라고 요청함"
+      ],
+      "sources": [
+        "canvas-link-anchors"
+      ],
+      "by": "ai",
+      "confirmed": false,
+      "retired": false,
+      "updatedAt": "2026-11-19T10:31:46.582Z"
+    }
+  ],
+  "changes": [
+    {
+      "revision": 11,
+      "by": "ai",
+      "event": {
+        "kind": "noteReinforced",
+        "statement": "원래 목표에 속한 기능은 범위에서 빼지 말고 마일스톤으로 나눠 담는다"
+      },
+      "at": "2026-11-19T10:31:46.582Z"
+    },
+    {
+      "revision": 10,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "원래 목표에 속한 기능은 범위에서 빼지 말고 마일스톤으로 나눠 담는다"
+      },
+      "at": "2026-11-19T05:17:13.406Z"
+    },
+    {
+      "revision": 9,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "직접 고안하기 전에 업계에서 검증된 알고리즘과 패턴을 찾아 따른다"
+      },
+      "at": "2026-11-19T05:12:18.156Z"
+    },
+    {
+      "revision": 8,
+      "by": "me",
+      "event": {
+        "kind": "noteConfirmed",
+        "statement": "이름 검색만으로 모듈의 책임과 경계를 파악할 수 있게 명명한다"
+      },
+      "at": "2026-11-13T14:41:35.204Z"
+    },
+    {
+      "revision": 7,
+      "by": "me",
+      "event": {
+        "kind": "noteConfirmed",
+        "statement": "자동 저장은 조용히 처리하고 실패했을 때만 사용자를 방해한다"
+      },
+      "at": "2026-11-13T14:41:34.254Z"
+    },
+    {
+      "revision": 6,
+      "by": "me",
+      "event": {
+        "kind": "noteConfirmed",
+        "statement": "검증은 변경 위험에 필요한 최소 범위로 제한한다"
+      },
+      "at": "2026-11-13T14:41:18.658Z"
+    },
+    {
+      "revision": 5,
+      "by": "me",
+      "event": {
+        "kind": "noteConfirmed",
+        "statement": "합의한 방향 안의 구현 선택은 재허락 없이 진행한다"
+      },
+      "at": "2026-11-13T14:40:59.493Z"
+    },
+    {
+      "revision": 4,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "검증은 변경 위험에 필요한 최소 범위로 제한한다"
+      },
+      "at": "2026-11-13T14:35:52.277Z"
+    },
+    {
+      "revision": 3,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "합의한 방향 안의 구현 선택은 재허락 없이 진행한다"
+      },
+      "at": "2026-11-13T14:33:43.660Z"
+    },
+    {
+      "revision": 2,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "자동 저장은 조용히 처리하고 실패했을 때만 사용자를 방해한다"
+      },
+      "at": "2026-11-13T14:33:43.593Z"
+    },
+    {
+      "revision": 1,
+      "by": "ai",
+      "event": {
+        "kind": "noteAdded",
+        "statement": "이름 검색만으로 모듈의 책임과 경계를 파악할 수 있게 명명한다"
+      },
+      "at": "2026-11-13T14:33:43.535Z"
+    }
+  ]
+}

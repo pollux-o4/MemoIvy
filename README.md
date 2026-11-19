@@ -42,15 +42,16 @@ Snap은 자동 업데이트도 지원합니다. 수동 업데이트 전에는 �
 <details>
 <summary>소스에서 실행·설치하기 (개발용)</summary>
 
-Linux 데스크톱에서 사용할 수 있습니다. 소스 빌드에는 **GTK 4.10 이상**과 **mise**가 필요합니다.
+개발 버전은 Electron·React 화면과 Rust·SQLite 엔진으로 이관 중입니다. **mise**로 Node와 Rust 버전을 맞춥니다. Windows·macOS는 해당 환경의 검수를 진행한 범위만 지원 완료로 기록합니다.
 
 ```bash
-# Ubuntu 시스템 패키지와 Rust 준비
-# 시스템 패키지 설치에 sudo 필요
-mise bootstrap
-
-# 개발 버전 실행
+# 개발 의존성 설치 후 실행
+mise install
+npm ci
 mise run dev
+
+# 화면별 상태와 GTK 원본 비교
+mise run storybook
 ```
 
 앱 메뉴와 바탕화면에 설치하거나 기존 설치본을 갱신하려면:
@@ -60,6 +61,8 @@ mise run install
 ```
 
 실행 중인 MemoIvy는 종료한 뒤 다시 열어 주세요.
+
+원본 GTK 화면·합성 데이터·캡처 메타정보는 **UI-REF-001**로 검색합니다. Storybook의 `Reference/GTK Fidelity`에서 같은 조건으로 비교하며 기준 이미지는 일반 빌드·테스트에서 갱신하지 않습니다. GTK 비교 실행은 별도 시스템 GTK 개발 패키지를 설치한 환경에서 `mise run dev:legacy`로 진행합니다.
 
 </details>
 
@@ -99,19 +102,23 @@ mise run install
 
 ## 개발·검증
 
-Rust · GTK 4 · MIT License
+Electron · React · Rust · SQLite · MIT License
 
 <details>
 <summary>빌드·테스트·Snap 패키징 명령</summary>
 
 | 작업 | 명령 |
 | --- | --- |
-| 포맷·전체 테스트·Clippy | `mise run check` |
+| 화면 타입 검사 | `npm run typecheck` |
+| 저장 엔진 검증 | `mise run test:engine` |
+| Storybook 빌드 | `npm run build:storybook` |
 | 릴리스 빌드 | `mise run build` |
-| Snap 패키지 빌드 | `mise run package:snap` |
+| 현재 운영체제 설치 패키지 | `npm run desktop:build` |
 | 커밋·푸시 비밀정보 검사 활성화 | `mise install` 후 `mise run hooks:install` |
 
 </details>
+
+기존 GTK Snap 배포 명령은 이관 비교용으로 유지합니다. 새 데스크톱 패키지의 배포 완료를 뜻하지 않습니다.
 
 상세 안내는 `docs`에서 **설치**(OPS-001), **백업·복구**(OPS-002), **개발 검증**(OPS-003), **아키텍처** 관심사로 찾을 수 있습니다.
 

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "desktop/preload.cjs",
+    "tools/*.cjs",
+    "e2e/**/*.e2e.ts",
+    "frontend/**/*.stories.tsx",
+    ".storybook/*.ts"
+  ],
+  "project": [
+    "frontend/**/*.{ts,tsx}",
+    "desktop/**/*.cjs",
+    "tools/**/*.cjs",
+    "e2e/**/*.ts"
+  ]
+}

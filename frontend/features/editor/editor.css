@@ -1,0 +1,22 @@
+/* 메모 편집 화면 · GTK views/memo.css. 편집 표면 자체는 shared/markdown/surface. */
+.palette-popover { position: absolute; z-index: 30; top: calc(100% + 5px); right: 0; }
+.palette-popover { min-width: 0; }
+.palette-popover .swatch { width: 26px; height: 26px; border-radius: 50%; }
+.editor-screen { --markdown-code-strength: 26%; position: relative; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; color: var(--note-text); background: var(--note-yellow); }
+.editor-screen.note-yellow { background: var(--note-yellow); }
+.editor-screen.note-pink { background: var(--note-pink); }
+.editor-screen.note-blue { background: var(--note-blue); }
+.editor-screen.note-green { background: var(--note-green); }
+.editor-screen.note-purple { background: var(--note-purple); }
+.editor-topbar { position: relative; z-index: 5; flex: 0 0 46px; height: 46px; display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; padding: 4px 8px; color: var(--note-text); background: transparent; -webkit-app-region: drag; }
+.editor-topbar button { -webkit-app-region: no-drag; }
+.editor-tools { display: flex; justify-content: flex-end; align-items: center; gap: 2px; }
+.editor-topbar .window-controls button,.editor-topbar .icon-button { color: var(--note-muted); }
+.editor-topbar .window-controls button:hover,.editor-topbar .icon-button:hover { color: var(--note-text); background: color-mix(in srgb,var(--note-text) 8%,transparent); }
+.editor-title { color: var(--note-text); font-size: 13px; font-weight: 600; }
+.editor-tools .menu-popover { top: 38px; }
+.editor-content { flex: 1; min-height: 0; overflow: auto; }
+.editor-status { min-height: 22px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 2px 20px 5px; color: var(--note-muted); font-size: 10px; }
+.editor-status.save-error { justify-content: flex-start; color: var(--memoivy-danger); }
+.editor-status button { padding: 2px 6px; border: 0; border-radius: 5px; color: var(--note-text); background: color-mix(in srgb,var(--note-text) 7%,transparent); cursor: pointer; font-size: 10px; }
+.editor-status button:hover { background: color-mix(in srgb,var(--note-text) 12%,transparent); }

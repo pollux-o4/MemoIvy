@@ -1,0 +1,293 @@
+<!doctype html>
+<!--
+  PROTOTYPE — 버려도 되는 코드. 질문: "캔버스의 프로젝트 카드에서 '들어가기'와 '이름·소개 편집'을 어떻게 나눌까?"
+  5개 시안을 ?variant=1..5 로 전환(위 탭 · [ / ] 키). 같은 데이터·같은 캔버스에서 비교한다.
+  결정된 안만 frontend/features/canvas 로 옮기고 이 폴더는 버린다.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · 프로젝트 편집</title>
+<style>
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root {
+  --bg: light-dark(#f5f5f7, #1a1b1e);
+  --surface: light-dark(#fff, #26272b);
+  --raised: light-dark(#fff, #303136);
+  --text: light-dark(#1d1d1f, #f2f2f4);
+  --muted: light-dark(#636366, #a5a7ae);
+  --hairline: light-dark(rgba(0,0,0,.09), rgba(255,255,255,.1));
+  --hover: light-dark(rgba(0,0,0,.05), rgba(255,255,255,.07));
+  --accent: light-dark(#0a6cff, #1f6fe5);
+  --shadow: light-dark(rgba(27,34,48,.14), rgba(0,0,0,.45));
+  --canvas: light-dark(#ecedf0, #1d1e21);
+  --dot: light-dark(rgba(26,27,30,.16), rgba(255,255,255,.13));
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  font-family: "Noto Sans KR", "Pretendard", system-ui, sans-serif; font-size: 13px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; color: var(--text); background: var(--bg); display: flex; flex-direction: column; }
+button { font: inherit; color: inherit; }
+
+/* 상단: 시안 탭과 설명 */
+.picker { display: flex; gap: 6px; padding: 12px 16px 0; flex-wrap: wrap; align-items: center; }
+.picker button { height: 32px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--surface); cursor: pointer; }
+.picker button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface)); font-weight: 600; }
+.picker .rec { margin-left: 4px; padding: 1px 6px; border-radius: 999px; font-size: 11px; color: #fff; background: var(--accent); }
+.picker .theme { margin-left: auto; }
+.brief { margin: 10px 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--surface); box-shadow: 0 0 0 1px var(--hairline); display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; line-height: 1.55; }
+.brief h2 { margin: 0 0 4px; font-size: 14px; }
+.brief h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.brief ul { margin: 0; padding-left: 16px; }
+.brief p { margin: 0; }
+@media (max-width: 760px) { .brief { grid-template-columns: 1fr; } }
+
+/* 앱 창 흉내 */
+.window { position: relative; flex: 1; margin: 12px 16px 16px; min-height: 520px; border-radius: 12px; overflow: hidden; background: var(--canvas); box-shadow: 0 0 0 1px var(--hairline);
+  background-image: radial-gradient(circle at 12px 12px, var(--dot) .9px, transparent 1.2px); background-size: 24px 24px; display: flex; }
+.stage { position: relative; flex: 1; min-width: 0; }
+.crumbs { position: absolute; top: 10px; left: 12px; z-index: 5; display: flex; align-items: center; gap: 2px; }
+.crumbs button, .crumbs .crumb-edit { white-space: nowrap; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.crumbs button:hover { background: var(--hover); color: var(--text); }
+.crumbs .current { color: var(--text); font-weight: 600; background: var(--hover); }
+.crumbs .current.editable { cursor: text; }
+.crumbs .current.editable:hover { box-shadow: inset 0 0 0 1px var(--hairline); }
+.crumbs i { width: 14px; text-align: center; font-style: normal; color: var(--muted); }
+.crumb-edit { font-weight: 600; color: var(--text); background: var(--surface) !important; outline: 2px solid var(--accent); width: 160px; }
+.empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); gap: 6px; }
+.empty strong { color: var(--text); font-size: 15px; }
+.empty .intro-box { max-width: 360px; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--surface); color: var(--text); text-align: left; white-space: pre-wrap; box-shadow: 0 0 0 1px var(--hairline); }
+
+/* 카드 */
+.card { position: absolute; width: 240px; height: 156px; padding: 14px 16px; border-radius: 12px; background: var(--card); color: var(--text); box-shadow: 0 6px 18px var(--shadow); display: flex; flex-direction: column; gap: 6px; cursor: default; user-select: none; transition: box-shadow 160ms var(--ease); }
+.card.project::before, .card.project::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 12px; background: color-mix(in srgb, var(--card) 80%, #000); transform: translate(5px, 5px); }
+.card.project::after { transform: translate(10px, 10px); opacity: .6; }
+.card.selected { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px var(--shadow); }
+.card .head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; min-height: 22px; }
+.card .head .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .open { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; cursor: pointer; opacity: .75; }
+.card .open:hover { opacity: 1; background: var(--hover); }
+.card .intro { flex: 1; font-size: 12.5px; line-height: 1.5; color: color-mix(in srgb, var(--text) 78%, transparent); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; white-space: pre-wrap; }
+.card .intro.placeholder { color: color-mix(in srgb, var(--text) 40%, transparent); font-style: italic; }
+.card .meta { font-size: 11.5px; font-weight: 600; opacity: .8; }
+.card.text-editable .head .t, .card.text-editable .intro { cursor: text; }
+.card .edit-title, .card .edit-intro { width: 100%; border: 0; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; font: inherit; color: var(--text); background: color-mix(in srgb, var(--surface) 70%, transparent); outline: 2px solid var(--accent); }
+.card .edit-intro { flex: 1; resize: none; font-size: 12.5px; line-height: 1.5; font-weight: 400; }
+.card .hint { font-size: 11px; color: var(--muted); }
+
+/* 떠 있는 도구 막대·메뉴 */
+.toolbar, .menu { position: absolute; z-index: 20; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--hairline), 0 8px 24px var(--shadow); animation: pop 140ms var(--ease); }
+.toolbar button, .menu button { height: 30px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.toolbar button:hover, .menu button:hover, .menu button:focus-visible { background: var(--hover); }
+.toolbar .sep { width: 1px; height: 18px; margin: 0 3px; background: var(--hairline); }
+.swatch { width: 14px; height: 14px; border-radius: 50%; background: var(--card); box-shadow: 0 0 0 1px var(--hairline); }
+.menu { flex-direction: column; align-items: stretch; min-width: 200px; }
+.menu button { justify-content: flex-start; height: 34px; }
+.menu kbd { margin-left: auto; color: var(--muted); font: 11px ui-monospace, monospace; }
+@keyframes pop { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .toolbar, .menu { animation: none; } }
+
+/* 시안 5: 오른쪽 패널 */
+.panel { width: 280px; flex: none; padding: 14px; border-left: 1px solid var(--hairline); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+.panel[hidden] { display: none; }
+.panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
+.panel input, .panel textarea { font: inherit; font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 9px; }
+.panel input:focus, .panel textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.panel textarea { min-height: 96px; resize: vertical; }
+.panel .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.panel .row button { height: 30px; padding: 0 10px; border: 1px solid var(--hairline); border-radius: 8px; background: transparent; cursor: pointer; }
+.panel .muted { color: var(--muted); }
+
+.toast { position: absolute; left: 50%; bottom: 14px; z-index: 30; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: var(--raised); box-shadow: 0 0 0 1px var(--hairline), 0 6px 18px var(--shadow); opacity: 0; transition: opacity 160ms; pointer-events: none; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<nav class="picker" id="picker"></nav>
+<section class="brief" id="brief"></section>
+<main class="window"><div class="stage" id="stage"></div><aside class="panel" id="panel" hidden></aside><div class="toast" id="toast"></div></main>
+
+<script>
+const COLORS = ['#4a4430', '#2f4a3a', '#2f3f5c', '#5a3340', '#43385c'];
+const LIGHT = ['#fff3c4', '#dff0d8', '#dbe8ff', '#ffdbe3', '#e8ddff'];
+const VARIANTS = [
+  { name: '선택 시 떠 있는 도구 막대', rec: true,
+    how: ['한 번 클릭: 선택 + 카드 위 도구 막대', '막대의 ✎ 이름·소개 → 카드에서 바로 편집', '더블클릭·↗: 들어가기', 'F2: 편집, Enter: 들어가기'],
+    pro: '할 수 있는 일이 눈에 보이고, 더블클릭 습관(들어가기)은 그대로. Miro·FigJam 방식.',
+    con: '선택할 때마다 막대가 떠 화면이 조금 붐빔. 끌기 중에는 숨김.' },
+  { name: '더블클릭 → 선택 메뉴',
+    how: ['한 번 클릭: 선택', '더블클릭: 포인터 옆에 메뉴(들어가기 / 이름·소개 / 색)', '메뉴에서 Enter·클릭으로 고름'],
+    pro: '실수로 들어가는 일이 없음. 처음 쓰는 사람도 선택지를 봄.',
+    con: '가장 흔한 "들어가기"가 한 단계 늘어남. 일반 메모(더블클릭=열기)와 동작이 달라짐.' },
+  { name: '선택 후 다시 클릭 → 그 자리 편집',
+    how: ['한 번 클릭: 선택', '선택된 카드의 글을 천천히 다시 클릭: 커서가 생겨 편집', '빠른 더블클릭: 들어가기', '소개가 비면 흐린 안내 문구'],
+    pro: '버튼 없이 가장 빠르게 쓰기 시작. Finder 이름 바꾸기·Miro 스티커 방식.',
+    con: '"천천히 두 번"은 발견하기 어렵고, 손이 느리면 편집과 들어가기가 헷갈릴 수 있음.' },
+  { name: '누르는 위치로 구분 + 경로 줄 편집',
+    how: ['제목 더블클릭: 이름만 편집', '본문·빈 곳 더블클릭: 들어가기', '프로젝트 안: 경로 줄의 이름 클릭 → 이름 편집, 소개는 빈 화면에 표시·편집', 'F2: 이름 편집'],
+    pro: 'Figma 프레임 이름과 같은 감각. 들어간 뒤에도 나가지 않고 이름·소개를 고침.',
+    con: '카드가 작아지면(축소) 제목·본문 구분이 어려움. 위치 규칙을 익혀야 함.' },
+  { name: '오른쪽 패널에서 편집',
+    how: ['한 번 클릭: 선택 + 오른쪽 패널 맨 위에 이름·소개 칸', '입력하는 대로 카드에 반영', '더블클릭: 들어가기'],
+    pro: '카드 동작이 단순하고, 색·고정 같은 설정을 한곳에. 긴 소개 쓰기에 편함.',
+    con: '시선이 카드와 패널을 오감. 패널이 캔버스 폭을 차지.' },
+];
+
+const initial = () => [
+  { id: 'p1', project: true, title: '새 프로젝트', intro: '', color: 0, children: 0, x: 60, y: 90 },
+  { id: 'p2', project: true, title: '이건 프로젝트에요', intro: 'LTM 정리와 지시서 흐름을\n한곳에 모으는 프로젝트', color: 1, children: 3, x: 360, y: 90 },
+  { id: 'n1', project: false, title: '오늘의 작은 기록', intro: '여유롭게, 내 속도로 중요한 생각은 남기고 다음에 할 일을 정리합니다.', color: 3, x: 210, y: 300 },
+];
+const state = { variant: 1, cards: initial(), selected: null, editing: null, inside: null, menu: null, crumbEdit: false, lastClick: { id: null, at: 0 }, light: false };
+const DOUBLE_MS = 350;
+const $ = (id) => document.getElementById(id);
+const byId = (id) => state.cards.find((c) => c.id === id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let toastTimer;
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600); }
+const tint = (c) => (state.light ? LIGHT : COLORS)[c.color % COLORS.length];
+
+function setVariant(v) {
+  state.variant = v; state.selected = null; state.editing = null; state.inside = null; state.menu = null; state.crumbEdit = false;
+  const url = new URL(location.href); url.searchParams.set('variant', v); history.replaceState(null, '', url);
+  render();
+}
+function enter(id) { const c = byId(id); if (!c?.project) { toast(`메모 "${c.title}" 열기`); return; } state.inside = id; state.selected = null; state.editing = null; state.menu = null; render(); }
+function startEdit(id, field = 'both') { state.editing = { id, field }; state.menu = null; render(); requestAnimationFrame(() => { const el = document.querySelector(field === 'intro' ? '.edit-intro' : '.edit-title'); el?.focus(); el?.select?.(); }); }
+function commitEdit() {
+  const e = state.editing; if (!e) return;
+  const c = byId(e.id); const t = document.querySelector('.edit-title'); const i = document.querySelector('.edit-intro');
+  if (t) c.title = t.value.trim() || c.title; if (i) c.intro = i.value;
+  state.editing = null; render(); toast('저장됨');
+}
+function cancelEdit() { state.editing = null; render(); }
+
+function renderPicker() {
+  $('picker').innerHTML = VARIANTS.map((v, i) => `<button aria-pressed="${state.variant === i + 1}" data-v="${i + 1}">${i + 1}. ${v.name}${v.rec ? '<span class="rec">추천</span>' : ''}</button>`).join('')
+    + `<button class="theme" id="theme">${state.light ? '어두운 테마' : '밝은 테마'}</button> <button id="reset">데이터 초기화</button>`;
+  const v = VARIANTS[state.variant - 1];
+  $('brief').innerHTML = `<div><h2>${state.variant}. ${v.name}</h2><ul>${v.how.map((h) => `<li>${h}</li>`).join('')}</ul></div><div><h3>좋은 점</h3><p>${v.pro}</p></div><div><h3>아쉬운 점</h3><p>${v.con}</p></div>`;
+}
+
+function cardHTML(c) {
+  const editing = state.editing?.id === c.id; const sel = state.selected === c.id;
+  const textEditable = (state.variant === 3 && sel) || (state.variant === 4 && c.project);
+  const titleEdit = editing && state.editing.field !== 'intro';
+  const introEdit = editing && state.editing.field !== 'title';
+  const placeholder = c.project ? (sel && state.variant === 3 ? '여기를 다시 눌러 프로젝트 소개를 적어 보세요' : '') : '';
+  return `<article class="card${c.project ? ' project' : ''}${sel ? ' selected' : ''}${textEditable ? ' text-editable' : ''}" data-id="${c.id}" style="left:${c.x}px;top:${c.y}px;--card:${tint(c)}">
+    <div class="head" data-part="title">${c.project ? '<span aria-hidden="true">🗀</span>' : ''}${titleEdit ? `<input class="edit-title" value="${esc(c.title)}" aria-label="프로젝트 이름">` : `<span class="t" data-part="title">${esc(c.title)}</span>`}${c.project && !editing ? '<button class="open" data-act="open" title="들어가기">↗</button>' : ''}</div>
+    ${introEdit ? '<textarea class="edit-intro" aria-label="프로젝트 소개" placeholder="프로젝트 소개">' + esc(c.intro) + '</textarea><div class="hint">Enter 이름 저장 · Ctrl+Enter 저장 · Esc 취소</div>'
+      : `<div class="intro${c.intro ? '' : ' placeholder'}" data-part="intro">${esc(c.intro || placeholder)}</div>`}
+    ${c.project && !editing ? `<div class="meta">메모 ${c.children}</div>` : ''}
+  </article>`;
+}
+
+function toolbarHTML() {
+  const c = byId(state.selected); if (!c || state.editing) return '';
+  const x = c.x + 120; const y = c.y - 46;
+  const main = c.project ? '<button data-act="open">↗ 열기</button>' : '<button data-act="open">↗ 메모 열기</button>';
+  return `<div class="toolbar" style="left:${x}px;top:${y}px;transform:translateX(-50%)">${main}<button data-act="edit">✎ ${c.project ? '이름·소개' : '제목'}</button><span class="sep"></span><button data-act="color" title="색 바꾸기"><span class="swatch" style="--card:${tint(c)}"></span>색</button><button data-act="pin">${c.pinned ? '★' : '☆'} 고정</button><button data-act="more" title="더 보기">⋯</button></div>`;
+}
+function menuHTML() {
+  const m = state.menu; if (!m) return ''; const c = byId(m.id);
+  return `<div class="menu" role="menu" style="left:${m.x}px;top:${m.y}px">
+    <button role="menuitem" data-act="open">↗ ${c.project ? '프로젝트로 들어가기' : '메모 열기'}<kbd>Enter</kbd></button>
+    <button role="menuitem" data-act="edit">✎ ${c.project ? '이름·소개 편집' : '제목 편집'}<kbd>F2</kbd></button>
+    <button role="menuitem" data-act="color"><span class="swatch" style="--card:${tint(c)}"></span>색 바꾸기</button>
+  </div>`;
+}
+function panelHTML() {
+  const c = byId(state.selected);
+  if (!c) return '<p class="muted">카드를 선택하면 이름·소개를 여기서 고칩니다.</p>';
+  return `<label>${c.project ? '프로젝트 이름' : '제목'}<input id="pTitle" value="${esc(c.title)}"></label>
+    <label>${c.project ? '소개' : '내용'}<textarea id="pIntro" placeholder="프로젝트 소개를 적어 보세요">${esc(c.intro)}</textarea></label>
+    <div class="row"><button data-act="color">색 바꾸기</button><button data-act="pin">${c.pinned ? '★ 고정됨' : '☆ 고정'}</button><button data-act="open">↗ 열기</button></div>`;
+}
+
+function render() {
+  renderPicker();
+  document.documentElement.dataset.theme = state.light ? 'light' : 'dark';
+  const stage = $('stage'); const panel = $('panel');
+  panel.hidden = state.variant !== 5 || Boolean(state.inside);
+  if (state.inside) {
+    const p = byId(state.inside); const editable = state.variant === 4;
+    const current = state.crumbEdit ? `<input class="crumb-edit" id="crumbInput" value="${esc(p.title)}" aria-label="프로젝트 이름">` : `<button class="current${editable ? ' editable' : ''}" id="crumbCurrent" title="${editable ? '눌러서 이름 바꾸기' : ''}">${esc(p.title)}</button>`;
+    stage.innerHTML = `<div class="crumbs"><button id="home">⌂ 전체</button><i>›</i>${current}</div>
+      <div class="empty"><strong>이 캔버스는 비어 있어요</strong><span>새 메모를 만들거나 라이브러리에서 메모를 추가해 보세요.</span>
+      ${editable ? `<div class="intro-box" id="insideIntro" contenteditable="true" data-placeholder="소개">${esc(p.intro) || '프로젝트 소개를 적어 보세요'}</div>` : ''}</div>`;
+    if (state.crumbEdit) requestAnimationFrame(() => { $('crumbInput')?.focus(); $('crumbInput')?.select(); });
+    return;
+  }
+  stage.innerHTML = `<div class="crumbs"><button class="current">⌂ 전체</button></div>${state.cards.map(cardHTML).join('')}${state.variant === 1 ? toolbarHTML() : ''}${state.variant === 2 ? menuHTML() : ''}`;
+  if (state.variant === 5) panel.innerHTML = panelHTML();
+}
+
+function act(name) {
+  const id = state.menu?.id ?? state.selected; const c = byId(id); if (!c) return;
+  if (name === 'open') enter(id);
+  else if (name === 'edit') startEdit(id, state.variant === 4 ? 'title' : 'both');
+  else if (name === 'color') { c.color += 1; state.menu = null; render(); }
+  else if (name === 'pin') { c.pinned = !c.pinned; render(); toast(c.pinned ? '바로가기에 고정' : '고정 해제'); }
+  else if (name === 'more') toast('⋯ 메뉴: 메모로 열기 · 복제 · 삭제');
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  if (t.closest('#picker')) { const b = t.closest('button'); if (b?.dataset.v) setVariant(+b.dataset.v); else if (b?.id === 'theme') { state.light = !state.light; render(); } else if (b?.id === 'reset') { state.cards = initial(); setVariant(state.variant); } return; }
+  if (t.closest('#home')) { state.inside = null; state.crumbEdit = false; render(); return; }
+  if (t.closest('#crumbCurrent') && state.variant === 4) { state.crumbEdit = true; render(); return; }
+  const actBtn = t.closest('[data-act]'); if (actBtn) { if (actBtn.closest('.card')) state.selected = actBtn.closest('.card').dataset.id; act(actBtn.dataset.act); return; }
+  if (t.closest('.menu, .toolbar, .panel, .edit-title, .edit-intro')) return;
+  const card = t.closest('.card');
+  if (state.editing && card?.dataset.id !== state.editing.id) commitEdit();
+  if (!card) { state.selected = null; state.menu = null; if (t.closest('#stage')) render(); return; }
+  const id = card.dataset.id; const now = performance.now();
+  const wasSelected = state.selected === id; const sinceLast = now - (state.lastClick.id === id ? state.lastClick.at : 0);
+  state.lastClick = { id, at: now };
+  // 첫 클릭에서 카드를 다시 그려 브라우저 dblclick이 끊기므로, 같은 카드 두 번 클릭 간격으로 직접 판별한다.
+  if (sinceLast <= DOUBLE_MS) { state.lastClick = { id: null, at: 0 }; onDouble(e, id); return; }
+  // 시안 3: 이미 선택된 카드의 글을 더블클릭 간격보다 천천히 다시 누르면 그 자리 편집.
+  if (state.variant === 3 && wasSelected && sinceLast > DOUBLE_MS && byId(id).project && !t.closest('.meta')) {
+    // 카드 여백을 눌러도 소개 편집으로 본다(제목 줄이면 이름 편집).
+    setTimeout(() => { if (state.lastClick.at === now) startEdit(id, t.closest('[data-part="title"]') ? 'title' : 'intro'); }, DOUBLE_MS);
+    return;
+  }
+  state.selected = id; state.menu = null; render();
+});
+function onDouble(e, id) {
+  if (state.variant === 2) { const rect = $('stage').getBoundingClientRect(); state.selected = id; state.menu = { id, x: e.clientX - rect.left + 8, y: e.clientY - rect.top + 8 }; render(); requestAnimationFrame(() => document.querySelector('.menu button')?.focus()); return; }
+  if (state.variant === 4 && e.target.closest('[data-part="title"]') && byId(id).project) { state.selected = id; startEdit(id, 'title'); return; }
+  enter(id);
+}
+document.addEventListener('input', (e) => {
+  const c = byId(state.selected);
+  if (e.target.id === 'pTitle' && c) { c.title = e.target.value || c.title; document.querySelector(`.card[data-id="${c.id}"] .t`).textContent = c.title; }
+  if (e.target.id === 'pIntro' && c) { c.intro = e.target.value; const el = document.querySelector(`.card[data-id="${c.id}"] .intro`); el.textContent = c.intro; el.classList.toggle('placeholder', !c.intro); }
+  if (e.target.id === 'insideIntro') byId(state.inside).intro = e.target.innerText;
+});
+document.addEventListener('focusout', (e) => {
+  if (e.target.id === 'crumbInput') { const p = byId(state.inside); p.title = e.target.value.trim() || p.title; state.crumbEdit = false; setTimeout(render); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'crumbInput') { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { state.crumbEdit = false; render(); } return; }
+  if (state.editing) {
+    if (e.key === 'Escape') cancelEdit();
+    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || e.target.classList.contains('edit-title'))) { e.preventDefault(); commitEdit(); }
+    return;
+  }
+  if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+  if (e.key === '[' || e.key === ']') { setVariant(((state.variant - 1 + (e.key === ']' ? 1 : -1) + 5) % 5) + 1); return; }
+  if (e.key === 'Escape') { if (state.menu) state.menu = null; else if (state.inside) state.inside = null; else state.selected = null; render(); return; }
+  const id = state.menu?.id ?? state.selected; if (!id) return;
+  if (e.key === 'Enter' && !(state.menu && document.activeElement?.closest('.menu'))) { e.preventDefault(); enter(id); }
+  if (e.key === 'F2' && state.variant !== 5) { e.preventDefault(); startEdit(id, state.variant === 4 ? 'title' : 'both'); }
+});
+
+const start = Number(new URLSearchParams(location.search).get('variant'));
+setVariant(start >= 1 && start <= 5 ? start : 1);
+</script>
+</body>
+</html>
