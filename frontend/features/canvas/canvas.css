@@ -178,19 +178,11 @@
 .canvas-screen .canvas-note .canvas-preview-reveal .disclosure { flex: none; width: 28px; height: 18px; padding: 0; color: var(--note-muted); }
 .canvas-screen .canvas-note .canvas-preview-reveal .disclosure:hover { color: var(--note-text); background: color-mix(in srgb, var(--note-text) 10%, transparent); }
 /* 펼친 카드는 목록이 늘어난 만큼 같은 곡선으로 자라 이웃 카드 위에 뜬다. */
-/* shortcut: 연결선·정렬은 고정 CARD_HEIGHT 기준이라 펼친 카드 아래로 이어지지 않음, 펼침 상태를 저장하게 되면 실제 높이로 계산 검토 */
+/* shortcut: 정렬은 접힌 카드 높이를 기준으로 계산, 펼친 카드까지 간격을 맞추는 요구가 생기면 실제 높이 적용 검토 */
 .canvas-screen .canvas-note.is-expanded { z-index: 3; }
 .canvas-screen .canvas-note { height: calc(var(--card-height, 156px) + var(--preview-extra, 0px)); }
 .canvas-screen .canvas-note .canvas-checklist-preview small.checked { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
-.canvas-screen .canvas-card-tasks { position: absolute; right: 14px; bottom: 11px; left: 14px; display: flex; align-items: center; justify-content: space-between; }
-.canvas-screen .canvas-card-tasks small { color: var(--note-muted); font-size: 10px; line-height: 1.2; }
-.canvas-screen .canvas-card-meta { line-height: 1.2; }
 .canvas-screen .canvas-project-folder { display: inline-grid; flex: none; color: var(--note-text); opacity: .8; }
-.canvas-screen .canvas-project-meta { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: space-between; gap: 6px; }
-.canvas-screen .canvas-project-meta small { display: inline-flex; align-items: center; gap: 5px; }
-.canvas-screen .canvas-project-meta b { color: var(--note-text); font-weight: 700; }
-.canvas-screen .canvas-project-progress { position: absolute; inset-inline: 0; bottom: -3px; height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--note-text) 12%, transparent); }
-.canvas-screen .canvas-project-progress i { display: block; height: 100%; border-radius: inherit; background: var(--canvas-success); }
 /* 가지 손잡이: 카드 오른쪽 가운데. 올리거나 고르거나 키보드로 들어오면 보인다. 누르면 하위 가지, 끌면 잇기. */
 .canvas-screen .card-branch { position: absolute; top: 50%; right: 6px; z-index: 1; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #fff; background: var(--canvas-accent); box-shadow: 0 1px 3px var(--canvas-shadow); cursor: crosshair; opacity: 0; transform: translateY(-50%) scale(.85); transition: opacity var(--disclosure-duration) var(--disclosure-ease), transform var(--disclosure-duration) var(--disclosure-ease); }
 .canvas-screen .canvas-note:is(:hover, .selected, :focus-within) .card-branch { opacity: 1; transform: translateY(-50%) scale(1); }
@@ -202,10 +194,6 @@
 .canvas-screen .canvas-connect-preview path { fill: none; stroke: var(--canvas-accent); stroke-dasharray: 6 5; }
 .canvas-screen .canvas-connect-preview .connect-ghost { fill: color-mix(in srgb, var(--canvas-accent) 8%, transparent); stroke: color-mix(in srgb, var(--canvas-accent) 60%, transparent); stroke-dasharray: 5 4; }
 @media (prefers-reduced-motion: reduce) { .canvas-screen .card-branch { transition: none; } }
-.canvas-screen .canvas-card-footer { position: absolute; inset-inline: 14px; bottom: 8px; display: flex; align-items: center; min-height: 24px; gap: 8px; color: var(--note-muted); font-size: 10px; }
-.canvas-screen .canvas-card-link { display: flex; flex: none; align-items: center; gap: 4px; margin-inline-start: auto; }
-.canvas-screen .canvas-card-link button { width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--note-muted); background: transparent; cursor: crosshair; }
-.canvas-screen .canvas-card-link button:hover { background: rgba(255, 255, 255, .45); }
 .canvas-screen .card-enter { width: 18px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; color: var(--note-text); background: transparent; cursor: pointer; }
 .canvas-screen .card-enter:hover { color: var(--canvas-accent); }
 .canvas-screen .selection-box { position: absolute; z-index: 5; border: 1px solid var(--canvas-accent); background: rgba(10, 108, 255, .1); pointer-events: none; }
@@ -303,7 +291,6 @@
   .canvas-screen .canvas-navigator { max-width: 100%; }
 }
 
-.canvas-screen .canvas-project-meta .task-count.complete { color: var(--canvas-success-text); font-weight: 600; }
 
 /* 잇기 고르기: 다음 누르기가 대상을 정한다는 것을 커서와 안내로 알린다. */
 .canvas-screen .canvas-board.picking, .canvas-screen .canvas-board.picking * { cursor: crosshair; }

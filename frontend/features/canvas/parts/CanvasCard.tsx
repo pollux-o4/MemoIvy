@@ -1,3 +1,4 @@
+import './card/card_footer.css';
 import { type CSSProperties, memo, type MouseEvent, type PointerEvent, useMemo, useState } from 'react';
 import type { Note } from '../../../shared/engine_contract';
 import { noteColor } from '../../../shared/model';

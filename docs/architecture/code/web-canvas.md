@@ -31,7 +31,7 @@ React 캔버스(`frontend/features/canvas`)는 조립, 조작, 순수 모델, �
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 연결점은 `useCardHeights`가 관찰한 카드 높이를 반영한다. |
+| 캔버스 그리기 | `CanvasWorld`(격자·선·카드·미리보기·정렬 안내선), `CanvasCard`·`CanvasLinks`·`ConnectPreview`. 카드 하단 배치는 `card_footer`에 모은다. 연결점은 `useCardHeights`가 관찰한 카드 높이를 반영한다. |
 | 떠 있는 패널 | inspector의 `CanvasInspector`·`InspectorOutline`·`useOutlineDrag`, `CanvasDock`·`CardMenu`·`CanvasNavigator` |
 
 동작 계약은 CANVAS-001~005에서, 실행·검증 절차는 OPS-004에서 찾는다.

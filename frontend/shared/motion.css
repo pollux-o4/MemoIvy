@@ -25,7 +25,7 @@
 .canvas-dock { transition: box-shadow 200ms ease-out; }
 .canvas-note { opacity: 1; scale: 1; transition: box-shadow .15s ease, outline-color .15s ease, opacity 200ms var(--ease-out-expo), scale 280ms var(--ease-out-expo); }
 @starting-style { .canvas-note { opacity: 0; scale: .92; } }
-.canvas-note p, .canvas-card-tasks { transition: opacity 180ms ease-out; }
+.canvas-note p { transition: opacity 180ms ease-out; }
 
 /* 할 일 완료 · 칠하기 → 체크 긋기 → 글자 흐려짐 순서로 이어진다. 처음 그릴 때는 전이가 없어 열 때 움직이지 않는다. */
 .md-checkbox { transition: background-color 140ms ease-out, border-color 140ms ease-out, transform 140ms cubic-bezier(.2,.9,.3,1.3); }
