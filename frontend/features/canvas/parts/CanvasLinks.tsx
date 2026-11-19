@@ -71,6 +71,7 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
     pathCache.current = { style: linkStyle, map: next };
     return next;
   }, [anchors, linkStyle]);
+  const doneIds = useMemo(() => new Set(allNotes.filter((note) => note.canvas.done).map((note) => note.id)), [allNotes]);
   const width = 1.5 / Math.max(zoom, .45);
   return <svg className="canvas-links" aria-hidden="true" data-link-style={linkStyle}>
     <defs>
@@ -86,7 +87,7 @@ export const CanvasLinks = memo(function CanvasLinks({ notes, allNotes, scope, p
       const target = isDirect && sample.pulsing && !sample.creating && sample.travel >= 1 ? positions[toId] : undefined;
       return <LinkItem key={item.key} d={paths.get(item.key)?.d ?? ''} isDirect={isDirect} sample={sample} width={width} zoom={zoom}
         highlighted={selected.includes(fromId) || selected.includes(toId)} dimmed={focus ? !(focus.has(fromId) && focus.has(toId)) : false}
-        arrive={target} arriveDone={target ? byIdDone(allNotes, toId) : false}/>;
+        arrive={target} arriveDone={target ? doneIds.has(toId) : false}/>;
     })}
   </svg>;
 });
@@ -106,5 +107,3 @@ const LinkItem = memo(function LinkItem({ d, isDirect, sample, width, zoom, high
     {arrive && <rect x={arrive.x - 4} y={arrive.y - 4} width={CARD_WIDTH + 8} height={CARD_HEIGHT + 8} rx="14" fill="none" className={arriveDone ? 'link-arrive is-done' : 'link-arrive'} strokeWidth={2.5 / Math.max(zoom, .45)} opacity={sample.alpha * .85}/>}
   </g>;
 });
-
-const byIdDone = (notes: Note[], id: string) => Boolean(notes.find((note) => note.id === id)?.canvas.done);
