@@ -41,7 +41,13 @@ export function useCanvasPointer(options: {
   const snapOff = useRef(false);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
 
-  const screenPoint = (event: { clientX: number; clientY: number }): CanvasPoint => { const rect = o.host.current?.getBoundingClientRect(); return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) }; };
+  // 보드 원점은 누를 때만 잰다. 끌기 중 매 이동마다 getBoundingClientRect를 부르면 강제 레이아웃으로 프레임당 수 ms가 든다.
+  const boardOrigin = useRef<{ left: number; top: number } | null>(null);
+  const measureBoard = () => { const rect = o.host.current?.getBoundingClientRect(); boardOrigin.current = { left: rect?.left ?? 0, top: rect?.top ?? 0 }; return boardOrigin.current; };
+  const screenPoint = (event: { clientX: number; clientY: number }, fresh = false): CanvasPoint => {
+    const origin = fresh || !boardOrigin.current ? measureBoard() : boardOrigin.current;
+    return { x: event.clientX - origin.left, y: event.clientY - origin.top };
+  };
   const worldPoint = (screen: CanvasPoint): CanvasPoint => ({ x: screen.x / o.camera.zoom + o.camera.x, y: screen.y / o.camera.zoom + o.camera.y });
   const snapped = (current: Drag, dx: number, dy: number): { delta: CanvasPoint; guides: SnapGuide[] } => {
     const origins = Object.values(current.positions);
@@ -91,7 +97,7 @@ export function useCanvasPointer(options: {
         if (wantsPan(event)) { beginPan(event); return; }
         if (event.target !== event.currentTarget) return;
         if (!event.shiftKey) o.setSelected([]);
-        const screen = screenPoint(event); o.setMode('marquee'); o.setMarquee({ a: screen, b: screen });
+        const screen = screenPoint(event, true); o.setMode('marquee'); o.setMarquee({ a: screen, b: screen });
         setDrag({ start: screen, origin: screen, positions: {}, shift: event.shiftKey }); event.currentTarget.setPointerCapture(event.pointerId);
       },
       onPointerMove: (event: ReactPointerEvent) => {
@@ -107,8 +113,10 @@ export function useCanvasPointer(options: {
           if (down && !down.moved && Math.hypot(point.x - down.point.x, point.y - down.point.y) > DRAG_SLOP_PX) { down.moved = true; o.onCardsMoved?.(Object.keys(drag.positions)); }
           // 끌기 문턱을 넘기 전(단순 클릭)에는 카드를 옮기거나 붙이지 않아 안내선도 뜨지 않는다.
           if (down && !down.moved) return;
-          const over = noteAt(event);
-          const project = o.allNotes.find((note) => note.id === over && note.canvas.project);
+          // 놓을 프로젝트는 위치로 판정한다(elementFromPoint는 끌기 중 매 이동마다 강제 레이아웃을 일으킨다). 위에 그려진 카드부터 본다.
+          const world = worldPoint(point);
+          const project = [...o.notes].reverse().find((note) => note.canvas.project && !drag.positions[note.id] && o.positions[note.id]
+            && world.x >= o.positions[note.id].x && world.x <= o.positions[note.id].x + CARD_WIDTH && world.y >= o.positions[note.id].y && world.y <= o.positions[note.id].y + CARD_HEIGHT);
           setDropTarget(project && o.canMoveInto(project.id, Object.keys(drag.positions)) ? project.id : null);
           o.setDraftPositions((current) => ({ ...current, ...draggedTo(drag, point) }));
         } else if (o.mode === 'marquee') o.setMarquee((current) => current ? { ...current, b: screenPoint(event) } : current);
@@ -155,7 +163,7 @@ export function useCanvasPointer(options: {
       event.stopPropagation();
       const next = event.shiftKey ? o.selected.includes(id) ? o.selected.filter((item) => item !== id) : [...o.selected, id] : o.selected.includes(id) ? o.selected : [id];
       o.setSelected(next); o.setMode('cards');
-      cardPointer.current = screenPoint(event); cardDown.current = { point: cardPointer.current, moved: false };
+      cardPointer.current = screenPoint(event, true); cardDown.current = { point: cardPointer.current, moved: false };
       setDrag({ start: worldPoint(screenPoint(event)), origin: { x: 0, y: 0 }, positions: Object.fromEntries(next.map((item) => [item, o.positions[item]])), shift: event.shiftKey });
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     },
