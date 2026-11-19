@@ -79,6 +79,28 @@ const canvasBranchesSnapshot = (linkStyle = 'curve'): Snapshot => {
     assets: [], revision: 1, savedRevision: 1, preferences: { canvasLinkStyle: linkStyle },
   };
 };
+/**
+ * 마인드맵 가지: 뿌리 하나에서 세 가지(한 변에서 세 선), 그중 하나는 하위 맵 프로젝트.
+ * 프로젝트 안에는 따로 이어진 가지가 있어 화면 단계마다 가지 개요가 다르게 보인다.
+ */
+const canvasMindmapSnapshot = (): Snapshot => {
+  const now = Math.floor(Date.now() / 1000);
+  const id = (n: number) => `00000000-0000-4000-8000-0000000003${String(n).padStart(2, '0')}`;
+  const card = (n: number, title: string, color: string, position: [number, number], next: number[], parent: number | null = null, project = false): Note =>
+    ({ id: id(n), text: `# ${title}`, color, modified: now - n * 60, canvas: { position, next: next.map(id), done: false, parent: parent === null ? null : id(parent), project } });
+  return {
+    notes: [
+      card(1, '앱 출시 준비', 'yellow', [80, 300], [2, 3, 4]),
+      card(2, '스토어 문구', 'blue', [440, 80], []),
+      card(3, '베타 테스트', 'green', [440, 300], [], null, true),
+      card(4, '출시 공지', 'pink', [440, 520], []),
+      card(11, '테스터 모집', 'purple', [80, 120], [12, 13], 3),
+      card(12, '설문 만들기', 'blue', [440, 40], [], 3),
+      card(13, '버그 정리', 'yellow', [440, 240], [], 3),
+    ],
+    assets: [], revision: 1, savedRevision: 1, preferences: {},
+  };
+};
 /** 성능 측정용 큰 캔버스: 카드 200개(20×10 격자), 간선 400개(오른쪽·아래 이웃). */
 const canvasLargeSnapshot = (): Snapshot => {
   const now = Math.floor(Date.now() / 1000);
@@ -94,6 +116,7 @@ const canvasLargeSnapshot = (): Snapshot => {
 export const CanvasLarge: Story = { render: () => previewApp('canvas', undefined, canvasLargeSnapshot(), [1400, 900]) };
 export const CanvasBranches: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot(), [1100, 900]) };
 export const CanvasBranchesOrthogonal: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('orthogonal'), [1100, 900]) };
+export const CanvasMindmap: Story = { render: () => previewApp('canvas', undefined, canvasMindmapSnapshot(), [1100, 900]) };
 export const CanvasBranchesStraight: Story = { render: () => previewApp('canvas', undefined, canvasBranchesSnapshot('straight'), [1100, 900]) };
 export const MarkdownHeadings: Story = { render: () => previewApp('note', markdownNoteId, markdownSnapshot()) };
 export const EmptyLibrary: Story = { render: () => previewApp('library', undefined, { notes: [], assets: [], revision: 0, savedRevision: 0, preferences: {} }) };
