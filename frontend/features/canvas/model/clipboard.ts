@@ -1,5 +1,6 @@
 import type { Note } from '../../../shared/engine_contract';
 import type { CanvasPoint } from './align';
+import { pointBounds } from './geometry';
 
 /** 복사한 카드 하나. 위치는 묶음 왼쪽 위 기준 상대값, 연결은 묶음 안 순번. */
 type ClipItem = { text: string; color: string; project: boolean; done: boolean; offset: CanvasPoint; next: number[] };
@@ -10,9 +11,11 @@ export const PASTE_STEP = 24;
 
 /** 선택한 카드를 내용·색·완료·상대 위치·묶음 안 연결과 함께 담는다. 묶음 밖으로 가는 연결은 버린다. */
 export function copyNotes(ids: string[], notes: Note[], positions: Record<string, CanvasPoint>): ClipPayload | undefined {
-  const picked = notes.filter((note) => ids.includes(note.id) && positions[note.id]);
+  const selectedIds = new Set(ids);
+  const picked = notes.filter((note) => selectedIds.has(note.id) && positions[note.id]);
   if (!picked.length) return undefined;
-  const origin = { x: Math.min(...picked.map((note) => positions[note.id].x)), y: Math.min(...picked.map((note) => positions[note.id].y)) };
+  const { minX, minY } = pointBounds(picked.map((note) => positions[note.id]));
+  const origin = { x: minX, y: minY };
   const order = new Map(picked.map((note, index) => [note.id, index]));
   return {
     origin,
