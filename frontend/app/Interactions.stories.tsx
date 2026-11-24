@@ -117,6 +117,9 @@ export const InspectorActions: Story = {
     const project = await selectCard(canvasElement, '테스트 프로젝트');
     await expect(await project.findByRole('button', { name: '프로젝트 들어가기' })).toBeVisible();
     await expect(project.getByRole('button', { name: '메모로 열기' })).toBeVisible();
+    // 본문은 메모와 같은 미리보기이고, 누르면 같은 자리에서 소개 편집기로 바뀐다.
+    await userEvent.click(project.getByRole('group', { name: /프로젝트 소개 · 눌러서 고치기/ }));
+    await expect(await project.findByRole('textbox', { name: '프로젝트 소개' })).toHaveFocus();
     const memo = await selectCard(canvasElement, '독립 메모');
     await expect(await memo.findByRole('button', { name: '메모 열기' })).toBeVisible();
     await expect(memo.queryByRole('button', { name: '메모로 열기' })).toBeNull();
