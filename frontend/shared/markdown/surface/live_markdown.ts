@@ -2,7 +2,7 @@ import { createBlockScanner } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
-import { createListScanner } from './list_markers';
+import { listDecorations } from './list_markers';
 import { pendingFenceLine } from './fence_input';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
 import { parseImageLine } from './image_tools/commands';
@@ -53,7 +53,6 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'URL']);
       const ranges: Array<{ from: number; to: number; value: Decoration }> = [{ from: activeLineObj.from, to: activeLineObj.from, value: activeLine }];
       const pendingLine = pendingFenceLine(view.state);
-      const listLine = createListScanner({ pendingLine });
       const imageLines = new Set<number>();
       const codeLines = new Set<number>();
       const scanBlock = createBlockScanner({ pendingLine });
@@ -61,8 +60,10 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       let block: (typeof blocks)[number] | undefined;
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {
         const line = view.state.doc.line(lineNumber);
-        const listDecorations = listLine(line);
-        const { fence: boundary, code } = scanBlock(line.text);
+        // 한 줄을 한 번만 스캔하고 목록 장식과 코드 블록 판정이 같은 결과를 쓴다.
+        const blockLine = scanBlock(line.text);
+        const { fence: boundary, code } = blockLine;
+        const listRanges = listDecorations(line, blockLine);
         if (boundary?.kind === 'open') {
           block = { from: line.from, to: view.state.doc.length, boundaries: [] };
           blocks.push(block);
@@ -78,7 +79,7 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
         if (image) {
           imageLines.add(lineNumber);
           // 이미지는 원문을 대체하므로 목록 정렬만 적용한다.
-          const alignment = listDecorations[0];
+          const alignment = listRanges[0];
           if (alignment) ranges.push(alignment);
           const widget = new AssetWidget({
             ...image, src: assetUrls[image.hash], from: line.from, to: line.to, view, handlers: imageHandlers,
@@ -87,7 +88,7 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push(line.number === active ? { from: line.from, to: line.from, value: Decoration.widget({ widget, side: -1 }) } : { from: line.from, to: line.to, value: Decoration.replace({ widget }) });
           continue;
         }
-        ranges.push(...listDecorations);
+        ranges.push(...listRanges);
       }
       for (const fenced of blocks) {
         if (touchesSelection(fenced.from, fenced.to)) continue;

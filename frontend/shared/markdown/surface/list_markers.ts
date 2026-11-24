@@ -1,5 +1,5 @@
 import { Decoration, WidgetType, type EditorView } from '@codemirror/view';
-import { blockLineAt, createBlockScanner, type ListItem as Item, type TaskState, taskBoxOffset } from '../list_item';
+import { type BlockLine, blockLineAt, createBlockScanner, type ListItem as Item, type TaskState, taskBoxOffset } from '../list_item';
 
 /** GTK live_editor: 표식 칸 24px(깊이마다 추가), 표식과 본문 사이 6px, 글머리표 •◦▪. */
 const GUTTER = 24;
@@ -88,27 +88,23 @@ const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-li
  * 목록 줄은 기호를 숨기고 표식 칸에 글머리표·체크박스를 그린다(커서 줄에서도 유지, GTK와 동일).
  * 항목 아래 표식 너비 이상 들여쓴 줄은 같은 항목의 이어쓰기로 보고, 공백을 숨겨 항목 글자와 같은 칸에서 시작한다.
  */
-export function createListScanner(options: Parameters<typeof createBlockScanner>[0] = {}) {
-  const scan = createBlockScanner(options);
-  return (line: Line): Range[] => {
-    const { item, owner, code } = scan(line.text);
-    if (code) return [];
-    if (item) {
-      const widget = item.task !== undefined
-        ? new TaskWidget(item.depth, item.task, line.from + taskBoxOffset(item))
-        : new BulletWidget(item.depth, item.ordered ? item.marker.trim() : undefined);
-      return [
-        { from: line.from, to: line.from, value: lineStyle(item.depth, item.task === 'x' ? ' md-task-done' : '') },
-        { from: line.from, to: line.from + item.markerEnd, value: Decoration.replace({ widget }) },
-      ];
-    }
-    const current = owner?.item;
-    if (!current || line.text.length - line.text.trimStart().length < current.contentIndent) return [];
+export function listDecorations(line: Line, { item, owner, code }: BlockLine): Range[] {
+  if (code) return [];
+  if (item) {
+    const widget = item.task !== undefined
+      ? new TaskWidget(item.depth, item.task, line.from + taskBoxOffset(item))
+      : new BulletWidget(item.depth, item.ordered ? item.marker.trim() : undefined);
     return [
-      { from: line.from, to: line.from, value: lineStyle(current.depth) },
-      { from: line.from, to: line.from + current.contentIndent, value: Decoration.replace({}) },
+      { from: line.from, to: line.from, value: lineStyle(item.depth, item.task === 'x' ? ' md-task-done' : '') },
+      { from: line.from, to: line.from + item.markerEnd, value: Decoration.replace({ widget }) },
     ];
-  };
+  }
+  const current = owner?.item;
+  if (!current || line.text.length - line.text.trimStart().length < current.contentIndent) return [];
+  return [
+    { from: line.from, to: line.from, value: lineStyle(current.depth) },
+    { from: line.from, to: line.from + current.contentIndent, value: Decoration.replace({}) },
+  ];
 }
 
 /** GTK list_edit: 목록 항목에서 Shift+Enter는 같은 항목 안에서 줄을 바꾼다(표식 너비만큼 들여쓴 이어쓰기 줄). */
