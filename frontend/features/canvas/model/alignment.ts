@@ -15,8 +15,12 @@ export function vacantGroup(ids: string[], positions: Record<string, CanvasPoint
   return Object.fromEntries(members.map(([id, point]) => [id, { x: Math.max(64, point.x), y: Math.max(64, point.y) }]));
 }
 
+/** 붙여 놓을 묶음이 기존 카드와 띄울 최소 간격. */
+const PLACEMENT_GAP = 24;
+
+/** 차지한 카드를 (카드+간격) 크기 격자에 담아, 한 점의 충돌을 이웃 9칸만 보고 O(1)에 가깝게 판정한다. */
 function occupiedCollision(occupied: readonly CanvasPoint[]): (point: CanvasPoint) => boolean {
-  const width = CARD_WIDTH + 24; const height = CARD_HEIGHT + 24;
+  const width = CARD_WIDTH + PLACEMENT_GAP; const height = CARD_HEIGHT + PLACEMENT_GAP;
   const cells = new Map<string, CanvasPoint[]>();
   const key = (x: number, y: number) => `${x},${y}`;
   for (const point of occupied) {
