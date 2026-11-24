@@ -45,7 +45,7 @@
 .canvas-screen .inspector-action span { flex: 1; text-align: left; }
 .canvas-screen .inspector-action.primary { color: #fff; background: var(--canvas-accent); font-weight: 600; }
 .canvas-screen .inspector-action.primary:hover { background: color-mix(in srgb, var(--canvas-accent), black 8%); }
-.canvas-screen .inspector-action.primary .inspector-kbd { color: #fff; background: rgb(255 255 255 / .18); }
+.canvas-screen .inspector-action.primary .inspector-kbd { color: #fff; background: rgb(0 0 0 / .22); }
 .canvas-screen .inspector-action.quiet { height: 32px; color: var(--canvas-muted); background: transparent; }
 .canvas-screen .inspector-action.quiet:hover { color: var(--canvas-text); background: var(--canvas-hover); }
 .canvas-screen .inspector-action:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: 2px; }
