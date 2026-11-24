@@ -92,6 +92,34 @@ export const AlignmentBarMorph: Story = {
   },
 };
 
+const inspectorSnapshot = (): Snapshot => {
+  const base = projectSnapshot();
+  const memo: Note = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4', text: '# 독립 메모\n- [ ] 할 일', color: 'blue', modified: now, canvas: { position: [320, 0], next: [], done: false, parent: null } };
+  return { ...base, notes: [...base.notes, memo] };
+};
+const selectCard = async (root: HTMLElement, title: string) => {
+  const card = [...root.querySelectorAll<HTMLElement>('[data-note-id]')].find((node) => node.textContent?.includes(title));
+  if (!card) throw new Error(`카드 없음: ${title}`);
+  await userEvent.click(card);
+  return within(await within(root).findByRole('complementary').catch(() => root.querySelector<HTMLElement>('.canvas-inspector')!));
+};
+
+/** 인스펙터 주 동작: 프로젝트는 들어가기 + 보조 '메모로 열기', 메모는 '메모 열기' 하나. 단축키 칩은 한 모양. */
+export const InspectorActions: Story = {
+  render: () => frame(createMockBridge(inspectorSnapshot()), 'canvas', undefined, [900, 620]),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole('article');
+    const project = await selectCard(canvasElement, '테스트 프로젝트');
+    await expect(await project.findByRole('button', { name: '프로젝트 들어가기' })).toBeVisible();
+    await expect(project.getByRole('button', { name: '메모로 열기' })).toBeVisible();
+    const memo = await selectCard(canvasElement, '독립 메모');
+    await expect(await memo.findByRole('button', { name: '메모 열기' })).toBeVisible();
+    await expect(memo.queryByRole('button', { name: '메모로 열기' })).toBeNull();
+    const chips = canvasElement.querySelectorAll('.canvas-inspector kbd');
+    await expect([...chips].every((chip) => chip.classList.contains('inspector-kbd'))).toBe(true);
+  },
+};
+
 const taskId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3';
 const taskSnapshot = (): Snapshot => {
   const note: Note = { id: taskId, text: '# 오늘 할 일\n- [ ] 장보기\n- [x] 메일 답장', color: 'green', modified: now, canvas: { position: [0, 0], next: [], done: false, parent: null } };
