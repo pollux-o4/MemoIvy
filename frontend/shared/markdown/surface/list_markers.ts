@@ -1,5 +1,5 @@
 import { Decoration, WidgetType, type EditorView } from '@codemirror/view';
-import { createListItemReader, type ListItem as Item, parseListItem, type TaskState, taskBoxOffset } from '../list_item';
+import { createListItemReader, type ListItem as Item, type TaskState, taskBoxOffset } from '../list_item';
 
 /** GTK live_editor: 표식 칸 24px(깊이마다 추가), 표식과 본문 사이 6px, 글머리표 •◦▪. */
 const GUTTER = 24;
@@ -79,19 +79,10 @@ class TaskWidget extends MarkerWidget {
 type Line = { from: number; text: string };
 
 function itemAtLine(state: EditorView['state'], number: number) {
-  const line = state.doc.line(number);
-  const direct = parseListItem(line.text);
-  if (direct) return { item: direct, markerLine: number };
-  const indent = leadingSpaces(line.text);
-  for (let previous = number - 1; previous > 0; previous--) {
-    const candidate = parseListItem(state.doc.line(previous).text);
-    if (candidate) return indent >= candidate.contentIndent ? { item: candidate, markerLine: previous } : null;
-    const text = state.doc.line(previous).text;
-    if (text.trim() && leadingSpaces(text) === 0) return null;
-  }
-  return null;
+  const read = createListItemReader();
+  for (let current = 1; current <= number; current++) read(state.doc.line(current).text);
+  return read.context.code ? null : read.context.owner;
 }
-const leadingSpaces = (text: string) => text.length - text.replace(/^ +/, '').length;
 const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-list${extra}`, attributes: { style: `padding-left: ${GUTTER * (depth + 1)}px` } });
 
 /**
@@ -99,13 +90,11 @@ const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-li
  * 항목 아래 표식 너비 이상 들여쓴 줄은 같은 항목의 이어쓰기로 보고, 공백을 숨겨 항목 글자와 같은 칸에서 시작한다.
  */
 export function createListScanner() {
-  let current: Item | null = null;
   const readItem = createListItemReader();
   return (line: Line): Range[] => {
     const item = readItem(line.text);
-    if (item === undefined) { current = null; return []; }
+    if (readItem.context.code) return [];
     if (item) {
-      current = item;
       const widget = item.task !== undefined
         ? new TaskWidget(item.depth, item.task, line.from + taskBoxOffset(item))
         : new BulletWidget(item.depth, item.ordered ? item.marker.trim() : undefined);
@@ -114,11 +103,8 @@ export function createListScanner() {
         { from: line.from, to: line.from + item.markerEnd, value: Decoration.replace({ widget }) },
       ];
     }
-    const indent = leadingSpaces(line.text);
-    if (!current || indent < current.contentIndent) {
-      if (line.text.trim()) current = null;
-      return [];
-    }
+    const current = readItem.context.owner?.item;
+    if (!current || line.text.length - line.text.trimStart().length < current.contentIndent) return [];
     return [
       { from: line.from, to: line.from, value: lineStyle(current.depth) },
       { from: line.from, to: line.from + current.contentIndent, value: Decoration.replace({}) },
@@ -140,16 +126,10 @@ export function continueListItem(view: EditorView): boolean {
     if (!fromItem || !toItem || fromItem.markerLine !== toItem.markerLine) return false;
     if (fromLine.number === fromItem.markerLine && selection.from < fromLine.from + fromItem.item.contentIndent) return false;
   }
-  for (let number = state.doc.lineAt(head).number; number >= 1; number--) {
-    const text = state.doc.line(number).text;
-    const item = parseListItem(text);
-    if (item) {
-      view.dispatch(state.replaceSelection(`\n${' '.repeat(item.contentIndent)}`), { scrollIntoView: true, userEvent: 'input' });
-      return true;
-    }
-    if (text.trim() && leadingSpaces(text) === 0) return false;
-  }
-  return false;
+  const context = itemAtLine(state, state.doc.lineAt(head).number);
+  if (!context) return false;
+  view.dispatch(state.replaceSelection(`\n${' '.repeat(context.item.contentIndent)}`), { scrollIntoView: true, userEvent: 'input' });
+  return true;
 }
 
 export function nextListMarker(item: Item) {
@@ -164,7 +144,12 @@ export function handleListKey(view: EditorView, key: string): boolean {
   const { state } = view;
   const selection = state.selection.main;
   const line = state.doc.lineAt(selection.head);
-  const context = itemAtLine(state, line.number);
+  const read = createListItemReader();
+  const contexts = Array.from({ length: state.doc.lines }, (_, index) => {
+    const item = read(state.doc.line(index + 1).text);
+    return { item, ...read.context };
+  });
+  const context = contexts[line.number - 1].code ? null : contexts[line.number - 1].owner;
   if (!context) return false;
   const { item, markerLine } = context;
 
@@ -183,19 +168,18 @@ export function handleListKey(view: EditorView, key: string): boolean {
     const last = state.doc.lineAt(selection.to).number;
     const roots: Array<{ number: number; item: Item }> = [];
     for (let number = first; number <= last; number++) {
-      const current = state.doc.line(number);
-      const parsed = parseListItem(current.text);
+      const parsed = contexts[number - 1].item;
       if (parsed) roots.push({ number, item: parsed });
     }
     if (!roots.length && selection.empty) roots.push({ number: markerLine, item });
     const included = new Set<number>();
     for (const root of roots) {
+      if (included.has(root.number)) continue;
       included.add(root.number);
       for (let number = root.number + 1; number <= state.doc.lines; number++) {
-        const current = state.doc.line(number);
-        const child = parseListItem(current.text);
+        const child = contexts[number - 1].item;
         if (child && child.depth <= root.item.depth) break;
-        if (!child && current.text.trim() && leadingSpaces(current.text) < root.item.contentIndent) break;
+        if (!child && !contexts[number - 1].owner) break;
         included.add(number);
       }
     }
@@ -224,12 +208,13 @@ export function handleListKey(view: EditorView, key: string): boolean {
       let number = (item.number ?? 0) + 2;
       for (let following = markerLine + 1; following <= state.doc.lines; following++) {
         const nextLine = state.doc.line(following);
-        if (!nextLine.text.trim()) break;
-        const next = parseListItem(nextLine.text);
+        const followingContext = contexts[following - 1];
+        if (!followingContext.owner) break;
+        const next = followingContext.item;
         if (!next) continue;
         if (next.depth < item.depth) break;
         if (next.depth > item.depth) continue;
-        if (!next.ordered) break;
+        if (!next.ordered || followingContext.owner.sequence !== context.sequence) break;
         const digits = String(next.number ?? 0);
         if (next.number !== number) changes.push({ from: nextLine.from + next.marker.indexOf(digits), to: nextLine.from + next.marker.indexOf(digits) + digits.length, insert: String(number) });
         number++;
@@ -245,7 +230,7 @@ export function handleListKey(view: EditorView, key: string): boolean {
   }
   if (key === 'Delete' && selection.head === line.to && line.number < state.doc.lines) {
     const following = state.doc.line(line.number + 1);
-    const next = parseListItem(following.text);
+    const next = contexts[line.number].item;
     if (!next) return false;
     view.dispatch({ changes: { from: line.to, to: following.from + next.contentIndent, insert: '' }, userEvent: 'input' });
     return true;

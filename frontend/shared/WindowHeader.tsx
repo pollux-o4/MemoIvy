@@ -8,7 +8,9 @@ type WindowControl = 'minimize' | 'maximize';
 export function WindowHeader({ title, bridge, onClose, controls = ['minimize', 'maximize'], actions, className = 'window-header' }: {
   title: ReactNode; bridge: DesktopBridge; onClose: () => void; controls?: WindowControl[]; actions?: ReactNode; className?: string;
 }) {
-  return <header className={className}>
+  return <header className={className} onDoubleClick={(event) => {
+    if (!(event.target as HTMLElement).closest('button, a, input, textarea, [contenteditable="true"], [role="button"]')) bridge.windowAction('maximize');
+  }}>
     <div className="window-controls">
       <button aria-label="창 닫기" title="닫기" onClick={onClose}><Icon name="close"/></button>
       {controls.includes('minimize') && <button aria-label="최소화" title="최소화" onClick={() => bridge.windowAction('minimize')}><Icon name="minimize"/></button>}

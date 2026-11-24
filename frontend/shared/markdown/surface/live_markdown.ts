@@ -1,3 +1,4 @@
+import { createListItemReader } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
@@ -48,13 +49,30 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
         range.empty ? range.head >= from && range.head <= to : range.from < to && range.to > from);
       const active = view.state.doc.lineAt(view.state.selection.main.head).number;
       const activeLineObj = view.state.doc.line(active);
-      const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'CodeMark', 'URL']);
+      const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'URL']);
       const ranges: Array<{ from: number; to: number; value: Decoration }> = [{ from: activeLineObj.from, to: activeLineObj.from, value: activeLine }];
       const listLine = createListScanner();
       const imageLines = new Set<number>();
+      const codeLines = new Set<number>();
+      const readBlock = createListItemReader();
+      const blocks: Array<{ from: number; to: number; boundaries: Array<{ from: number; to: number; indent: number }> }> = [];
+      let block: (typeof blocks)[number] | undefined;
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {
         const line = view.state.doc.line(lineNumber);
         const listDecorations = listLine(line);
+        readBlock(line.text);
+        const boundary = readBlock.context.fence;
+        if (boundary?.kind === 'open') {
+          block = { from: line.from, to: view.state.doc.length, boundaries: [] };
+          blocks.push(block);
+        }
+        if (readBlock.context.code) {
+          codeLines.add(lineNumber);
+          ranges.push({ from: line.from, to: line.from, value: codeBlock });
+          if (boundary && block) block.boundaries.push({ from: line.from, to: line.to, indent: boundary.indent.length });
+          if (boundary?.kind === 'close' && block) { block.to = line.to; block = undefined; }
+          continue;
+        }
         const image = parseImageLine(line.text);
         if (image) {
           imageLines.add(lineNumber);
@@ -70,30 +88,20 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
         }
         ranges.push(...listDecorations);
       }
+      for (const fenced of blocks) {
+        if (touchesSelection(fenced.from, fenced.to)) continue;
+        for (const boundary of fenced.boundaries) {
+          ranges.push({ from: boundary.from + boundary.indent, to: boundary.to, value: hiddenMark });
+          ranges.push({ from: boundary.from, to: boundary.from, value: hiddenFenceLine });
+        }
+      }
       const { from: visibleFrom, to: visibleTo } = view.viewport;
       syntaxTree(view.state).iterate({ from: visibleFrom, to: visibleTo, enter(node) {
+        if (codeLines.has(view.state.doc.lineAt(node.from).number)) return;
         if (node.name === 'InlineCode') {
           ranges.push({ from: node.from, to: node.to, value: inlineCode });
         }
-        if (node.name === 'FencedCode') {
-          const doc = view.state.doc;
-          const first = doc.lineAt(Math.max(node.from, visibleFrom)).number;
-          const last = doc.lineAt(Math.min(node.to, visibleTo)).number;
-          for (let number = first; number <= last; number++) {
-            const { from } = doc.line(number);
-            ranges.push({ from, to: from, value: codeBlock });
-          }
-        }
         const parent = node.node.parent;
-        if (node.name === 'CodeMark' && parent?.name === 'FencedCode') {
-          if (touchesSelection(parent.from, parent.to)) return;
-          const line = view.state.doc.lineAt(node.from);
-          ranges.push({ from: node.from, to: node.to, value: hiddenMark });
-          if (!view.state.sliceDoc(line.from, node.from).trim() && !view.state.sliceDoc(node.to, line.to).trim()) {
-            ranges.push({ from: line.from, to: line.from, value: hiddenFenceLine });
-          }
-          return;
-        }
         if (marks.has(node.name) && (node.name !== 'URL' || parent?.name === 'Link') && node.to > node.from) {
           if (imageLines.has(view.state.doc.lineAt(node.from).number)) return;
           const reveal = node.name === 'HeaderMark'

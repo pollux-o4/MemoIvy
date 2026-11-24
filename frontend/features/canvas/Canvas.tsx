@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/Icon';
 import { SettingsButton } from '../../shared/SettingsButton';
 import { useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
@@ -39,7 +40,7 @@ import { useFanQuiet } from './interaction/state/useFanQuiet';
 const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px`, '--card-radius': `${CARD_RADIUS}px` } as React.CSSProperties;
 
 /** 캔버스 화면 조립: 범위·선택·카메라·명령·포인터 훅을 묶고 화면 부품에 전달한다. */
-export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void }) {
+export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings, onOpenLibrary }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void; onOpenLibrary: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
   const openLinkPicker = useRef<(() => void) | null>(null);
@@ -147,6 +148,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
   return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="window-header canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<>
+      <button type="button" className="icon-button" title="메모 목록" aria-label="메모 목록" onClick={onOpenLibrary}><Icon name="note"/></button>
       <SettingsButton onClick={onOpenSettings}/>
       <CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_PROJECT_DEPTH}/>
     </>}/>

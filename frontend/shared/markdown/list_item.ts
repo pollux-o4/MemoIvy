@@ -27,19 +27,58 @@ export function parseListItem(text: string): (ListItem & { markerEnd: number }) 
 /** 체크 표식의 여는 대괄호 위치. 본문에 있는 대괄호는 제외한다. */
 export const taskBoxOffset = (item: ListItem): number => item.marker.lastIndexOf('[');
 
-/** 줄 순서대로 읽으며 코드 블록과 인용문 안의 표식은 건너뛴다. */
+/** 문서 순서로 한 번 읽는다. 호출 결과는 표식, context는 해당 줄의 블록·항목 소속이다. */
 export function createListItemReader() {
+  type Owner = { item: ListItem; markerLine: number; sequence: number };
+  type Context = {
+    owner: Owner | null;
+    code: boolean;
+    fence?: { kind: 'open' | 'close'; delimiter: string; indent: string };
+  };
   let fence: string | undefined;
-  return (text: string) => {
-    const delimiter = /^\s*(`{3,}|~{3,})/.exec(text)?.[1];
+  let line = 0;
+  let sequence = 0;
+  let blanks = 0;
+  const owners: Owner[] = [];
+  const read = (text: string) => {
+    line++;
+    const indent = text.length - text.trimStart().length;
+    const blank = !text.trim();
+    const delimiter = /^(\s*)(`{3,}|~{3,})([^\n]*)$/.exec(text);
+    const opening = delimiter && !(delimiter[2][0] === '`' && delimiter[3].includes('`'));
+    const inside = fence !== undefined;
+    let boundary: Context['fence'];
     if (fence) {
-      if (delimiter?.[0] === fence[0] && delimiter.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(text)) {
+      if (delimiter && delimiter[2][0] === fence[0] && delimiter[2].length >= fence.length && !delimiter[3].trim()) {
+        boundary = { kind: 'close', delimiter: delimiter[2], indent: delimiter[1] };
         fence = undefined;
       }
-      return undefined;
+    } else if (opening) {
+      fence = delimiter[2];
+      boundary = { kind: 'open', delimiter: fence, indent: delimiter[1] };
     }
-    if (delimiter) { fence = delimiter; return undefined; }
-    if (/^\s*>/.test(text)) return undefined;
-    return parseListItem(text);
+    const code = inside || !!boundary;
+    const item = code || /^\s*>/.test(text) ? undefined : parseListItem(text);
+    if (blank) {
+      if (++blanks > 1) owners.length = 0;
+    } else {
+      blanks = 0;
+      if (item) {
+        while (owners.length && owners[owners.length - 1].item.depth > item.depth) owners.pop();
+        const previous = owners[owners.length - 1];
+        const same = previous && previous.item.depth === item.depth;
+        const group = same && previous.item.ordered === item.ordered && previous.item.delimiter === item.delimiter
+          ? previous.sequence : ++sequence;
+        if (same) owners.pop();
+        owners.push({ item, markerLine: line, sequence: group });
+      } else if (!inside) {
+        while (owners.length && indent < owners[owners.length - 1].item.contentIndent) owners.pop();
+        if (/^\s*>/.test(text)) owners.length = 0;
+      }
+    }
+    read.context = { owner: owners[owners.length - 1] ?? null, code, fence: boundary };
+    return item;
   };
+  read.context = { owner: null, code: false } as Context;
+  return read;
 }

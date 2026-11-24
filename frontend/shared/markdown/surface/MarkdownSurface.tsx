@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import './markdown_surface.css';
 import { indentWithTab, history, historyKeymap, defaultKeymap } from '@codemirror/commands';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { syntaxHighlighting } from '@codemirror/language';
 import { markdownStyle } from './markdown_style';
@@ -44,7 +44,8 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
     const state = EditorState.create({ doc: value, extensions: [
       history(), EditorView.lineWrapping, hints.of(hintExtensions()), markdown({ base: markdownLanguage }), syntaxHighlighting(markdownStyle), editorTheme, linkPreview({ open: (url) => callbacks.current.onExternal(url) }),
       rawMode.of(raw ? [] : [liveMarkdown(assetUrls, imageHandlers)]),
-      keymap.of([...formattingKeymap(), ...historyKeymap, ...defaultKeymap, indentWithTab]),
+      Prec.highest(keymap.of(formattingKeymap())),
+      keymap.of([...historyKeymap, ...defaultKeymap, indentWithTab]),
       EditorView.domEventHandlers({
         compositionstart: () => { callbacks.current.onComposing(true); return false; },
         compositionend: () => { window.setTimeout(() => callbacks.current.onComposing(false), 0); return false; },

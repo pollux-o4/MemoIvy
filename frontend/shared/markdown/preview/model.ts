@@ -17,8 +17,13 @@ export function markdownPreview(markdown: string, budget = Number.POSITIVE_INFIN
   const heading = source[titleLine] ?? '';
   const title = previewLine(heading, readItem(heading));
   // 줄바꿈은 메모 편집기에서 보이는 그대로 한 줄씩 남긴다.
-  const items = source.slice(titleLine + 1).flatMap((line, index) => line.trim()
-    ? [previewLine(line, readItem(line), titleLine + 1 + index)] : []);
+  const items = source.slice(titleLine + 1).flatMap((line, index) => {
+    const item = readItem(line);
+    if (!line.trim()) return [];
+    const row = previewLine(line, item, titleLine + 1 + index);
+    if (!item && !readItem.context.code && readItem.context.owner) row.depth = readItem.context.owner.item.depth;
+    return [row];
+  });
   return { title, rows: items.slice(0, budget), remaining: Math.max(0, items.length - budget) };
 }
 

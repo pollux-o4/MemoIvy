@@ -1,4 +1,4 @@
-import { syntaxTree } from '@codemirror/language';
+import { createListItemReader } from '../list_item';
 import type { EditorView } from '@codemirror/view';
 import { continueListItem, handleListKey } from './list_markers';
 
@@ -8,15 +8,11 @@ function completeCodeFence(view: EditorView): boolean {
   if (view.composing || ranges.length !== 1 || !main.empty) return false;
   const line = state.doc.lineAt(main.head);
   if (main.head !== line.to) return false;
-  const match = /^( {0,3})(`{3,})([^`]*)$/.exec(line.text);
-  if (!match) return false;
-  const [, indent, fence] = match;
-  const start = line.from + indent.length;
-  const mark = syntaxTree(state).resolveInner(start + 1);
-  const block = mark.parent;
-  if (mark.name !== 'CodeMark' || block?.name !== 'FencedCode' || block.from !== start) return false;
-  const last = block.lastChild;
-  if (last?.name === 'CodeMark' && last.from !== mark.from) return false;
+  const read = createListItemReader();
+  for (let number = 1; number <= line.number; number++) read(state.doc.line(number).text);
+  const boundary = read.context.fence;
+  if (boundary?.kind !== 'open') return false;
+  const { indent, delimiter: fence } = boundary;
 
   view.dispatch({
     changes: { from: line.to, insert: `\n${indent}\n${indent}${fence}` },

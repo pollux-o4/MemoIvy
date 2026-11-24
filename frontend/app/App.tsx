@@ -25,6 +25,7 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     return requested === 'note' || requested === 'canvas' || requested === 'files' || requested === 'settings' || requested === 'help' ? requested : 'library';
   });
   const [activeId, setActiveId] = useState<string | undefined>(() => initialId ?? (initialScreen ? undefined : query.get('id') ?? undefined));
+  const [navigationError, setNavigationError] = useState<string | null>(null);
   const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   useAppearance(store.snapshot?.preferences);
   const frame = useWindowFrame();
@@ -45,9 +46,17 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     if (window.memoivy) { await store.bridge.openNote(id); return; }
     setActiveId(id); setScreen('note');
   };
-  const openCanvas = async (id?: string) => {
-    if (window.memoivy) { await store.bridge.openWindow('canvas', id); return; }
-    setActiveId(id); setScreen('canvas');
+  const navigate = async (target: 'library' | 'canvas', id?: string) => {
+    setNavigationError(null);
+    try {
+      if (window.memoivy || bridge) {
+        await store.bridge.openWindow(target, id);
+        return;
+      }
+      setActiveId(id); setScreen(target);
+    } catch {
+      setNavigationError('화면을 열지 못했어요. 다시 시도해 주세요.');
+    }
   };
   const openHelp = () => setHelpTopic(screen === 'canvas' ? 'canvas' : 'note');
   const openSettings = async () => {
@@ -85,13 +94,13 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
   return <div className={`app-root app-${screen}${frame}`}>
     {localPreview && <div className="preview-banner"><span><i/> 화면 미리보기</span><span>변경 사항은 저장되지 않습니다</span></div>}
     {!store.snapshot && <div className="startup-state"><span className="loading-orbit"/><span>메모를 불러오는 중</span></div>}
-    {store.snapshot && screen === 'library' && <Library store={store} onOpenNote={(id) => void openNote(id)} onOpenCanvas={(id) => void openCanvas(id)} onCreate={(project) => void createNote(project)} onOpenSettings={() => void openSettings()}/>}
+    {store.snapshot && screen === 'library' && <Library store={store} onOpenNote={(id) => void openNote(id)} onOpenCanvas={(id) => void navigate('canvas', id)} onCreate={(project) => void createNote(project)} onOpenSettings={() => void openSettings()}/>}
     {screen === 'help' && <Help bridge={store.bridge} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'settings' && <Settings store={store} onClose={() => void closeScreen()}/>}
     {store.snapshot && screen === 'note' && activeId && <Editor store={store} noteId={activeId} onClose={() => void closeScreen()}/>}
-    {store.snapshot && screen === 'canvas' && <Canvas store={store} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()} onHelp={openHelp} onOpenSettings={() => void openSettings()}/>}
+    {store.snapshot && screen === 'canvas' && <Canvas store={store} onOpenLibrary={() => void navigate('library')} scope={activeId} onOpenNote={(id) => void openNote(id)} onBack={() => void closeScreen()} onHelp={openHelp} onOpenSettings={() => void openSettings()}/>}
     {store.snapshot && screen === 'files' && <Files store={store} onClose={() => void closeScreen()} onOpenNote={(id) => void openNote(id)} initialTab={initialFilesTab}/>}
     {helpTopic && screen !== 'help' && <Help bridge={store.bridge} initialTopic={helpTopic} onClose={() => setHelpTopic(null)}/>}
-    {store.error && screen !== 'note' && <div className="global-error" role="alert"><Icon name="close" size={15}/><span>{store.error}</span><button onClick={() => void store.request('snapshot').catch(() => undefined)}>다시 확인</button></div>}
+    {(navigationError || store.error) && screen !== 'note' && <div className="global-error" role="alert"><Icon name="close" size={15}/><span>{navigationError || store.error}</span><button onClick={() => { if (navigationError) setNavigationError(null); else void store.request('snapshot').catch(() => undefined); }}>다시 확인</button></div>}
   </div>;
 }

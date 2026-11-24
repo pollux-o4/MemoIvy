@@ -330,3 +330,28 @@ fn appearance_preference_accepts_known_choices_and_rejects_others() {
         assert_eq!(error.code, "INVALID_PARAMS");
     }
 }
+
+#[test]
+fn deleted_note_is_absent_from_result_reload_and_reopen() {
+    let (d, mut e) = open();
+    let created = req(
+        &mut e,
+        "create",
+        json!({"baseRevision":0,"text":"delete me"}),
+    )
+    .unwrap();
+    let id = created["note"]["id"].clone();
+    let deleted = req(&mut e, "delete", json!({"baseRevision":1,"id":id})).unwrap();
+    assert_eq!(deleted["snapshot"]["notes"], json!([]));
+    assert_eq!(deleted["snapshot"]["revision"], 2);
+    assert_eq!(
+        req(&mut e, "snapshot", json!({})).unwrap()["snapshot"],
+        deleted["snapshot"]
+    );
+    drop(e);
+    let mut reopened = Engine::open(d.path(), None).unwrap();
+    assert_eq!(
+        req(&mut reopened, "snapshot", json!({})).unwrap()["snapshot"],
+        deleted["snapshot"]
+    );
+}
