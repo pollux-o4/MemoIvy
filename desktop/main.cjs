@@ -150,6 +150,24 @@ async function flushWindow(win) {
   await requireEngine().request('flush', {});
 }
 
+/**
+ * 메모 목록이 앱의 본 창이다. 작업 창(캔버스·메모)을 닫으면 목록으로 돌아가고, 앱 종료는 목록 창을 닫을 때만 일어난다.
+ * 설정 같은 보조 창은 닫아도 보던 창에 머문다. 단 보이는 창이 하나도 남지 않으면 목록을 띄워 앱이 사라지지 않게 한다.
+ * 닫기 버튼·OS 닫기(Alt+F4)가 모두 이 경로를 지난다.
+ */
+function returnsToLibrary(win) {
+  const key = [...windowByKey].find(([, value]) => value === win)?.[0];
+  if (!key || key === 'library') return false;
+  if (key === 'canvas' || key.startsWith('note:')) return true;
+  return ![...windows].some((other) => other !== win && !other.isDestroyed() && other.isVisible());
+}
+
+function showLibrary() {
+  const library = windowByKey.get('library');
+  if (library && !library.isDestroyed()) { library.show(); library.focus(); return; }
+  createWindow('library');
+}
+
 async function requestWindowClose(win, { hide = false } = {}) {
   if (!win || win.isDestroyed() || closing.has(win)) return;
   closing.add(win);
@@ -157,7 +175,10 @@ async function requestWindowClose(win, { hide = false } = {}) {
     await flushWindow(win);
     if (!win.isDestroyed()) {
       if (hide) win.hide();
-      else { permittedClose.add(win); win.close(); }
+      else {
+        if (returnsToLibrary(win)) showLibrary();
+        permittedClose.add(win); win.close();
+      }
     }
   } catch (error) {
     broadcast({ version: 1, event: 'error', error: { code: 'CLOSE_FLUSH_FAILED', message: error.message, snapshot: currentSnapshot } });
@@ -294,10 +315,6 @@ function createWindow(kind = 'library', id) {
     windows.delete(win);
     approvedContents.delete(contents);
     if (windowByKey.get(key) === win) windowByKey.delete(key);
-    if (kind === 'note' && !isQuitting && !quitApproved && ![...windowByKey.keys()].some((windowKey) => windowKey.startsWith('note:'))) {
-      const library = windowByKey.get('library');
-      if (library && !library.isDestroyed()) library.show();
-    }
   });
   const target = rendererTarget(kind, id);
   const load = app.isPackaged ? win.loadURL(target) : win.loadURL(target).catch((error) => {

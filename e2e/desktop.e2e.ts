@@ -234,6 +234,33 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('메모·캔버스 창을 닫으면 앱이 끝나지 않고 메모 목록으로 돌아간다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-close-canvas-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      await expect.poll(() => library.isClosed()).toBe(true);
+      // 캔버스가 남아 있어도 메모 창을 닫으면 목록이 다시 뜬다.
+      await canvas.getByRole('button', { name: 'New' }).click();
+      await canvas.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await editor.getByRole('button', { name: '창 닫기' }).click();
+      const back = await windowWith(app, '.library-screen');
+      await expect.poll(() => editor.isClosed()).toBe(true);
+      await back.getByRole('button', { name: '창 닫기' }).click();
+      await expect.poll(() => back.isClosed()).toBe(true);
+      // 캔버스를 닫아도 목록으로 돌아간다.
+      await canvas.getByRole('button', { name: '창 닫기' }).click();
+      const again = await windowWith(app, '.library-screen');
+      expect(again.isClosed()).toBe(false);
+      await expect.poll(() => canvas.isClosed()).toBe(true);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('삭제는 Ctrl+Z로 원래 id·연결 그대로 되살아나고 그 전 기록도 이어서 되돌린다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-undo-delete-'));
     const kept = 'd0000000-0000-4000-8000-000000000001';
