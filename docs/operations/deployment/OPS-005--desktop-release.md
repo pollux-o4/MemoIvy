@@ -5,11 +5,11 @@
 - 흐름: 작업 브랜치 → `dev`(작업 이력, CI) → `dev`에서 버전 올림 → `dev→main` PR squash 병합(출시 결정) → 초안 Release·설치본 빌드·첨부 → 공개(태그) → `main→dev` 병합 → Windows VM 설치 확인 → 스토어 승격.
 - 버전 SSoT는 `package.json`이다(`npm version <버전> --no-git-tag-version`). `scripts/release-plan.mjs`가 태그 `v<버전>`을 정하고 이미 출시된 버전이면 실패한다. CI는 `main` 대상 PR에서, `Release` 워크플로는 `main` 푸시에서 이 규칙을 쓴다.
 - squash 커밋은 제목 `release: MemoIvy <버전>`, 본문은 사용자에게 보이는 변경을 명사형 종결(`… 추가`·`… 개선`·`… 수정`)로 한 줄씩 적는다. 본문이 그대로 Release 노트가 된다.
-- 이어서 `Desktop release candidates`가 CI 전체(Linux·Windows e2e 포함)를 다시 통과한 커밋에서 Windows와 Snap을 빌드한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
+- 이어서 `Desktop release candidates`가 CI 전체(Linux·Windows e2e 포함)를 다시 통과한 커밋에서 Windows와 Snap을 빌드한다. `scripts/verify-package.mjs`가 대상별로 엔진 동봉·Windows 엔진의 VC 런타임 비의존(CRT 정적 링크, `.cargo/config.toml`)·Snap 단일 산출물을 확인한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 산출물은 초안 Release에 붙고 모두 성공해야 공개된다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
 - Windows 검증 단계: 매 푸시의 CI Windows e2e가 기능 회귀를 막고, 공용 Windows VM은 릴리스 후보의 설치·Store·첫 실행 확인에만 사용한다.
 - Windows x64는 `npm run release:windows`로 사용자별 NSIS 설치본을 만든다. Linux에서는 다른 Wine 접두사와 가상 화면에서 설치만 먼저 확인한다. 실제 Windows에서 표준 사용자·한글 설치 경로·앱 메뉴·작성·첨부·재시작·업데이트를 확인한다.
 - Store용 MSIX는 Windows SDK와 `scripts/package-msix.ps1`을 사용한다. Partner Center에서 할당한 이름, 게시자, 표시 이름을 각각 `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_NAME`에 설정한다. 임시 개발 식별자로 만든 패키지는 제출 후보에서 제외한다.
-- Snap은 Ubuntu 24.04에서 Snapcraft·LXD를 준비한 뒤 `npm run release:snap`을 사용한다. `unsquashfs -ll`로 엔진을 확인하고 `unsquashfs -cat 후보.snap meta/snap.yaml`로 이름·격리·연결 권한을 확인한다.
+- Snap은 Ubuntu 24.04에서 Snapcraft·LXD를 준비한 뒤 `npm run release:snap`을 사용한다. 엔진은 후보 빌드가 확인하고, `unsquashfs -cat 후보.snap meta/snap.yaml`로 이름·격리·연결 권한을 확인한다.
 
 ## 후보 검증
 
