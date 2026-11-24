@@ -1,4 +1,4 @@
-import { CARD_HEIGHT, CARD_WIDTH, type CanvasPoint, pointBounds } from './geometry';
+import { CARD_HEIGHT, CARD_WIDTH, type CanvasPoint, pointBounds, SLOT_GRID, slotAt } from './geometry';
 
 export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-x' | 'distribute-y' | 'grid' | 'flow' | 'mindmap';
 
@@ -7,12 +7,13 @@ export function vacantGroup(ids: string[], positions: Record<string, CanvasPoint
   if (!members.length) return {};
   const { minX: left, minY: top } = pointBounds(members.map(([, point]) => point));
   const collides = occupiedCollision(occupied);
-  for (let index = 0; index < 5040; index++) {
-    const origin = { x: 64 + (index % 60) * 320, y: 64 + Math.floor(index / 60) * 232 };
+  // 격자 칸을 줄 단위로 훑어 처음 비는 자리에 묶음 왼쪽 위를 놓는다.
+  for (let index = 0; index < SLOT_GRID.columns * SLOT_GRID.rows; index++) {
+    const origin = slotAt(index % SLOT_GRID.columns, Math.floor(index / SLOT_GRID.columns));
     const collision = members.some(([, point]) => collides({ x: origin.x + point.x - left, y: origin.y + point.y - top }));
     if (!collision) return Object.fromEntries(members.map(([id, point]) => [id, { x: origin.x + point.x - left, y: origin.y + point.y - top }]));
   }
-  return Object.fromEntries(members.map(([id, point]) => [id, { x: Math.max(64, point.x), y: Math.max(64, point.y) }]));
+  return Object.fromEntries(members.map(([id, point]) => [id, { x: Math.max(SLOT_GRID.margin, point.x), y: Math.max(SLOT_GRID.margin, point.y) }]));
 }
 
 /** 붙여 놓을 묶음이 기존 카드와 띄울 최소 간격. */

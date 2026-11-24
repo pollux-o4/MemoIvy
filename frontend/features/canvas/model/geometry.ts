@@ -13,8 +13,15 @@ export const CANVAS_LIMIT: number = canvasBounds.limit;
 export const CANVAS_MIN = -CANVAS_LIMIT;
 /** 캔버스 위 카드가 차지하는 사각형. 카드 치수의 원본(CARD_WIDTH·CARD_HEIGHT)과 함께 둔다. */
 export const cardRect = (point: CanvasPoint) => ({ x: point.x, y: point.y, w: CARD_WIDTH, h: CARD_HEIGHT });
+/** 빈 자리 배치 격자: 여백·칸 간격·칸 수. 새 카드 자리와 붙여넣기 빈 자리 찾기가 함께 쓴다. */
+export const SLOT_GRID = { margin: 64, pitchX: 320, pitchY: 232, columns: 60, rows: 84 } as const;
+/** 새 카드는 4열 띠를 위에서 아래로 채운 뒤 다음 띠로 넘어간다. */
+const SLOT_BAND = 4;
+export const slotAt = (column: number, row: number): CanvasPoint =>
+  ({ x: SLOT_GRID.margin + column * SLOT_GRID.pitchX, y: SLOT_GRID.margin + row * SLOT_GRID.pitchY });
 export function canvasSlot(index: number): CanvasPoint {
-  return { x: 64 + ((index % 4 + Math.floor(index / 336) * 4) % 60) * 320, y: 64 + (Math.floor(index / 4) % 84) * 232 };
+  const band = Math.floor(index / (SLOT_BAND * SLOT_GRID.rows));
+  return slotAt((index % SLOT_BAND + band * SLOT_BAND) % SLOT_GRID.columns, Math.floor(index / SLOT_BAND) % SLOT_GRID.rows);
 }
 /** 점들의 경계. 한 번 훑어 O(n)으로 구하고, 전개 인자(Math.min(...))의 호출 스택 한도를 피한다. 빈 목록은 ±Infinity. */
 export function pointBounds(points: readonly CanvasPoint[]) {
