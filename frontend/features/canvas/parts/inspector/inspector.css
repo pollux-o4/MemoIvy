@@ -48,6 +48,8 @@
 .canvas-screen .inspector-action.primary { min-height: 36px; border-radius: 9px; color: #fff; background: var(--canvas-accent); font-weight: 600; }
 .canvas-screen .inspector-action.primary:hover { background: color-mix(in srgb, var(--canvas-accent), black 8%); }
 .canvas-screen .inspector-action.primary .inspector-kbd { color: #fff; background: rgb(0 0 0 / .22); }
+/* 한글 글꼴은 위 여백이 커서 상자 가운데여도 글자가 처진다. 글자 높이(cap)로 잘라 눈으로 보는 가운데에 맞춘다. */
+.canvas-screen .inspector-action > span { text-box: trim-both cap alphabetic; }
 .canvas-screen .inspector-action:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: 2px; }
 /* 단축키 칩: 인스펙터 전체가 이 한 모양만 쓴다. */
 .canvas-screen .inspector-kbd { margin-left: 2px; padding: 0 5px; border-radius: 4px; color: var(--canvas-muted); background: var(--canvas-hover); font: inherit; font-size: 10px; font-weight: 500; line-height: 16px; }
