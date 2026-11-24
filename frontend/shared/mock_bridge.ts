@@ -91,6 +91,7 @@ export function createMockBridge(initial?: Snapshot): DesktopBridge {
     async importLegacy() { return null; },
     windowAction(action) { console.info('[mock] window action', action); },
     onFlush() { return () => undefined; },
+    onWindowState(listener) { listener({ maximized: false }); return () => undefined; },
   };
   return bridge;
 }

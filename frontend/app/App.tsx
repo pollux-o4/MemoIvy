@@ -28,7 +28,7 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   useAppearance(store.snapshot?.preferences);
-  const frame = useWindowFrame();
+  const frame = useWindowFrame(store.bridge);
   useEffect(() => installTooltips(), []);
   const localPreview = preview ?? (!bridge && !window.memoivy);
   const isProductionFileWithoutBridge = window.location.protocol === 'file:' && !window.memoivy && !bridge;

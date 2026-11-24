@@ -44,7 +44,7 @@ test('failed library deletion keeps the card and displays the engine error', asy
         async request(op) { if (op === 'delete') throw new Error('삭제 저장 실패'); return { snapshot }; },
         subscribe() { return () => {}; },
         async openNote() {}, async openWindow() {}, async openExternal() {}, async importLegacy() { return {}; },
-        windowAction() {}, onFlush() { return () => {}; },
+        windowAction() {}, onFlush() { return () => {}; }, onWindowState() { return () => {}; },
       };
     });
     await page.goto(url);

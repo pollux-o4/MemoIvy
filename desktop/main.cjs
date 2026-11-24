@@ -233,7 +233,13 @@ function installIpc() {
     else if (win.isMaximized()) win.unmaximize();
     else win.maximize();
   });
+  ipcMain.handle('memoivy:window-state', (event) => windowState(assertSender(event)));
   ipcMain.handle('memoivy:close-window', (event) => requestWindowClose(assertSender(event)));
+}
+
+/** 렌더러 창 장식이 따르는 상태(DesktopBridge.onWindowState). */
+function windowState(win) {
+  return { maximized: win.isMaximized() || win.isFullScreen() };
 }
 
 function createWindow(kind = 'library', id) {
@@ -264,6 +270,8 @@ function createWindow(kind = 'library', id) {
   approvedContents.add(contents);
   windowByKey.set(key, win);
   win.once('ready-to-show', () => win.show());
+  const sendWindowState = () => { if (!contents.isDestroyed()) contents.send('memoivy:window-state', windowState(win)); };
+  for (const name of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(name, sendWindowState);
   win.webContents.on('will-navigate', (event, target) => {
     if (!isApprovedFrame(target)) {
       event.preventDefault();

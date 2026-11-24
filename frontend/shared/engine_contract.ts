@@ -16,6 +16,9 @@ export interface EngineRequest { version: 1; id: string; op: string; params?: Re
 /** @public Rust 엔진과 맞춰 보는 프로토콜 형태 */
 export interface EngineResponse { version: 1; id: string; result?: EngineResult; error?: EngineError }
 export interface EngineEvent { version: 1; event: 'snapshot' | 'error'; snapshot?: Snapshot; error?: EngineError }
+/** 창 관리자가 정한 창 상태. 메인 프로세스의 maximize·fullscreen 이벤트가 단일 출처다. */
+export type WindowState = { maximized: boolean };
+
 export interface DesktopBridge {
   request(op: string, params?: Record<string, unknown>): Promise<EngineResult>;
   subscribe(listener: (event: EngineEvent) => void): () => void;
@@ -25,5 +28,7 @@ export interface DesktopBridge {
   importLegacy(): Promise<EngineResult | null>;
   windowAction(action: 'minimize' | 'maximize' | 'close'): void;
   onFlush(listener: () => Promise<void>): () => void;
+  /** 구독 즉시 현재 상태를 한 번 받고, 바뀔 때마다 다시 받는다. */
+  onWindowState(listener: (state: WindowState) => void): () => void;
 }
 declare global { interface Window { memoivy?: DesktopBridge } }
