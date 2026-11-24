@@ -14,8 +14,8 @@ jobs:
       MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER || 'CN=MemoIvy Development' }}
       MSIX_PUBLISHER_NAME: ${{ vars.MSIX_PUBLISHER_NAME || 'MemoIvy Development' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
         with:
           install_args: node rust
       - run: npm ci
@@ -36,7 +36,7 @@ jobs:
             "$( (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() )  $($_.Name)"
           } | Set-Content SHA256SUMS
           Set-Content SOURCE_COMMIT $env:GITHUB_SHA
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-x64-${{ github.sha }}
           if-no-files-found: error
@@ -49,8 +49,8 @@ jobs:
   snap:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
         with:
           install_args: node rust
       - name: Prepare isolated Snapcraft builder
@@ -71,7 +71,7 @@ jobs:
           unsquashfs -ll ./*.snap | grep 'resources/engine/memoivy-engine$'
           sha256sum -- *.snap > SHA256SUMS
           printf '%s\n' "$GITHUB_SHA" > SOURCE_COMMIT
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: snap-amd64-${{ github.sha }}
           if-no-files-found: error
