@@ -54,3 +54,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.draft.outputs.tag }}
         run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+
+  snap-candidate:
+    needs: [draft, publish]
+    if: vars.SNAP_STORE_CANDIDATE_ENABLED == 'true'
+    uses: ./.github/workflows/snap-store-candidate.yml
+    with:
+      tag: ${{ needs.draft.outputs.tag }}
+    secrets:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
