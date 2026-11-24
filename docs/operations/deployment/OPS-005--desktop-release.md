@@ -2,7 +2,9 @@
 
 ## 산출물
 
-- `package.json`의 릴리스 버전을 사용한다. Windows와 Snap은 같은 커밋을 빌드한다. `Desktop release candidates`는 설치본, `SHA256SUMS`, `SOURCE_COMMIT`을 보관한다. 업로드와 채널 변경은 이 빌드 작업에서 실행하지 않는다.
+- 버전 SSoT는 `package.json`이다. `Release` 워크플로(release-please)가 `dev`의 Conventional Commits로 릴리스 PR(버전·CHANGELOG)을 유지하고, 병합하면 `v<버전>` 태그와 GitHub Release를 만든다.
+- 이어서 `Desktop release candidates`가 CI 전체(Linux·Windows e2e 포함)를 다시 통과한 커밋에서 Windows와 Snap을 빌드한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
+- Windows 검증 단계: 매 푸시의 CI Windows e2e가 기능 회귀를 막고, 공용 Windows VM은 릴리스 후보의 설치·Store·첫 실행 확인에만 사용한다.
 - Windows x64는 `npm run release:windows`로 사용자별 NSIS 설치본을 만든다. Linux에서는 다른 Wine 접두사와 가상 화면에서 설치만 먼저 확인한다. 실제 Windows에서 표준 사용자·한글 설치 경로·앱 메뉴·작성·첨부·재시작·업데이트를 확인한다.
 - Store용 MSIX는 Windows SDK와 `scripts/package-msix.ps1`을 사용한다. Partner Center에서 할당한 이름, 게시자, 표시 이름을 각각 `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_NAME`에 설정한다. 임시 개발 식별자로 만든 패키지는 제출 후보에서 제외한다.
 - Snap은 Ubuntu 24.04에서 Snapcraft·LXD를 준비한 뒤 `npm run release:snap`을 사용한다. `unsquashfs -ll`로 엔진을 확인하고 `unsquashfs -cat 후보.snap meta/snap.yaml`로 이름·격리·연결 권한을 확인한다.

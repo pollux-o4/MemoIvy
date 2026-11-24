@@ -80,7 +80,10 @@ run = "npm run test:memory"
 
 [tasks."test:e2e"]
 description = "Electron 정합 작동: 합성 데이터로 작성·동기화·재시작 복원 (가상 X 화면, 사용자 화면에 창을 띄우지 않음)"
-run = "env -u WAYLAND_DISPLAY MEMOIVY_HEADLESS=1 xvfb-run -a npm run test:e2e --"
+env = { MEMOIVY_HEADLESS = "1" }
+run = "env -u WAYLAND_DISPLAY xvfb-run -a npm run test:e2e --"
+# Windows에는 Wayland·xvfb가 없어 Electron을 바로 띄운다(CI windows 러너 전용 경로).
+run_windows = "npm run test:e2e --"
 
 [tasks."check:web"]
 description = "웹·데스크톱 정적 점검: 린트, 미사용 코드, 모듈 경계, 중복"

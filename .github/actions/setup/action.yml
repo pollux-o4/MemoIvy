@@ -1,0 +1,26 @@
+name: MemoIvy toolchain
+description: mise 도구(Node·Rust)·Rust 캐시·npm 의존성을 준비한다. 모든 워크플로의 공통 준비 단계(SSoT).
+inputs:
+  rust-components:
+    description: 추가로 설치할 rustup 구성 요소(공백 구분)
+    default: ''
+  browsers:
+    description: 단위·e2e 테스트가 쓰는 Playwright Chromium 헤드리스 셸 설치 여부
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v3
+      with:
+        install_args: node rust
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: engine
+    - if: inputs.rust-components != ''
+      shell: bash
+      run: rustup component add ${{ inputs.rust-components }}
+    - shell: bash
+      run: npm ci
+    - if: inputs.browsers == 'true'
+      shell: bash
+      run: npx playwright install chromium --only-shell
