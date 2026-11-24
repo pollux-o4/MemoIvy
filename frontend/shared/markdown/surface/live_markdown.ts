@@ -1,4 +1,4 @@
-import { createListItemReader } from '../list_item';
+import { createBlockScanner } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
@@ -54,19 +54,18 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       const listLine = createListScanner();
       const imageLines = new Set<number>();
       const codeLines = new Set<number>();
-      const readBlock = createListItemReader();
+      const scanBlock = createBlockScanner();
       const blocks: Array<{ from: number; to: number; boundaries: Array<{ from: number; to: number; indent: number }> }> = [];
       let block: (typeof blocks)[number] | undefined;
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {
         const line = view.state.doc.line(lineNumber);
         const listDecorations = listLine(line);
-        readBlock(line.text);
-        const boundary = readBlock.context.fence;
+        const { fence: boundary, code } = scanBlock(line.text);
         if (boundary?.kind === 'open') {
           block = { from: line.from, to: view.state.doc.length, boundaries: [] };
           blocks.push(block);
         }
-        if (readBlock.context.code) {
+        if (code) {
           codeLines.add(lineNumber);
           ranges.push({ from: line.from, to: line.from, value: codeBlock });
           if (boundary && block) block.boundaries.push({ from: line.from, to: line.to, indent: boundary.indent.length });

@@ -8,7 +8,7 @@ const LIST_LINE = /^(\s*)(?:(?:([-*+])\s+(?:\[([ xX/])\]\s+)?|(\d+)([.)])\s+))/;
 export type TaskState = ' ' | 'x' | '/';
 export type ListItem = { depth: number; contentIndent: number; marker: string; ordered: boolean; number?: number; delimiter?: string; task?: TaskState };
 
-export function parseListItem(text: string): (ListItem & { markerEnd: number }) | null {
+export function parseListItem(text: string): ParsedListItem | null {
   const match = LIST_LINE.exec(text);
   if (!match) return null;
   const marker = match[0];
@@ -27,58 +27,88 @@ export function parseListItem(text: string): (ListItem & { markerEnd: number }) 
 /** 체크 표식의 여는 대괄호 위치. 본문에 있는 대괄호는 제외한다. */
 export const taskBoxOffset = (item: ListItem): number => item.marker.lastIndexOf('[');
 
-/** 문서 순서로 한 번 읽는다. 호출 결과는 표식, context는 해당 줄의 블록·항목 소속이다. */
-export function createListItemReader() {
-  type Owner = { item: ListItem; markerLine: number; sequence: number };
-  type Context = {
-    owner: Owner | null;
-    code: boolean;
-    fence?: { kind: 'open' | 'close'; delimiter: string; indent: string };
-  };
-  let fence: string | undefined;
+export type FenceBoundary = { kind: 'open' | 'close'; delimiter: string; indent: string };
+export type ListOwner = { item: ListItem; markerLine: number; sequence: number };
+/** 한 줄의 블록 판정. item은 목록 표식(null: 일반 줄, undefined: 코드·인용 안이라 판정 제외). */
+export type ParsedListItem = ListItem & { markerEnd: number };
+export type BlockLine = { item: ParsedListItem | null | undefined; owner: ListOwner | null; code: boolean; fence?: FenceBoundary };
+
+const FENCE_LINE = /^(\s*)(`{3,}|~{3,})([^\n]*)$/;
+const QUOTE_LINE = /^\s*>/;
+
+/** 코드 펜스 짝짓기: 여는 펜스와 같은 문자·같거나 긴 길이의 빈 정보 줄만 닫는다(CommonMark). */
+class FenceTracker {
+  private open?: string;
+
+  get inside(): boolean { return this.open !== undefined; }
+
+  /** 이 줄이 펜스 경계면 경계를 돌려주고 상태를 바꾼다. */
+  advance(text: string): FenceBoundary | undefined {
+    const match = FENCE_LINE.exec(text);
+    if (!match) return undefined;
+    const [, indent, delimiter, info] = match;
+    if (this.open) {
+      if (delimiter[0] !== this.open[0] || delimiter.length < this.open.length || info.trim()) return undefined;
+      this.open = undefined;
+      return { kind: 'close', delimiter, indent };
+    }
+    if (delimiter[0] === '`' && info.includes('`')) return undefined;
+    this.open = delimiter;
+    return { kind: 'open', delimiter, indent };
+  }
+}
+
+/** 목록 소속 스택: 항목 내용 들여쓰기 이상의 이어쓰기 줄(이미지 포함)과 빈 줄 1개는 항목을 끊지 않는다. */
+class ListOwners {
+  private readonly stack: ListOwner[] = [];
+  private sequence = 0;
+  private blanks = 0;
+
+  get current(): ListOwner | null { return this.stack[this.stack.length - 1] ?? null; }
+
+  item(item: ListItem, line: number): void {
+    this.blanks = 0;
+    const { stack } = this;
+    for (let top = this.current; top && top.item.depth > item.depth; top = this.current) stack.pop();
+    const previous = this.current;
+    const sibling = previous?.item.depth === item.depth;
+    const sameList = sibling && previous.item.ordered === item.ordered && previous.item.delimiter === item.delimiter;
+    if (sibling) stack.pop();
+    stack.push({ item, markerLine: line, sequence: sameList ? previous.sequence : ++this.sequence });
+  }
+
+  text(indent: number, quote: boolean): void {
+    this.blanks = 0;
+    if (quote) { this.stack.length = 0; return; }
+    for (let top = this.current; top && indent < top.item.contentIndent; top = this.current) this.stack.pop();
+  }
+
+  blank(): void { if (++this.blanks > 1) this.stack.length = 0; }
+}
+
+/** 문서 순서로 줄마다 한 번 호출하는 블록 스캐너(줄당 O(목록 깊이), 상태 O(목록 깊이)). */
+export function createBlockScanner(): (text: string) => BlockLine {
+  const fence = new FenceTracker();
+  const owners = new ListOwners();
   let line = 0;
-  let sequence = 0;
-  let blanks = 0;
-  const owners: Owner[] = [];
-  const read = (text: string) => {
+  return (text) => {
     line++;
-    const indent = text.length - text.trimStart().length;
-    const blank = !text.trim();
-    const delimiter = /^(\s*)(`{3,}|~{3,})([^\n]*)$/.exec(text);
-    const opening = delimiter && !(delimiter[2][0] === '`' && delimiter[3].includes('`'));
-    const inside = fence !== undefined;
-    let boundary: Context['fence'];
-    if (fence) {
-      if (delimiter && delimiter[2][0] === fence[0] && delimiter[2].length >= fence.length && !delimiter[3].trim()) {
-        boundary = { kind: 'close', delimiter: delimiter[2], indent: delimiter[1] };
-        fence = undefined;
-      }
-    } else if (opening) {
-      fence = delimiter[2];
-      boundary = { kind: 'open', delimiter: fence, indent: delimiter[1] };
-    }
-    const code = inside || !!boundary;
-    const item = code || /^\s*>/.test(text) ? undefined : parseListItem(text);
-    if (blank) {
-      if (++blanks > 1) owners.length = 0;
-    } else {
-      blanks = 0;
-      if (item) {
-        while (owners.length && owners[owners.length - 1].item.depth > item.depth) owners.pop();
-        const previous = owners[owners.length - 1];
-        const same = previous && previous.item.depth === item.depth;
-        const group = same && previous.item.ordered === item.ordered && previous.item.delimiter === item.delimiter
-          ? previous.sequence : ++sequence;
-        if (same) owners.pop();
-        owners.push({ item, markerLine: line, sequence: group });
-      } else if (!inside) {
-        while (owners.length && indent < owners[owners.length - 1].item.contentIndent) owners.pop();
-        if (/^\s*>/.test(text)) owners.length = 0;
-      }
-    }
-    read.context = { owner: owners[owners.length - 1] ?? null, code, fence: boundary };
-    return item;
+    const wasInside = fence.inside;
+    const boundary = fence.advance(text);
+    const code = wasInside || boundary !== undefined;
+    const quote = QUOTE_LINE.test(text);
+    const item = code || quote ? undefined : parseListItem(text);
+    if (!text.trim()) owners.blank();
+    else if (item) owners.item(item, line);
+    else if (!wasInside) owners.text(text.length - text.trimStart().length, quote);
+    return { item, owner: owners.current, code, fence: boundary };
   };
-  read.context = { owner: null, code: false } as Context;
-  return read;
+}
+
+/** 1부터 센 `number`번째 줄의 판정. 앞줄만 읽는다. */
+export function blockLineAt(lineText: (number: number) => string, number: number): BlockLine {
+  const scan = createBlockScanner();
+  let result: BlockLine = { item: null, owner: null, code: false };
+  for (let current = 1; current <= number; current++) result = scan(lineText(current));
+  return result;
 }

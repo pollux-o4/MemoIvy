@@ -1,4 +1,4 @@
-import { createListItemReader } from '../list_item';
+import { blockLineAt } from '../list_item';
 import type { EditorView } from '@codemirror/view';
 import { continueListItem, handleListKey } from './list_markers';
 
@@ -8,9 +8,7 @@ function completeCodeFence(view: EditorView): boolean {
   if (view.composing || ranges.length !== 1 || !main.empty) return false;
   const line = state.doc.lineAt(main.head);
   if (main.head !== line.to) return false;
-  const read = createListItemReader();
-  for (let number = 1; number <= line.number; number++) read(state.doc.line(number).text);
-  const boundary = read.context.fence;
+  const boundary = blockLineAt((number) => state.doc.line(number).text, line.number).fence;
   if (boundary?.kind !== 'open') return false;
   const { indent, delimiter: fence } = boundary;
 

@@ -1,5 +1,5 @@
 import { Decoration, WidgetType, type EditorView } from '@codemirror/view';
-import { createListItemReader, type ListItem as Item, type TaskState, taskBoxOffset } from '../list_item';
+import { blockLineAt, createBlockScanner, type ListItem as Item, type TaskState, taskBoxOffset } from '../list_item';
 
 /** GTK live_editor: 표식 칸 24px(깊이마다 추가), 표식과 본문 사이 6px, 글머리표 •◦▪. */
 const GUTTER = 24;
@@ -79,9 +79,8 @@ class TaskWidget extends MarkerWidget {
 type Line = { from: number; text: string };
 
 function itemAtLine(state: EditorView['state'], number: number) {
-  const read = createListItemReader();
-  for (let current = 1; current <= number; current++) read(state.doc.line(current).text);
-  return read.context.code ? null : read.context.owner;
+  const block = blockLineAt((current) => state.doc.line(current).text, number);
+  return block.code ? null : block.owner;
 }
 const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-list${extra}`, attributes: { style: `padding-left: ${GUTTER * (depth + 1)}px` } });
 
@@ -90,10 +89,10 @@ const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-li
  * 항목 아래 표식 너비 이상 들여쓴 줄은 같은 항목의 이어쓰기로 보고, 공백을 숨겨 항목 글자와 같은 칸에서 시작한다.
  */
 export function createListScanner() {
-  const readItem = createListItemReader();
+  const scan = createBlockScanner();
   return (line: Line): Range[] => {
-    const item = readItem(line.text);
-    if (readItem.context.code) return [];
+    const { item, owner, code } = scan(line.text);
+    if (code) return [];
     if (item) {
       const widget = item.task !== undefined
         ? new TaskWidget(item.depth, item.task, line.from + taskBoxOffset(item))
@@ -103,7 +102,7 @@ export function createListScanner() {
         { from: line.from, to: line.from + item.markerEnd, value: Decoration.replace({ widget }) },
       ];
     }
-    const current = readItem.context.owner?.item;
+    const current = owner?.item;
     if (!current || line.text.length - line.text.trimStart().length < current.contentIndent) return [];
     return [
       { from: line.from, to: line.from, value: lineStyle(current.depth) },
@@ -144,11 +143,8 @@ export function handleListKey(view: EditorView, key: string): boolean {
   const { state } = view;
   const selection = state.selection.main;
   const line = state.doc.lineAt(selection.head);
-  const read = createListItemReader();
-  const contexts = Array.from({ length: state.doc.lines }, (_, index) => {
-    const item = read(state.doc.line(index + 1).text);
-    return { item, ...read.context };
-  });
+  const scan = createBlockScanner();
+  const contexts = Array.from({ length: state.doc.lines }, (_, index) => scan(state.doc.line(index + 1).text));
   const context = contexts[line.number - 1].code ? null : contexts[line.number - 1].owner;
   if (!context) return false;
   const { item, markerLine } = context;

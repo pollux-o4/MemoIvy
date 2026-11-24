@@ -35,13 +35,13 @@ test('renumbering crosses an image continuation and one blank line, but stops at
 
 test('a new fence above an existing block gets its own closing fence', () => {
   const view = editor('```\n```js\nconst x = 1;\n```', 3);
-  expect(formattingKeymap().find(binding => binding.key === 'Enter')!.run(view)).toBe(true);
+  expect(formattingKeymap().find(binding => binding.key === 'Enter')?.run(view)).toBe(true);
   expect(view.state.doc.toString()).toBe('```\n\n```\n```js\nconst x = 1;\n```');
 });
 
 test.each([['- item', 2], ['- [ ] task', 6], ['12) item', 4]] as const)('Shift-Enter keeps one marker for %s', (doc, indent) => {
   const view = editor(doc, doc.length);
-  expect(formattingKeymap().find(binding => binding.key === 'Shift-Enter')!.run(view)).toBe(true);
+  expect(formattingKeymap().find(binding => binding.key === 'Shift-Enter')?.run(view)).toBe(true);
   expect(view.state.doc.line(2).text.trim()).toBe('');
   expect(view.state.doc.line(2).text.length).toBe(indent);
 });
@@ -49,9 +49,9 @@ test.each([['- item', 2], ['- [ ] task', 6], ['12) item', 4]] as const)('Shift-E
 test.each(['```', '~~~', '  ````ts'])('new %s fence completes before an existing block', (fence) => {
   const doc = `${fence}\n\`\`\`\nold code\n\`\`\``;
   const view = editor(doc, fence.length);
-  expect(formattingKeymap().find(binding => binding.key === 'Enter')!.run(view)).toBe(true);
-  const indent = fence.match(/^ */)![0];
-  const delimiter = fence.trim().match(/^[`~]+/)![0];
+  expect(formattingKeymap().find(binding => binding.key === 'Enter')?.run(view)).toBe(true);
+  const indent = fence.match(/^ */)?.[0];
+  const delimiter = fence.trim().match(/^[`~]+/)?.[0];
   expect(view.state.doc.toString()).toBe(`${fence}\n${indent}\n${indent}${delimiter}\n\`\`\`\nold code\n\`\`\``);
 });
 

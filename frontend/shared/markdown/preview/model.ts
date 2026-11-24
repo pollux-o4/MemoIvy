@@ -1,4 +1,4 @@
-import { createListItemReader, type ListItem, taskBoxOffset, type TaskState } from '../list_item';
+import { blockLineAt, createBlockScanner, type ListItem, taskBoxOffset, type TaskState } from '../list_item';
 import { plainText } from '../../model';
 
 /** depth는 편집기 목록 들여쓰기(list_item.depth)와 같은 값이다. 일반 줄은 0. */
@@ -13,15 +13,15 @@ export type PreviewItem = { text: string; depth: number } & (
 export function markdownPreview(markdown: string, budget = Number.POSITIVE_INFINITY): { title: PreviewItem; rows: PreviewItem[]; remaining: number } {
   const source = markdown.split('\n');
   const titleLine = source.findIndex((line) => line.trim());
-  const readItem = createListItemReader();
+  const scan = createBlockScanner();
   const heading = source[titleLine] ?? '';
-  const title = previewLine(heading, readItem(heading));
+  const title = previewLine(heading, scan(heading).item);
   // 줄바꿈은 메모 편집기에서 보이는 그대로 한 줄씩 남긴다.
   const items = source.slice(titleLine + 1).flatMap((line, index) => {
-    const item = readItem(line);
+    const { item, owner, code } = scan(line);
     if (!line.trim()) return [];
     const row = previewLine(line, item, titleLine + 1 + index);
-    if (!item && !readItem.context.code && readItem.context.owner) row.depth = readItem.context.owner.item.depth;
+    if (!item && !code && owner) row.depth = owner.item.depth;
     return [row];
   });
   return { title, rows: items.slice(0, budget), remaining: Math.max(0, items.length - budget) };
@@ -41,9 +41,7 @@ export function togglePreviewTask(markdown: string, sourceLine: number): string 
   const lines = markdown.split('\n');
   const line = lines[sourceLine];
   if (line === undefined) return markdown;
-  const readItem = createListItemReader();
-  for (let i = 0; i < sourceLine; i += 1) readItem(lines[i]);
-  const item = readItem(line);
+  const { item } = blockLineAt((number) => lines[number - 1], sourceLine + 1);
   if (!item?.task) return markdown;
   const at = taskBoxOffset(item) + 1;
   lines[sourceLine] = line.slice(0, at) + (item.task === 'x' ? ' ' : 'x') + line.slice(at + 1);
@@ -57,15 +55,15 @@ export function rebasePreviewTask(original: string, current: string, sourceLine:
   const before = original.split('\n');
   const after = current.split('\n');
   if (before.length !== after.length) return undefined;
-  const readBefore = createListItemReader();
-  const readAfter = createListItemReader();
+  const scanBefore = createBlockScanner();
+  const scanAfter = createBlockScanner();
   let targetOffset: number | undefined;
   let targetTask: TaskState | undefined;
   for (let index = 0; index < before.length; index += 1) {
     const line = before[index];
     const nextLine = after[index];
-    const oldItem = readBefore(line);
-    const newItem = readAfter(nextLine);
+    const oldItem = scanBefore(line).item;
+    const newItem = scanAfter(nextLine).item;
     if (line !== nextLine) {
       if (!oldItem?.task || !newItem?.task) return undefined;
       const at = taskBoxOffset(oldItem) + 1;
