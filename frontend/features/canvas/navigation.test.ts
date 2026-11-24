@@ -56,14 +56,14 @@ describe('목록과 캔버스 전환', () => {
     expect(state.bridge.openWindow).not.toHaveBeenCalled();
   });
 
-  it.each(['library', 'canvas'] as const)('데스크톱에서 %s 창을 열고 현재 창은 유지한다', async (target) => {
+  it.each(['library', 'canvas'] as const)('데스크톱에서 %s 창이 열린 뒤 현재 창을 닫는다', async (target) => {
     let resolve!: () => void;
     state.bridge.openWindow.mockReturnValue(new Promise<void>((done) => { resolve = done; }));
     open(render(target === 'canvas' ? 'library' : 'canvas', true), target, target === 'canvas' ? 'project-id' : undefined);
     expect(state.bridge.openWindow).toHaveBeenCalledWith(target, target === 'canvas' ? 'project-id' : undefined);
     expect(state.bridge.windowAction).not.toHaveBeenCalled();
     resolve(); await Promise.resolve();
-    expect(state.bridge.windowAction).not.toHaveBeenCalled();
+    expect(state.bridge.windowAction).toHaveBeenCalledExactlyOnceWith('close');
   });
 
   it('전역 데스크톱 bridge도 같은 전환 규칙을 쓴다', async () => {
@@ -72,7 +72,7 @@ describe('목록과 캔버스 전환', () => {
     open(render('library'), 'canvas');
     await Promise.resolve();
     expect(state.bridge.openWindow).toHaveBeenCalledWith('canvas', undefined);
-    expect(state.bridge.windowAction).not.toHaveBeenCalled();
+    expect(state.bridge.windowAction).toHaveBeenCalledExactlyOnceWith('close');
   });
 
   it('목적 창 열기가 실패하면 현재 창을 유지하고 오류를 알린다', async () => {

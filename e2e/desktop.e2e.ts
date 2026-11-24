@@ -38,7 +38,8 @@ async function quit(app: ElectronApplication) {
 }
 async function windowWith(app: ElectronApplication, selector: string): Promise<Page> {
   for (const end = Date.now() + 10_000; Date.now() < end; await new Promise((r) => setTimeout(r, 100))) {
-    for (const page of app.windows()) if (await page.$(selector)) return page;
+    // 목록↔캔버스 전환은 원래 창을 닫으므로 닫히는 중인 페이지는 건너뛴다.
+    for (const page of app.windows()) if (!page.isClosed() && await page.$(selector).catch(() => null)) return page;
   }
   throw new Error(`no window with ${selector}`);
 }
@@ -170,7 +171,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const settings = await windowWith(app, '.settings-screen');
     await settings.getByRole('radio', { name: '다크' }).click();
     await settings.getByRole('radiogroup', { name: '모션 줄이기' }).getByRole('radio', { name: '켜기' }).click();
-    await expect.poll(() => library.evaluate(() => [document.documentElement.classList.contains('theme-dark'), document.documentElement.dataset.motion])).toEqual([true, 'reduce']);
+    // 목록 창은 캔버스로 전환되며 닫혔으므로 열린 캔버스 창으로 전체 반영을 확인한다.
+    await expect.poll(() => canvas.evaluate(() => [document.documentElement.classList.contains('theme-dark'), document.documentElement.dataset.motion])).toEqual([true, 'reduce']);
     // 연결선 모양은 엔진 설정으로 저장되어 오류 없이 선택 상태가 바뀐다.
     await settings.getByRole('radio', { name: '직각' }).click();
     await expect.poll(() => settings.getByRole('radio', { name: '직각' }).getAttribute('aria-checked')).toBe('true');
@@ -211,7 +213,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await canvas.mouse.up();
 
       // 저장 완료 신호는 다른 렌더러가 받은 엔진 스냅숏으로 확인한다.
-      const persisted = () => library.evaluate(async (noteId) => {
+      const persisted = () => canvas.evaluate(async (noteId) => {
         const result = await window.memoivy?.request('snapshot');
         return result?.snapshot?.notes.find((note) => note.id === noteId)?.canvas.position;
       }, id);
@@ -705,7 +707,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => gauge.getAttribute('aria-valuenow')).toBe('0');
       expect(await gauge.getAttribute('aria-valuemax')).toBe('1');
       expect(await roots.getByRole('progressbar', { name: '최근 메모 진행률' }).count()).toBe(0);
-      await library.getByRole('button', { name: '작업 프로젝트 캔버스 열기', exact: true }).click();
+      // 두 창 동기화를 보려고 목록을 닫는 버튼 대신 bridge로 캔버스만 연다.
+      await library.evaluate((id) => window.memoivy?.openWindow('canvas', id), project);
       const canvas = await windowWith(app, '.canvas-screen');
       const canvasGauge = canvas.getByRole('progressbar', { name: '작업 메모 진행률' });
       await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('0');
@@ -857,7 +860,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => firstTask.getAttribute('aria-checked')).toBe('false');
       await secondTask.click();
       await expect.poll(() => secondTask.getAttribute('aria-checked')).toBe('true');
-      const savedTask = await library.evaluate(async () => {
+      const savedTask = await canvas.evaluate(async () => {
         const result = await window.memoivy?.request('snapshot');
         return result?.snapshot?.notes.find((note) => note.text.startsWith('펼치면 길어지는 메모'));
       });
