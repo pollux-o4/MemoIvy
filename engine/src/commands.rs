@@ -18,6 +18,7 @@ impl Engine {
             "update" => self.update(p),
             "delete" => self.delete(p),
             "canvas" => self.canvas(p),
+            "restore" => self.restore(p),
             "preference" => self.set_preference(p),
             "importLegacy" => {
                 let path = p

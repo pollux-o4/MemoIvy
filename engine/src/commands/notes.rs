@@ -114,25 +114,44 @@ impl Engine {
             .get("changes")
             .and_then(Value::as_array)
             .ok_or_else(|| err("INVALID_PARAMS", "changes must be an array"))?;
-        let cs = changes.clone();
         let (_, s) = self.write_tx(Some(base), |tx| {
             let mut ns = notes_tx(tx)?;
-            for change in cs {
-                let id = change
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .ok_or_else(|| err("INVALID_PARAMS", "change id required"))?;
-                ensure_note_fresh(tx, id, base)?;
-                let n = ns
-                    .iter_mut()
-                    .find(|n| n.id == id)
-                    .ok_or_else(|| err("NOT_FOUND", "Note not found"))?;
-                let cv = change
-                    .get("canvas")
-                    .ok_or_else(|| err("INVALID_PARAMS", "canvas required"))?;
-                apply_canvas(&mut n.canvas, cv)?;
-                n.modified = now()
+            apply_changes(tx, &mut ns, changes, base)?;
+            save_notes(tx, &mut ns)
+        })?;
+        Ok(json!({"snapshot":s}))
+    }
+
+    /// Puts deleted notes back with their original ids and fields, then reapplies the
+    /// canvas fields (parent, next) that deletion rewrote on surviving notes. One transaction,
+    /// so a restore either brings back the whole deletion or nothing.
+    pub(super) fn restore(&mut self, p: &Value) -> ApiResult {
+        let base = base(p)?;
+        let notes: Vec<Note> = p
+            .get("notes")
+            .cloned()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|_| err("INVALID_PARAMS", "notes must be an array of notes"))?
+            .ok_or_else(|| err("INVALID_PARAMS", "notes must be an array of notes"))?;
+        let changes = p
+            .get("changes")
+            .and_then(Value::as_array)
+            .ok_or_else(|| err("INVALID_PARAMS", "changes must be an array"))?;
+        if notes.iter().any(|n| !COLORS.contains(&n.color.as_str())) {
+            return Err(err("INVALID_DATA", "Unknown note color"));
+        }
+        let (_, s) = self.write_tx(Some(base), |tx| {
+            let mut ns = notes_tx(tx)?;
+            let mut known: std::collections::HashSet<String> =
+                ns.iter().map(|n| n.id.clone()).collect();
+            for n in &notes {
+                if !known.insert(n.id.clone()) {
+                    return Err(err("CONFLICT", "Note already exists"));
+                }
             }
+            ns.extend(notes.iter().cloned());
+            apply_changes(tx, &mut ns, changes, base)?;
             save_notes(tx, &mut ns)
         })?;
         Ok(json!({"snapshot":s}))
@@ -154,6 +173,32 @@ impl Engine {
         })?;
         Ok((id, s))
     }
+}
+
+/// Applies `{id, canvas}` patches to fresh notes.
+fn apply_changes(
+    tx: &Transaction<'_>,
+    ns: &mut [Note],
+    changes: &[Value],
+    base: u64,
+) -> Result<(), ApiError> {
+    for change in changes {
+        let id = change
+            .get("id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| err("INVALID_PARAMS", "change id required"))?;
+        ensure_note_fresh(tx, id, base)?;
+        let n = ns
+            .iter_mut()
+            .find(|n| n.id == id)
+            .ok_or_else(|| err("NOT_FOUND", "Note not found"))?;
+        let cv = change
+            .get("canvas")
+            .ok_or_else(|| err("INVALID_PARAMS", "canvas required"))?;
+        apply_canvas(&mut n.canvas, cv)?;
+        n.modified = now()
+    }
+    Ok(())
 }
 
 /// Derives project flags, validates the hierarchy and persists every note.

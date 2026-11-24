@@ -355,3 +355,58 @@ fn deleted_note_is_absent_from_result_reload_and_reopen() {
         deleted["snapshot"]
     );
 }
+#[test]
+fn restore_brings_back_deleted_note_with_links_and_children() {
+    let (_d, mut e) = open();
+    let make = |e: &mut Engine, extra: Value| {
+        let rev = e.snapshot().unwrap().revision;
+        let mut p = json!({"baseRevision":rev});
+        p.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        req(e, "create", p).unwrap()["note"].clone()
+    };
+    let parent = make(&mut e, json!({"text":"p","project":true}));
+    let pid = parent["id"].as_str().unwrap().to_owned();
+    let target = make(&mut e, json!({"text":"t","parent":pid}));
+    let tid = target["id"].as_str().unwrap().to_owned();
+    let source = make(&mut e, json!({"text":"s"}));
+    let sid = source["id"].as_str().unwrap().to_owned();
+    let rev = e.snapshot().unwrap().revision;
+    req(
+        &mut e,
+        "canvas",
+        json!({"baseRevision":rev,"changes":[{"id":sid,"canvas":{"next":[pid]}}]}),
+    )
+    .unwrap();
+    let before = e.snapshot().unwrap();
+    let deleted: Value =
+        serde_json::to_value(before.notes.iter().find(|n| n.id == pid).unwrap()).unwrap();
+    req(
+        &mut e,
+        "delete",
+        json!({"baseRevision":before.revision,"id":pid}),
+    )
+    .unwrap();
+    let rev = e.snapshot().unwrap().revision;
+    let out = req(
+        &mut e,
+        "restore",
+        json!({"baseRevision":rev,"notes":[deleted],"changes":[
+        {"id":sid,"canvas":{"next":[pid]}},{"id":tid,"canvas":{"parent":pid}}]}),
+    )
+    .unwrap();
+    let notes = out["snapshot"]["notes"].as_array().unwrap();
+    let find = |id: &str| notes.iter().find(|n| n["id"] == id).unwrap().clone();
+    assert_eq!(find(&pid)["text"], "p");
+    assert_eq!(find(&sid)["canvas"]["next"], json!([pid]));
+    assert_eq!(find(&tid)["canvas"]["parent"], json!(pid));
+    let rev = out["snapshot"]["revision"].as_u64().unwrap();
+    let again = req(
+        &mut e,
+        "restore",
+        json!({"baseRevision":rev,"notes":[find(&pid)],"changes":[]}),
+    )
+    .unwrap_err();
+    assert_eq!(again.code, "CONFLICT");
+}
