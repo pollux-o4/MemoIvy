@@ -222,9 +222,21 @@ fn write_new_synced(p: &Path, data: &[u8]) -> io::Result<()> {
     let mut f = opts.open(p)?;
     f.write_all(data)?;
     f.sync_all()?;
-    if let Some(dir) = p.parent() {
-        File::open(dir)?.sync_all()?
+    sync_parent_dir(p)
+}
+
+/// 새 파일 이름이 디렉터리 항목에 영속되게 한다. Unix는 디렉터리 fsync가 필요하다.
+/// Windows는 디렉터리를 일반 파일로 열 수 없고(os error 5) NTFS가 메타데이터를 저널링하므로 생략한다.
+#[cfg(unix)]
+fn sync_parent_dir(p: &Path) -> io::Result<()> {
+    match p.parent() {
+        Some(dir) => File::open(dir)?.sync_all(),
+        None => Ok(()),
     }
+}
+
+#[cfg(not(unix))]
+fn sync_parent_dir(_: &Path) -> io::Result<()> {
     Ok(())
 }
 
