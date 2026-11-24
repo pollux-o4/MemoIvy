@@ -66,10 +66,13 @@ export const SaveFailure: Story = {
       if (!surface) throw new Error('Editor content surface was not mounted.');
       return surface;
     });
+    const originalLines = [...editor.querySelectorAll('.cm-line')].map((line) => line.textContent);
     await userEvent.click(editor);
-    await userEvent.keyboard('\n상태 확인용 초안');
+    await userEvent.keyboard('{Control>}{End}{/Control}');
+    // 글자별 DOM 변경은 CodeMirror의 선택 영역 동기화와 충돌하므로 편집기가 처리하는 paste 경로를 쓴다.
+    await userEvent.paste('\n상태 확인용 초안');
     await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
-    await expect(editor).toHaveTextContent('상태 확인용 초안');
+    await expect([...editor.querySelectorAll('.cm-line')].map((line) => line.textContent)).toEqual([...originalLines, '상태 확인용 초안']);
   },
 };
 
@@ -118,7 +121,7 @@ export const InspectorActions: Story = {
     await expect(await project.findByRole('button', { name: '프로젝트 들어가기' })).toBeVisible();
     await expect(project.getByRole('button', { name: '메모로 열기' })).toBeVisible();
     // 본문은 메모와 같은 미리보기이고, 누르면 같은 자리에서 소개 편집기로 바뀐다.
-    await userEvent.click(project.getByRole('group', { name: /프로젝트 소개 · 눌러서 고치기/ }));
+    await userEvent.click(project.getByRole('button', { name: '프로젝트 소개 고치기' }));
     await expect(await project.findByRole('textbox', { name: '프로젝트 소개' })).toHaveFocus();
     const memo = await selectCard(canvasElement, '독립 메모');
     await expect(await memo.findByRole('button', { name: '메모 열기' })).toBeVisible();
