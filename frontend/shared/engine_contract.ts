@@ -16,8 +16,8 @@ export interface EngineRequest { version: 1; id: string; op: string; params?: Re
 /** @public Rust 엔진과 맞춰 보는 프로토콜 형태 */
 export interface EngineResponse { version: 1; id: string; result?: EngineResult; error?: EngineError }
 export interface EngineEvent { version: 1; event: 'snapshot' | 'error'; snapshot?: Snapshot; error?: EngineError }
-/** 창 관리자가 정한 창 상태. 메인 프로세스의 maximize·fullscreen 이벤트가 단일 출처다. */
-export type WindowState = { maximized: boolean };
+/** 메인 프로세스가 정한 창 상태: maximized는 maximize·fullscreen 이벤트, rounded는 window_chrome 플랫폼 정책이 단일 출처다. */
+export type WindowState = { maximized: boolean; rounded: boolean };
 
 export interface DesktopBridge {
   request(op: string, params?: Record<string, unknown>): Promise<EngineResult>;

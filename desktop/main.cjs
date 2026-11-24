@@ -239,7 +239,7 @@ function installIpc() {
 
 /** 렌더러 창 장식이 따르는 상태(DesktopBridge.onWindowState). */
 function windowState(win) {
-  return { maximized: win.isMaximized() || win.isFullScreen() };
+  return { maximized: win.isMaximized() || win.isFullScreen(), rounded: windowChrome(process.platform).transparent };
 }
 
 function createWindow(kind = 'library', id) {

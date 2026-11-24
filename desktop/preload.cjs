@@ -57,9 +57,10 @@ const bridge = Object.freeze({
   },
   onWindowState(listener) {
     if (typeof listener !== 'function') throw new TypeError('Listener must be a function');
-    const wrapped = (_event, state) => listener({ maximized: state?.maximized === true });
+    const normalize = (state) => ({ maximized: state?.maximized === true, rounded: state?.rounded === true });
+    const wrapped = (_event, state) => listener(normalize(state));
     ipcRenderer.on('memoivy:window-state', wrapped);
-    void ipcRenderer.invoke('memoivy:window-state').then((state) => listener({ maximized: state?.maximized === true })).catch(() => undefined);
+    void ipcRenderer.invoke('memoivy:window-state').then((state) => listener(normalize(state))).catch(() => undefined);
     return () => ipcRenderer.removeListener('memoivy:window-state', wrapped);
   },
   onFlush(listener) {

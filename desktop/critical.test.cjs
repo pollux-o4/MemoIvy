@@ -12,7 +12,7 @@ const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
 
 test('external URL policy is shared and only valid bounded web or mail links open', async () => {
   for (const url of ['https://example.com/path', 'http://example.com', 'mailto:user@example.com']) assert.equal(isSafeExternal(url), true);
-  for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:pass@example.com', 'https://example.com/' + 'a'.repeat(4096), null]) assert.equal(isSafeExternal(url), false);
+  for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:pass@example.com', `https://example.com/${'a'.repeat(4096)}`, null]) assert.equal(isSafeExternal(url), false);
 
   const opened = [];
   await openExternal('https://example.com', async (url) => opened.push(url));

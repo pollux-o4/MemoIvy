@@ -28,7 +28,7 @@ test('every window kind takes its chrome from the platform policy', () => {
   }
   const app = { setName() {}, setDesktopName() {}, commandLine: { appendSwitch() {} }, requestSingleInstanceLock: () => false, quit() {}, setPath() {} };
   const context = { require: (name) => name === 'electron' ? { app, BrowserWindow: FakeWindow, nativeTheme: { shouldUseDarkColors: false } } : localRequire(name), process, console, URL, URLSearchParams, __dirname, module: { exports: {} } };
-  vm.runInNewContext(readFileSync(path.join(__dirname, 'main.cjs'), 'utf8') + '\nmodule.exports.createWindow = createWindow;', context);
+  vm.runInNewContext(`${readFileSync(path.join(__dirname, 'main.cjs'), 'utf8')}\nmodule.exports.createWindow = createWindow;`, context);
   for (const kind of Object.keys(localRequire('./window_kinds.json'))) {
     const win = context.module.exports.createWindow(kind, kind === 'note' ? '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4' : undefined);
     const { windowChrome } = require('./window_chrome.cjs');
@@ -52,11 +52,13 @@ test('main process pushes maximize and fullscreen changes as the window state', 
   }
   const app = { setName() {}, setDesktopName() {}, commandLine: { appendSwitch() {} }, requestSingleInstanceLock: () => false, quit() {}, setPath() {} };
   const context = { require: (name) => name === 'electron' ? { app, BrowserWindow: FakeWindow, nativeTheme: { shouldUseDarkColors: false } } : localRequire(name), process, console, URL, URLSearchParams, __dirname, module: { exports: {} } };
-  vm.runInNewContext(readFileSync(path.join(__dirname, 'main.cjs'), 'utf8') + '\nmodule.exports.createWindow = createWindow;', context);
+  vm.runInNewContext(`${readFileSync(path.join(__dirname, 'main.cjs'), 'utf8')}\nmodule.exports.createWindow = createWindow;`, context);
   const win = context.module.exports.createWindow('canvas');
   win.maximized = true; win.emit('maximize');
   win.maximized = false; win.emit('unmaximize');
   win.fullScreen = true; win.emit('enter-full-screen');
+  const { windowChrome } = require('./window_chrome.cjs');
+  assert.ok(win.sent.every(([, state]) => state.rounded === windowChrome(process.platform).transparent));
   assert.deepEqual(win.sent.map(([channel, state]) => [channel, state.maximized]), [
     ['memoivy:window-state', true], ['memoivy:window-state', false], ['memoivy:window-state', true],
   ]);
