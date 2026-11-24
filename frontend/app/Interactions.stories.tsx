@@ -101,7 +101,8 @@ const selectCard = async (root: HTMLElement, title: string) => {
   const card = [...root.querySelectorAll<HTMLElement>('[data-note-id]')].find((node) => node.textContent?.includes(title));
   if (!card) throw new Error(`카드 없음: ${title}`);
   await userEvent.click(card);
-  return within(await within(root).findByRole('complementary').catch(() => root.querySelector<HTMLElement>('.canvas-inspector')!));
+  await waitFor(() => expect(root.querySelector('.canvas-inspector')).not.toBeNull());
+  return within(root.querySelector<HTMLElement>('.canvas-inspector')!);
 };
 
 /** 인스펙터 주 동작: 프로젝트는 들어가기 + 보조 '메모로 열기', 메모는 '메모 열기' 하나. 단축키 칩은 한 모양. */
