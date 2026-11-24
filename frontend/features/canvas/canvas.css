@@ -1,4 +1,7 @@
 .canvas-screen {
+  /* 제목 줄·경로 막대·하단 도크가 공유하는 좌우 여백과 경로 칩 높이: 세 줄의 왼쪽 가장자리와 칩 위아래를 맞춘다. */
+  --canvas-gutter: 19px;
+  --canvas-chip: 32px;
   --canvas-bg: var(--memoivy-bg);
   --canvas-surface: var(--memoivy-surface);
   --canvas-text: var(--memoivy-text);
@@ -28,7 +31,7 @@
   height: 54px;
   display: grid;
   align-items: center;
-  padding: 0 19px;
+  padding: 0 var(--canvas-gutter);
   border: 0;
   color: var(--canvas-text);
   background: var(--canvas-bg);
@@ -213,7 +216,7 @@
   position: absolute;
   z-index: 8;
   bottom: 18px;
-  left: 19px;
+  left: var(--canvas-gutter);
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -273,26 +276,26 @@
 .canvas-screen .alignment-bar button.danger:hover { background: var(--canvas-danger); color: #fff; }
 .canvas-screen .alignment-face > i { width: 1px; height: 18px; margin: 0 2px; background: var(--canvas-hairline); }
 
-.canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 44px; display: flex; align-items: center; padding: 2px 12px 10px; }
+.canvas-screen .canvas-navigator-row { position: relative; z-index: 3; flex: 0 0 auto; min-height: 44px; display: flex; align-items: center; padding: 2px var(--canvas-gutter) 10px; }
 /* 경로: 머리 막대 닫기 버튼과 왼쪽을 맞추고, 모든 항목을 32px 높이·한 줄 기준선에 둔다. */
 .canvas-screen .canvas-navigator { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; font-size: 13px; line-height: 1; }
 .canvas-screen .canvas-navigator span { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
 .canvas-screen .canvas-navigator i { width: 14px; color: color-mix(in srgb, var(--canvas-muted) 70%, transparent); font-style: normal; text-align: center; }
-.canvas-screen .canvas-navigator button { display: inline-flex; align-items: center; max-width: 200px; height: 32px; overflow: hidden; padding: 0 10px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.canvas-screen .canvas-navigator button { display: inline-flex; align-items: center; max-width: 200px; height: var(--canvas-chip); overflow: hidden; padding: 0 10px; border: 0; border-radius: 8px; color: var(--canvas-muted); background: transparent; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 120ms, color 120ms; }
 .canvas-screen .canvas-navigator button:hover { color: var(--canvas-text); background: var(--canvas-hover); }
 .canvas-screen .canvas-navigator button[aria-current="page"] { color: var(--canvas-text); font-weight: 600; background: var(--canvas-hover); }
 .canvas-screen .canvas-navigator .canvas-home { gap: 6px; padding-left: 8px; }
 .canvas-screen .canvas-navigator .canvas-pin { justify-content: center; width: 32px; margin-left: 2px; padding: 0; color: var(--canvas-accent); font-size: 15px; }
 /* 바로가기 묶음은 앞이 홈·경로·별 무엇이든 첫 칩부터 8px 띄운다. */
 .canvas-screen .canvas-navigator :not(.canvas-shortcut) + .canvas-shortcut { margin-left: 8px; }
-.canvas-screen .canvas-navigator .canvas-shortcut { max-width: 140px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--canvas-surface); box-shadow: 0 0 0 1px var(--canvas-hairline); }
+.canvas-screen .canvas-navigator .canvas-shortcut { max-width: 140px; height: var(--canvas-chip); padding: 0 12px; border-radius: 999px; background: var(--canvas-surface); box-shadow: 0 0 0 1px var(--canvas-hairline); }
 
 @container (max-width: 620px) {
-  .canvas-screen .canvas-header { padding: 0 10px; }
+  .canvas-screen { --canvas-gutter: 10px; }
   .canvas-screen .canvas-header .window-controls { gap: 2px; }
-  .canvas-screen .canvas-dock { bottom: 8px; left: 8px; gap: 3px; padding: 0 5px; }
+  .canvas-screen .canvas-dock { bottom: 8px; gap: 3px; padding: 0 5px; }
   .canvas-screen .canvas-dock .canvas-summary, .canvas-screen .canvas-dock .canvas-status { display: none; }
-  .canvas-screen .canvas-navigator-row { min-height: 40px; padding: 0 10px 8px; }
+  .canvas-screen .canvas-navigator-row { min-height: 40px; padding-block: 0 8px; }
   .canvas-screen .canvas-navigator { max-width: 100%; }
 }
 
