@@ -25,7 +25,7 @@ export function createMockBridge(initial?: Snapshot): DesktopBridge {
   const bridge: DesktopBridge = {
     async request(op, params = {}) {
       if (op === 'snapshot' || op === 'flush') return { snapshot: structuredClone(snapshot) };
-      if (['create', 'update', 'delete', 'canvas', 'importAsset', 'deleteAsset', 'preference'].includes(op) && params.baseRevision !== snapshot.revision) {
+      if (['create', 'update', 'delete', 'canvas', 'restore', 'importAsset', 'deleteAsset', 'preference'].includes(op) && params.baseRevision !== snapshot.revision) {
         const conflict = new Error('다른 창에서 메모가 변경되었습니다. 초안을 확인하고 다시 시도해 주세요.') as Error & { code: string; snapshot: Snapshot };
         conflict.code = 'CONFLICT'; conflict.snapshot = structuredClone(snapshot); throw conflict;
       }
@@ -56,6 +56,17 @@ export function createMockBridge(initial?: Snapshot): DesktopBridge {
         return update(() => {
           const id = String(params.id);
           snapshot = { ...snapshot, notes: snapshot.notes.filter((note) => note.id !== id).map((note) => ({ ...note, canvas: { ...note.canvas, parent: note.canvas.parent === id ? null : note.canvas.parent, next: note.canvas.next.filter((target) => target !== id) } })) };
+          return {};
+        });
+      }
+      if (op === 'restore') {
+        return update(() => {
+          const restored = structuredClone(params.notes as Note[]);
+          const patches = params.changes as Array<{ id: string; canvas: Partial<Note['canvas']> }>;
+          snapshot = { ...snapshot, notes: [...restored, ...snapshot.notes].map((note) => {
+            const patch = patches.find((change) => change.id === note.id);
+            return patch ? { ...note, canvas: { ...note.canvas, ...patch.canvas } } : note;
+          }) };
           return {};
         });
       }

@@ -136,9 +136,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent, onMove: inspectorActions.move, onShift: inspectorActions.shift }), [outlineRows, inspectorActions]);
 
   const confirmDelete = async () => {
-    for (const id of deleteTarget) {
-      try { await store.removeNote(id); } catch { break; }
-    }
+    await commands.remove(deleteTarget).catch(() => undefined);
     setSelected([]);
     setDeleteTarget([]);
   };

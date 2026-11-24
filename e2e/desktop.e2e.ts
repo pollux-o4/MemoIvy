@@ -234,7 +234,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  test('삭제한 메모를 가리키는 실행 취소 기록은 건너뛰고 오류를 내지 않는다', async () => {
+  test('삭제는 Ctrl+Z로 원래 id·연결 그대로 되살아나고 그 전 기록도 이어서 되돌린다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-undo-delete-'));
     const kept = 'd0000000-0000-4000-8000-000000000001';
     const removed = 'd0000000-0000-4000-8000-000000000002';
@@ -263,8 +263,14 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await canvas.locator('.canvas-screen').press('Control+z');
       await new Promise((resolve) => setTimeout(resolve, 500));
       expect(await canvas.getByRole('alert').count()).toBe(0);
+      await expect.poll(() => card(removed).count()).toBe(1);
+      const links = async () => (await canvas.evaluate(() => window.memoivy.request('snapshot'))).snapshot?.notes.find((note) => note.id === 'd0000000-0000-4000-8000-000000000001')?.canvas.next;
+      await expect.poll(links).toEqual([removed]);
+      // 삭제 앞의 이동 기록도 되살아난 메모에 이어서 적용된다.
+      const moved = await card(removed).boundingBox();
+      await canvas.locator('.canvas-screen').press('Control+z');
+      await expect.poll(async () => (await card(removed).boundingBox())?.x).not.toBe(moved?.x);
       await expect.poll(() => canvas.locator('.canvas-status').textContent()).not.toContain('실패');
-      expect(await card(kept).count()).toBe(1);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
