@@ -1,4 +1,5 @@
 name: Snap Store candidate
+# 공개된 GitHub Release의 Snap을 체크섬 확인 뒤 latest/candidate에 올린다(OPS-005).
 
 on:
   workflow_call:
@@ -21,35 +22,26 @@ permissions:
 
 jobs:
   upload:
-    if: github.ref == 'refs/heads/main'
+    # 출시 호출은 main에서, 수동 재업로드는 고친 워크플로를 쓰도록 어느 브랜치에서든 연다. 태그는 최신 공개 출시로 제한한다.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     concurrency:
       group: snap-store-candidate
       cancel-in-progress: false
     steps:
-      - name: Download and verify the current release Snap
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "$latest" ]]; then
-            echo "::error::Use the latest published MemoIvy release tag ($latest)."
-            exit 1
-          fi
-          cd "$RUNNER_TEMP"
-          package="memoivy_${TAG#v}_amd64.snap"
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern "$package" --pattern SHA256SUMS-snap
-          sha256sum --check --strict SHA256SUMS-snap
-          test -f "$package"
-          test "$(sha256sum -- "$package")" = "$(cat SHA256SUMS-snap)"
-          printf 'SNAP_PACKAGE=%s/%s\n' "$RUNNER_TEMP" "$package" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v5
+      - id: snap
+        uses: ./.github/actions/release-asset
+        with:
+          tag: ${{ inputs.tag }}
+          package: memoivy_{version}_amd64.snap
+          checksums: SHA256SUMS-snap
       - run: sudo snap install snapcraft --classic
       - name: Upload to latest/candidate
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          SNAP_PACKAGE: ${{ steps.snap.outputs.path }}
         run: |
           if [[ -z "$SNAPCRAFT_STORE_CREDENTIALS" ]]; then
             echo '::error::Set the SNAPCRAFT_STORE_CREDENTIALS Actions secret.'

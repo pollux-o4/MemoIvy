@@ -38,24 +38,13 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Download and verify the current release MSIX
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "$latest" ]]; then
-            echo "::error::Use the latest published MemoIvy release tag ($latest)."
-            exit 1
-          fi
-          cd "$RUNNER_TEMP"
-          package="MemoIvy-${TAG#v}-x64.msix"
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern "$package" --pattern SHA256SUMS-windows
-          # SHA256SUMS-windows에는 설치 파일(.exe)도 있으므로 받은 MSIX 줄만 확인한다.
-          # Windows sha256sum은 이진 모드 표시로 파일명 앞에 *를 붙인다.
-          awk -v f="$package" '$2 == f || $2 == "*" f' SHA256SUMS-windows | grep . | sha256sum --check --strict
-          printf 'MSIX_PACKAGE=%s\n' "$(cygpath -w "$RUNNER_TEMP/$package")" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v5
+      - id: msix
+        uses: ./.github/actions/release-asset
+        with:
+          tag: ${{ inputs.tag }}
+          package: MemoIvy-{version}-x64.msix
+          checksums: SHA256SUMS-windows
       - name: Check Store configuration
         env:
           TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
@@ -79,6 +68,7 @@ jobs:
           SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
           SELLER: ${{ vars.MSSTORE_SELLER_ID }}
           PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          MSIX_PACKAGE: ${{ steps.msix.outputs.path }}
         run: |
           msstore reconfigure --tenantId $env:TENANT --sellerId $env:SELLER --clientId $env:CLIENT --clientSecret $env:SECRET
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

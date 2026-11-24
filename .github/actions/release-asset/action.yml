@@ -1,0 +1,41 @@
+name: MemoIvy release asset
+description: 최신 공개 Release의 설치 파일 하나를 받아 SHA256SUMS로 확인한다. 스토어 게시 워크플로의 공통 준비 단계(SSoT).
+inputs:
+  tag:
+    description: 최신 공개 GitHub Release 태그(vX.Y.Z)
+    required: true
+  package:
+    description: 받을 파일 이름. {version}은 태그에서 v를 뺀 버전으로 바뀐다.
+    required: true
+  checksums:
+    description: 확인에 쓸 체크섬 파일 이름(SHA256SUMS-<대상>)
+    required: true
+outputs:
+  path:
+    description: 받은 파일의 실행 환경 기준 경로
+    value: ${{ steps.fetch.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - id: fetch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ inputs.tag }}
+        PACKAGE: ${{ inputs.package }}
+        CHECKSUMS: ${{ inputs.checksums }}
+      run: |
+        latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "$latest" ]]; then
+          echo "::error::Use the latest published MemoIvy release tag ($latest)."
+          exit 1
+        fi
+        cd "$RUNNER_TEMP"
+        package="${PACKAGE//\{version\}/${TAG#v}}"
+        gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --clobber --pattern "$package" --pattern "$CHECKSUMS"
+        # 체크섬 파일에는 같은 대상의 다른 설치 파일도 있어 받은 파일 줄만 확인한다.
+        # Windows sha256sum은 이진 모드 표시로 파일명 앞에 *를 붙인다.
+        awk -v f="$package" '$2 == f || $2 == "*" f' "$CHECKSUMS" | grep . | sha256sum --check --strict
+        path="$RUNNER_TEMP/$package"
+        if [[ "$RUNNER_OS" == Windows ]]; then path=$(cygpath -w "$path"); fi
+        printf 'path=%s\n' "$path" >> "$GITHUB_OUTPUT"

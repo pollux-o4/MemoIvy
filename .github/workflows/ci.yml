@@ -1,8 +1,9 @@
 name: CI
 # 병합 관문: 로컬 mise 작업을 그대로 실행해 로컬·CI 검증 정의를 하나로 유지한다(OPS-003).
+# main 푸시는 PR에서 통과한 코드라 Release의 ci-gate가 그 결과를 확인한다(OPS-005).
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
   pull_request:
   workflow_dispatch:
   workflow_call:

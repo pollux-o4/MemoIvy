@@ -4,7 +4,7 @@
 
 - 브랜치·버전·출시 커밋 규칙: `decisions/release`의 current ADR.
 - 출시 절차: `dev`에서 `npm version <버전> --no-git-tag-version` 커밋 → `dev→main` PR squash 병합 → `Release` 워크플로 성공·Release 공개 확인 → `main`을 `dev`에 병합 → Windows VM 설치 확인 → 스토어 승격.
-- `Release` 워크플로는 `scripts/release-plan.mjs`로 태그를 정하고 초안 Release를 만든 뒤 `Desktop release candidates`를 호출한다. 후보 빌드는 CI 전체(Linux·Windows e2e 포함)를 다시 통과한 커밋에서 Windows와 Snap을 빌드한다. `scripts/verify-package.mjs`가 대상별로 엔진 동봉·Windows 엔진의 VC 런타임 비의존(CRT 정적 링크, `.cargo/config.toml`)·Snap 단일 산출물을 확인한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 모두 성공해야 Release가 공개되고 태그가 생긴다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
+- `Release` 워크플로는 `scripts/release-plan.mjs`로 태그를 정하고 초안 Release를 만든 뒤 `Desktop release candidates`를 호출한다. `scripts/release-ci-gate.mjs`가 병합 PR에서 같은 코드가 CI 전체(Linux·Windows e2e 포함)를 통과했는지 확인하고, 확인할 수 없으면 CI를 다시 실행한다. 후보 빌드는 이 관문을 통과한 커밋에서 Windows와 Snap을 빌드한다. `scripts/verify-package.mjs`가 대상별로 엔진 동봉·Windows 엔진의 VC 런타임 비의존(CRT 정적 링크, `.cargo/config.toml`)·Snap 단일 산출물을 확인한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 모두 성공해야 Release가 공개되고 태그가 생긴다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
 - Windows 검증 단계: 매 푸시의 CI Windows e2e가 기능 회귀를 막고, 공용 Windows VM은 릴리스 후보의 설치·Store·첫 실행 확인에만 사용한다.
 - Windows x64는 `npm run release:windows`로 사용자별 NSIS 설치본을 만든다. Linux에서는 다른 Wine 접두사와 가상 화면에서 설치만 먼저 확인한다. 실제 Windows에서 표준 사용자·한글 설치 경로·앱 메뉴·작성·첨부·재시작·업데이트를 확인한다.
 - Store용 MSIX는 Windows SDK와 `scripts/package-msix.ps1`을 사용한다. Partner Center에서 할당한 이름, 게시자, 표시 이름을 각각 `MSIX_IDENTITY`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_NAME`에 설정한다. 임시 개발 식별자로 만든 패키지는 제출 후보에서 제외한다.
@@ -21,9 +21,9 @@
 
 - 서명과 Store·Snap 게시 자격 증명은 권한을 제한한 작업 환경에서 사용한다. 테스트 패키지와 후보 체크섬을 검토한 뒤 선택한 산출물만 게시한다.
 - GitHub Actions에 `SNAPCRAFT_STORE_CREDENTIALS`를 등록하고 저장소 변수 `SNAP_STORE_CANDIDATE_ENABLED`를 `true`로 설정하면 GitHub Release 공개 후 Snap을 `latest/candidate`에 올린다. 토큰은 `memoivy`와 `latest/candidate`에 한정한다.
-- 재실행하려면 `main`에서 `Snap Store candidate` 워크플로에 최신 공개 태그를 지정한다. 업로드 전에 Release에서 받은 Snap의 SHA-256을 확인한다. 위 검증을 통과한 리비전은 게시 담당자가 `snapcraft release memoivy 리비전 latest/stable`로 승격한다.
+- 재실행하려면 `Snap Store candidate` 워크플로(어느 브랜치에서든)에 최신 공개 태그를 지정한다. 두 스토어 워크플로는 `.github/actions/release-asset`으로 최신 공개 Release의 설치 파일을 받아 SHA-256을 확인한다. 위 검증을 통과한 리비전은 게시 담당자가 `snapcraft release memoivy 리비전 latest/stable`로 승격한다.
 - Microsoft Store 첫 공개는 Partner Center에서 진행한다(완료). 이후에는 GitHub Release 공개 뒤 `Microsoft Store submission` 워크플로가 체크섬을 확인한 MSIX를 `msstore publish`로 새 제출에 올리고 커밋한다. 시크릿 `MSSTORE_TENANT_ID`·`MSSTORE_CLIENT_ID`·`MSSTORE_CLIENT_SECRET`, 변수 `MSSTORE_SELLER_ID`·`MSSTORE_PRODUCT_ID`가 필요하고, `MSSTORE_PRODUCT_ID`가 비면 건너뛴다. Entra 앱은 Partner Center 사용자 관리에 관리자 권한으로 연결돼 있어야 한다. MSIX 신원은 변수 `MSIX_IDENTITY`·`MSIX_PUBLISHER`·`MSIX_PUBLISHER_NAME`이 Partner Center 값과 같아야 한다.
-- 재제출은 `main`에서 `Microsoft Store submission` 워크플로에 최신 공개 태그를 지정한다.
+- 재제출은 `Microsoft Store submission` 워크플로(어느 브랜치에서든)에 최신 공개 태그를 지정한다.
 - 장애 시 게시 담당자가 이전 리비전을 채널에 재지정하고, 장치에서 `snap revert memoivy`와 OPS-002 복구 절차를 확인한다. 새 SQLite 파일은 별도로 보존한다.
 
 ## 공용 배포 검증 환경
