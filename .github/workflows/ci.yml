@@ -53,14 +53,14 @@ jobs:
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: npm ci
       - run: mise run test:e2e
+        env:
+          E2E_SHOT_DIR: ${{ runner.temp }}/e2e-shots
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-shots-${{ github.sha }}
           path: ${{ runner.temp }}/e2e-shots
           if-no-files-found: ignore
-    env:
-      E2E_SHOT_DIR: ${{ runner.temp }}/e2e-shots
 
   secrets:
     name: 비밀정보 검사
