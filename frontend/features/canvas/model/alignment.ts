@@ -5,14 +5,34 @@ export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom
 export function vacantGroup(ids: string[], positions: Record<string, CanvasPoint>, occupied: CanvasPoint[]): Record<string, CanvasPoint> {
   const members = ids.flatMap((id) => positions[id] ? [[id, positions[id]] as const] : []);
   if (!members.length) return {};
-  const left = Math.min(...members.map(([, point]) => point.x)); const top = Math.min(...members.map(([, point]) => point.y));
+  const { minX: left, minY: top } = pointBounds(members.map(([, point]) => point));
+  const collides = occupiedCollision(occupied);
   for (let index = 0; index < 5040; index++) {
     const origin = { x: 64 + (index % 60) * 320, y: 64 + Math.floor(index / 60) * 232 };
-    const moved = members.map(([, point]) => ({ x: origin.x + point.x - left, y: origin.y + point.y - top }));
-    const collision = moved.some((point) => occupied.some((other) => Math.abs(point.x - other.x) < CARD_WIDTH + 24 && Math.abs(point.y - other.y) < CARD_HEIGHT + 24));
+    const collision = members.some(([, point]) => collides({ x: origin.x + point.x - left, y: origin.y + point.y - top }));
     if (!collision) return Object.fromEntries(members.map(([id, point]) => [id, { x: origin.x + point.x - left, y: origin.y + point.y - top }]));
   }
   return Object.fromEntries(members.map(([id, point]) => [id, { x: Math.max(64, point.x), y: Math.max(64, point.y) }]));
+}
+
+function occupiedCollision(occupied: readonly CanvasPoint[]): (point: CanvasPoint) => boolean {
+  const width = CARD_WIDTH + 24; const height = CARD_HEIGHT + 24;
+  const cells = new Map<string, CanvasPoint[]>();
+  const key = (x: number, y: number) => `${x},${y}`;
+  for (const point of occupied) {
+    const cell = key(Math.floor(point.x / width), Math.floor(point.y / height));
+    const bucket = cells.get(cell);
+    if (bucket) bucket.push(point);
+    else cells.set(cell, [point]);
+  }
+  return (point) => {
+    const x = Math.floor(point.x / width); const y = Math.floor(point.y / height);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      const bucket = cells.get(key(x + dx, y + dy));
+      if (bucket?.some((other) => Math.abs(point.x - other.x) < width && Math.abs(point.y - other.y) < height)) return true;
+    }
+    return false;
+  };
 }
 
 export function alignPositions(ids: string[], positions: Record<string, CanvasPoint>, kind: Alignment, edges: Array<[string, string]> = []): Record<string, CanvasPoint> {
@@ -89,20 +109,37 @@ function flowPositions(ids: string[], positions: Record<string, CanvasPoint>, ed
     }
   }
   const rank = order.map(() => 0);
-  for (let round = 0; round < order.length; round++) for (const [from, to] of forward) rank[to] = Math.max(rank[to], rank[from] + 1);
-  const columns: number[][] = Array.from({ length: Math.max(...rank) + 1 }, () => []);
+  const children = order.map(() => [] as number[]);
+  const parents = order.map(() => [] as number[]);
+  const indegree = order.map(() => 0);
+  for (const [from, to] of forward) {
+    children[from].push(to);
+    parents[to].push(from);
+    indegree[to] += 1;
+  }
+  const queue = order.flatMap((_, index) => indegree[index] === 0 ? [index] : []);
+  for (let head = 0; head < queue.length; head++) {
+    const from = queue[head];
+    for (const to of children[from]) {
+      rank[to] = Math.max(rank[to], rank[from] + 1);
+      indegree[to] -= 1;
+      if (indegree[to] === 0) queue.push(to);
+    }
+  }
+  let maxRank = -Infinity;
+  for (const value of rank) maxRank = Math.max(maxRank, value);
+  const columns: number[][] = Array.from({ length: maxRank + 1 }, () => []);
   rank.forEach((value, index) => { columns[value].push(index); });
   const row = order.map(() => 0);
   for (const column of columns) {
-    column.sort((a, b) => {
-      const parents = (i: number) => forward.filter((edge) => edge[1] === i).map((edge) => row[edge[0]]);
-      const aa = parents(a); const bb = parents(b);
-      return (aa.length ? aa.reduce((s, n) => s + n, 0) / aa.length : a) - (bb.length ? bb.reduce((s, n) => s + n, 0) / bb.length : b) || a - b;
-    });
+    const keys = new Map(column.map((index) => [index, parents[index].length
+      ? parents[index].reduce((sum, parent) => sum + row[parent], 0) / parents[index].length : index]));
+    column.sort((a, b) => (keys.get(a) ?? a) - (keys.get(b) ?? b) || a - b);
     column.forEach((index, position) => { row[index] = position; });
   }
-  const left = Math.min(...ids.map((id) => positions[id].x)); const top = Math.min(...ids.map((id) => positions[id].y));
-  const tallest = Math.max(...columns.map((column) => column.length));
+  const { minX: left, minY: top } = pointBounds(ids.map((id) => positions[id]));
+  let tallest = -Infinity;
+  for (const column of columns) tallest = Math.max(tallest, column.length);
   return Object.fromEntries(columns.flatMap((column, c) => column.map((index, r) => [order[index], {
     x: left + c * (CARD_WIDTH + 96), y: top + (tallest - column.length) * (CARD_HEIGHT + 32) / 2 + r * (CARD_HEIGHT + 32),
   }])));
