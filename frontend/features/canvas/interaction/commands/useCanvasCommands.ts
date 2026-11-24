@@ -24,7 +24,8 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
     void store.mutateCanvas(changes).catch(() => undefined).finally(() => setDraftPositions((current) => settleDraft(current, moved)));
   };
   const states = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, { ...note.canvas, position: note.canvas.position ?? [positions[note.id].x, positions[note.id].y] }])), [notes, positions]);
-  const history = useCanvasHistory(states, persist);
+  const noteIds = useMemo(() => new Set(store.notes.map((note) => note.id)), [store.notes]);
+  const history = useCanvasHistory(states, persist, noteIds);
   const commit = (changes: CanvasChange[]) => { if (!changes.length) return; history.record(changes); persist(changes); };
 
   const commitPositions = (next: Positions) => commit(changedPositions(next, Object.fromEntries(notes.map((note) => [note.id, note.canvas.position])))

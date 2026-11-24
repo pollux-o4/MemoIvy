@@ -234,6 +234,43 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('삭제한 메모를 가리키는 실행 취소 기록은 건너뛰고 오류를 내지 않는다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-undo-delete-'));
+    const kept = 'd0000000-0000-4000-8000-000000000001';
+    const removed = 'd0000000-0000-4000-8000-000000000002';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id: kept, text: '남길 메모', color: 'yellow', modified: 100, canvas: { position: [0, 0], next: [removed] } },
+      { id: removed, text: '지울 메모', color: 'blue', modified: 100, canvas: { position: [400, 0], next: [] } },
+    ]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      const card = (id: string) => canvas.locator(`.canvas-note[data-note-id="${id}"]`);
+      await card(removed).waitFor();
+      await settle(canvas);
+      // 지울 메모를 옮겨 실행 취소 기록 맨 위에 그 메모의 변경을 남긴다.
+      const box = await card(removed).boundingBox();
+      if (!box) throw new Error('카드가 보이지 않음');
+      await canvas.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await canvas.mouse.down();
+      await canvas.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 40, { steps: 6 });
+      await canvas.mouse.up();
+      await card(removed).click();
+      await canvas.locator('.canvas-screen').press('Delete');
+      await canvas.getByRole('button', { name: '삭제', exact: true }).click();
+      await expect.poll(() => card(removed).count()).toBe(0);
+      await canvas.locator('.canvas-screen').press('Control+z');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(await canvas.getByRole('alert').count()).toBe(0);
+      await expect.poll(() => canvas.locator('.canvas-status').textContent()).not.toContain('실패');
+      expect(await card(kept).count()).toBe(1);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   // 검증: PROJECT-001. 큰 보드에서 나갈 때 보던 배율과 위치를 복원한다.
   test('프로젝트 복귀 시 이전 캔버스 위치와 확대율을 복원한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-scope-camera-'));
