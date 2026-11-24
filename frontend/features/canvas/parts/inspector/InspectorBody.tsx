@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Draft } from '../../../../shared/draft/useDraft';
 import { markdownPreview } from '../../../../shared/markdown/preview/model';
 import { PreviewList } from '../../../../shared/markdown/preview/PreviewList';
@@ -17,7 +17,9 @@ export function InspectorBody({ text, edit, onToggleTask }: {
 }) {
   const [editing, setEditing] = useState(false);
   const field = useRef<HTMLDivElement>(null);
-  const rows = markdownPreview(text, PREVIEW_ROWS).rows;
+  const showEditor = Boolean(edit && (editing || !edit.draft.value.trim()));
+  // 편집 중에는 미리보기를 그리지 않으므로 입력마다 다시 파싱하지 않는다.
+  const rows = useMemo(() => showEditor ? [] : markdownPreview(text, PREVIEW_ROWS).rows, [showEditor, text]);
   // 편집기가 마운트를 마친 다음 프레임에 포커스를 준다(개발 StrictMode의 재생성 중 포커스를 잃지 않게).
   useEffect(() => {
     if (!editing) return;
@@ -25,7 +27,7 @@ export function InspectorBody({ text, edit, onToggleTask }: {
     return () => cancelAnimationFrame(frame);
   }, [editing]);
 
-  if (edit && (editing || !edit.draft.value.trim())) {
+  if (edit && showEditor) {
     return <div ref={field} className="inspector-body editing" onFocus={() => setEditing(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setEditing(false); }}>
       <MarkdownField className="inspector-intro" draft={edit.draft} label={edit.label} placeholder={edit.placeholder} onExternal={edit.onExternal}/>
     </div>;
