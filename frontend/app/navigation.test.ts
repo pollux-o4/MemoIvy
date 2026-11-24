@@ -12,21 +12,21 @@ vi.mock('react', async (original) => ({
   useEffect: () => {},
   useEffectEvent: (callback: unknown) => callback,
 }));
-vi.mock('../../shared/useMemoivy', () => ({ useMemoivy: () => ({ snapshot: {}, bridge: state.bridge }) }));
-vi.mock('../../shared/appearance', () => ({ useAppearance: () => {} }));
-vi.mock('../../shared/useWindowFrame', () => ({ useWindowFrame: () => '' }));
-vi.mock('../../shared/tooltip', () => ({ installTooltips: () => {} }));
-vi.mock('../../shared/Icon', () => ({ Icon: () => null }));
-vi.mock('../library/Library', () => ({ Library: () => null }));
-vi.mock('../editor/Editor', () => ({ Editor: () => null }));
-vi.mock('./Canvas', () => ({ Canvas: () => null }));
-vi.mock('../attachments/Files', () => ({ Files: () => null }));
-vi.mock('../settings/Settings', () => ({ Settings: () => null }));
-vi.mock('../help/Help', () => ({ Help: () => null }));
+vi.mock('../shared/useMemoivy', () => ({ useMemoivy: () => ({ snapshot: {}, bridge: state.bridge }) }));
+vi.mock('../shared/appearance', () => ({ useAppearance: () => {} }));
+vi.mock('../shared/useWindowFrame', () => ({ useWindowFrame: () => '' }));
+vi.mock('../shared/tooltip', () => ({ installTooltips: () => {} }));
+vi.mock('../shared/Icon', () => ({ Icon: () => null }));
+vi.mock('../features/library/Library', () => ({ Library: () => null }));
+vi.mock('../features/editor/Editor', () => ({ Editor: () => null }));
+vi.mock('../features/canvas/Canvas', () => ({ Canvas: () => null }));
+vi.mock('../features/attachments/Files', () => ({ Files: () => null }));
+vi.mock('../features/settings/Settings', () => ({ Settings: () => null }));
+vi.mock('../features/help/Help', () => ({ Help: () => null }));
 
-import { App } from '../../app/App';
-import { Canvas } from './Canvas';
-import { Library } from '../library/Library';
+import { App } from './App';
+import { Canvas } from '../features/canvas/Canvas';
+import { Library } from '../features/library/Library';
 
 function render(screen: 'library' | 'canvas', desktop = false) {
   state.cursor = 0;

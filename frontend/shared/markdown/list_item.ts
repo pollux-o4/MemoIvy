@@ -28,7 +28,7 @@ export function parseListItem(text: string): ParsedListItem | null {
 export const taskBoxOffset = (item: ListItem): number => item.marker.lastIndexOf('[');
 
 export type FenceBoundary = { kind: 'open' | 'close'; delimiter: string; indent: string };
-export type ListOwner = { item: ListItem; markerLine: number; sequence: number };
+type ListOwner = { item: ListItem; markerLine: number; sequence: number };
 /** 한 줄의 블록 판정. item은 목록 표식(null: 일반 줄, undefined: 코드·인용 안이라 판정 제외). */
 export type ParsedListItem = ListItem & { markerEnd: number };
 export type BlockLine = { item: ParsedListItem | null | undefined; owner: ListOwner | null; code: boolean; fence?: FenceBoundary };

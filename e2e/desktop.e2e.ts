@@ -853,11 +853,6 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => gauge.getAttribute('aria-valuenow')).toBe('0');
       expect(await gauge.getAttribute('aria-valuemax')).toBe('1');
       expect(await roots.getByRole('progressbar', { name: '최근 메모 진행률' }).count()).toBe(0);
-      // 두 창 동기화를 보려고 목록을 닫는 버튼 대신 bridge로 캔버스만 연다.
-      await library.evaluate((id) => window.memoivy?.openWindow('canvas', id), project);
-      const canvas = await windowWith(app, '.canvas-screen');
-      const canvasGauge = canvas.getByRole('progressbar', { name: '작업 메모 진행률' });
-      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('0');
       const gaugeOffset = await gauge.evaluate((element: HTMLElement) => element.offsetTop);
       const preview = card.locator('.preview-list');
       const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
@@ -878,7 +873,6 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(await preview.locator('.preview-bullet').evaluate((row) => parseFloat(getComputedStyle(row).paddingInlineStart))).toBeGreaterThan(0);
       await expect.poll(() => card.locator('.task-chip').textContent()).toBe('1/1');
       expect(await gauge.getAttribute('aria-valuenow')).toBe('1');
-      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('1');
       expect(await gauge.evaluate((element: HTMLElement) => element.offsetTop)).toBe(gaugeOffset);
       await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('3/3');
       expect(app.windows().filter((page) => page.url().includes('window=note'))).toHaveLength(0);
@@ -897,6 +891,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await library.mouse.click(point.x, point.y);
       const editor = await windowWith(app, '.editor-screen');
       await expect.poll(() => editor.locator('.md-checkbox.is-checked').count()).toBe(1);
+      // 목록·캔버스는 동시에 열리지 않으므로(NOTE-001) 캔버스로 바꿔 같은 진행률을 확인한다.
+      await library.evaluate((id) => window.memoivy?.openWindow('canvas', id), project);
+      const canvas = await windowWith(app, '.canvas-screen');
+      await expect.poll(() => canvas.getByRole('progressbar', { name: '작업 메모 진행률' }).getAttribute('aria-valuenow')).toBe('1');
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
