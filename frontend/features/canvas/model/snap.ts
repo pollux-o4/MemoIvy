@@ -20,8 +20,14 @@ function nearest(own: number[], others: number[][], threshold: number): number {
 }
 
 function span(rects: SnapRect[], axis: 'x' | 'y'): [number, number] {
-  const start = Math.min(...rects.map((r) => axis === 'x' ? r.y : r.x));
-  const end = Math.max(...rects.map((r) => axis === 'x' ? r.y + r.h : r.x + r.w));
+  let start = Infinity;
+  let end = -Infinity;
+  for (const rect of rects) {
+    const from = axis === 'x' ? rect.y : rect.x;
+    const to = from + (axis === 'x' ? rect.h : rect.w);
+    start = Math.min(start, from);
+    end = Math.max(end, to);
+  }
   return [start, end];
 }
 

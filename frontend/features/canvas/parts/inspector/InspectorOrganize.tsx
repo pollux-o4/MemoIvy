@@ -8,6 +8,6 @@ export function InspectorOrganize({ projects, onLift, onMoveInto }: { projects: 
   return <section className="inspector-group" aria-label="정리">
     <header><b>정리</b></header>
     <CanvasProjectMenu projects={projects} onMove={onMoveInto}/>
-    {onLift && <button className="inspector-action" title="한 단계 위 보드로 옮기기 · Alt+Shift+G" onClick={onLift}><Icon name="up" size={14}/>밖으로 꺼내기</button>}
+    {onLift && <button className="inspector-action" title="한 단계 위 보드로 옮기기 · Alt+Shift+G" onClick={onLift}><Icon name="up" size={15}/><span>밖으로 꺼내기</span></button>}
   </section>;
 }

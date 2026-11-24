@@ -6,7 +6,8 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
 export const root = resolve(import.meta.dirname, '../..');
-const out = join(root, 'storybook-static');
+// STORYBOOK_OUT으로 빌드 폴더를 나누면 여러 검사를 동시에 돌려도 서로 덮어쓰지 않는다.
+const out = process.env.STORYBOOK_OUT ? resolve(process.env.STORYBOOK_OUT) : join(root, 'storybook-static');
 export const bin = (name) => join(root, 'node_modules', '.bin', name);
 
 export const run = (command, commandArgs) => new Promise((done) => {

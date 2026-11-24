@@ -6,7 +6,9 @@
       "desktop/**",
       "tools/**",
       "e2e/**",
-      "!**/dist"
+      "!**/dist",
+      "!!**/target",
+      "!!**/artifacts"
     ]
   },
   "formatter": {

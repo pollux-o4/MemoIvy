@@ -66,10 +66,13 @@ export const SaveFailure: Story = {
       if (!surface) throw new Error('Editor content surface was not mounted.');
       return surface;
     });
+    const originalLines = [...editor.querySelectorAll('.cm-line')].map((line) => line.textContent);
     await userEvent.click(editor);
-    await userEvent.keyboard('\n상태 확인용 초안');
+    await userEvent.keyboard('{Control>}{End}{/Control}');
+    // 글자별 DOM 변경은 CodeMirror의 선택 영역 동기화와 충돌하므로 편집기가 처리하는 paste 경로를 쓴다.
+    await userEvent.paste('\n상태 확인용 초안');
     await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
-    await expect(editor).toHaveTextContent('상태 확인용 초안');
+    await expect([...editor.querySelectorAll('.cm-line')].map((line) => line.textContent)).toEqual([...originalLines, '상태 확인용 초안']);
   },
 };
 
@@ -89,6 +92,42 @@ export const AlignmentBarMorph: Story = {
     await userEvent.keyboard('{Escape}');
     const back = await canvas.findByRole('toolbar', { name: '선택 항목 정렬' });
     await expect(within(back).getByRole('button', { name: /맞춤/ })).toHaveFocus();
+  },
+};
+
+const inspectorSnapshot = (): Snapshot => {
+  const base = projectSnapshot();
+  const memo: Note = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4', text: '# 독립 메모\n- [ ] 할 일', color: 'blue', modified: now, canvas: { position: [320, 0], next: [], done: false, parent: null } };
+  return { ...base, notes: [...base.notes, memo] };
+};
+const selectCard = async (root: HTMLElement, title: string) => {
+  const card = [...root.querySelectorAll<HTMLElement>('[data-note-id]')].find((node) => node.textContent?.includes(title));
+  if (!card) throw new Error(`카드 없음: ${title}`);
+  await userEvent.click(card);
+  const inspector = await waitFor(() => {
+    const found = root.querySelector<HTMLElement>('.canvas-inspector');
+    if (!found) throw new Error('인스펙터가 열리지 않음');
+    return found;
+  });
+  return within(inspector);
+};
+
+/** 인스펙터 주 동작: 프로젝트는 들어가기 + 보조 '메모로 열기', 메모는 '메모 열기' 하나. 단축키 칩은 한 모양. */
+export const InspectorActions: Story = {
+  render: () => frame(createMockBridge(inspectorSnapshot()), 'canvas', undefined, [900, 620]),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole('article');
+    const project = await selectCard(canvasElement, '테스트 프로젝트');
+    await expect(await project.findByRole('button', { name: '프로젝트 들어가기' })).toBeVisible();
+    await expect(project.getByRole('button', { name: '메모로 열기' })).toBeVisible();
+    // 본문은 메모와 같은 미리보기이고, 누르면 같은 자리에서 소개 편집기로 바뀐다.
+    await userEvent.click(project.getByRole('button', { name: '프로젝트 소개 고치기' }));
+    await expect(await project.findByRole('textbox', { name: '프로젝트 소개' })).toHaveFocus();
+    const memo = await selectCard(canvasElement, '독립 메모');
+    await expect(await memo.findByRole('button', { name: '메모 열기' })).toBeVisible();
+    await expect(memo.queryByRole('button', { name: '메모로 열기' })).toBeNull();
+    const chips = canvasElement.querySelectorAll('.canvas-inspector kbd');
+    await expect([...chips].every((chip) => chip.classList.contains('inspector-kbd'))).toBe(true);
   },
 };
 

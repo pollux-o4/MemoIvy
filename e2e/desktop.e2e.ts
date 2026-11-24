@@ -285,21 +285,25 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await library.getByRole('button', { name: 'New' }).click();
       await library.getByRole('menuitem', { name: /메모/ }).click();
       const editor = await windowWith(app, '.editor-screen');
+      // 마우스: 펼친 메뉴에 두 갈래가 모두 보이고, 캔버스를 고르면 메모 창은 남긴 채 목록 자리를 캔버스가 차지한다.
       await editor.getByRole('button', { name: '이동' }).click();
-      await editor.getByRole('menuitem', { name: '메모 목록' }).waitFor();
-      await editor.waitForTimeout(320);
-      await editor.screenshot({ path: path.join(process.env.E2E_SHOT_DIR ?? tmpdir(), 'note-nav-open.png') });
-      await editor.getByRole('menuitem', { name: '캔버스', exact: true }).click();
+      const toCanvas = editor.getByRole('menuitem', { name: '캔버스', exact: true });
+      const toLibrary = editor.getByRole('menuitem', { name: '메모 목록' });
+      await expect.poll(() => Promise.all([toCanvas.isVisible(), toLibrary.isVisible()])).toEqual([true, true]);
+      await toCanvas.click();
       const canvas = await windowWith(app, '.canvas-screen');
-      expect(canvas.isClosed()).toBe(false);
-      expect(editor.isClosed()).toBe(false);
       // 목록과 캔버스는 홈 자리 하나를 나눠 쓴다.
       await expect.poll(() => library.isClosed()).toBe(true);
+      expect(editor.isClosed()).toBe(false);
+      // 키보드: 메뉴가 첫 항목에 포커스를 준 뒤에 화살표로 옮겨야 입력이 메뉴에 닿는다.
       await editor.getByRole('button', { name: '이동' }).click();
+      await expect.poll(() => toCanvas.evaluate((node) => node === document.activeElement)).toBe(true);
       await editor.keyboard.press('ArrowDown');
+      await expect.poll(() => toLibrary.evaluate((node) => node === document.activeElement)).toBe(true);
       await editor.keyboard.press('Enter');
-      await expect.poll(async () => (await windowWith(app, '.library-screen')).isClosed()).toBe(false);
+      await windowWith(app, '.library-screen');
       await expect.poll(() => canvas.isClosed()).toBe(true);
+      expect(editor.isClosed()).toBe(false);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

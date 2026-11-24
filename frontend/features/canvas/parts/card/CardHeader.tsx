@@ -1,6 +1,10 @@
 import type { PointerEvent } from 'react';
 import { Icon } from '../../../../shared/Icon';
 import type { PreviewItem } from '../../../../shared/markdown/preview/model';
+import { openActionTitle, openActions } from '../../model/open_actions';
+
+/** 들어가기 버튼의 이름·툴팁은 카드 메뉴·인스펙터와 같은 openActions에서 온다. */
+const ENTER = openActions(true)[0];
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -13,7 +17,7 @@ export function CardHeader({ title, marker, project, done, onEnter, onToggleDone
     {marker.kind === 'number' && <span className="canvas-title-marker" aria-hidden="true">{marker.mark}</span>}
     {marker.kind === 'bullet' && <span className="canvas-title-marker" aria-hidden="true">•</span>}
     <h3 className={marker.kind === 'task' && marker.task === 'x' ? 'line-done' : ''}>{title}</h3>
-    {project && <button className="card-enter" title="프로젝트 열기 · 두 번 누르기 또는 Enter" aria-label={`${title} 프로젝트 들어가기`} onPointerDown={stop} onClick={onEnter}><Icon name="arrow" size={16}/></button>}
+    {project && <button className="card-enter" title={openActionTitle(ENTER)} aria-label={`${title} ${ENTER.label}`} onPointerDown={stop} onClick={onEnter}><Icon name="arrow" size={16}/></button>}
     <button className="card-done" title={doneLabel} aria-label={doneLabel} onPointerDown={stop} onClick={(event) => { event.stopPropagation(); onToggleDone(); }}><Icon name="check" size={14}/></button>
   </header>;
 }
