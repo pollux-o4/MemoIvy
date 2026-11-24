@@ -21,7 +21,7 @@ function validateRequest(op, params) {
     snapshot: [], flush: [],
     create: ['baseRevision', 'text', 'color', 'parent', 'project', 'position'],
     update: ['baseRevision', 'id', 'text', 'color', 'canvas'],
-    delete: ['baseRevision', 'id'],
+    delete: ['baseRevision', 'id', 'ids'],
     canvas: ['baseRevision', 'changes'],
     restore: ['baseRevision', 'notes', 'changes'],
     importAsset: ['baseRevision', 'name', 'data', 'mime'],
@@ -40,8 +40,14 @@ function validateRequest(op, params) {
     optionalText(params.text, MAX_TEXT, 'text');
     optionalColor(params.color);
     if (params.canvas !== undefined) canvas(params.canvas);
-  } else if (op === 'delete' || op === 'deleteAsset') {
-    (op === 'delete' ? id : assetId)(params.id);
+  } else if (op === 'delete') {
+    // 한 건(id) 또는 여러 건(ids) 중 하나만 받는다.
+    if ((params.id === undefined) === (params.ids === undefined)) throw bad('Give id or ids');
+    if (params.ids === undefined) id(params.id);
+    else if (!Array.isArray(params.ids) || !params.ids.length || params.ids.length > 5000) throw bad('Invalid note ids');
+    else params.ids.forEach(id);
+  } else if (op === 'deleteAsset') {
+    assetId(params.id);
   } else if (op === 'canvas') canvasChanges(params.changes);
   else if (op === 'restore') {
     if (!Array.isArray(params.notes) || !params.notes.length || params.notes.length > 5000) throw bad('Invalid restored notes');

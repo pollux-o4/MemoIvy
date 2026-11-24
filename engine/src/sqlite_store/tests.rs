@@ -410,3 +410,34 @@ fn restore_brings_back_deleted_note_with_links_and_children() {
     .unwrap_err();
     assert_eq!(again.code, "CONFLICT");
 }
+#[test]
+fn batch_delete_lifts_children_past_removed_ancestors() {
+    let (_d, mut e) = open();
+    let mut make = |parent: Option<&str>, project: bool| {
+        let rev = e.snapshot().unwrap().revision;
+        let out = req(
+            &mut e,
+            "create",
+            json!({"baseRevision":rev,"parent":parent,"project":project}),
+        )
+        .unwrap();
+        out["note"]["id"].as_str().unwrap().to_owned()
+    };
+    let top = make(None, true);
+    let mid = make(Some(&top), true);
+    let leaf = make(Some(&mid), false);
+    let rev = e.snapshot().unwrap().revision;
+    let out = req(
+        &mut e,
+        "delete",
+        json!({"baseRevision":rev,"ids":[mid, top]}),
+    )
+    .unwrap();
+    let notes = out["snapshot"]["notes"].as_array().unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0]["id"], json!(leaf));
+    assert!(notes[0]["canvas"].get("parent").is_none());
+    let rev = out["snapshot"]["revision"].as_u64().unwrap();
+    let missing = req(&mut e, "delete", json!({"baseRevision":rev,"ids":[top]})).unwrap_err();
+    assert_eq!(missing.code, "NOT_FOUND");
+}

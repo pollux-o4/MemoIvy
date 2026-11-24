@@ -30,6 +30,8 @@ test('IPC window targets allow settings and reject invalid kinds or ids', () => 
 
 test('IPC boundary rejects unsafe, stale-shape and invalid preference payloads', () => {
   assert.throws(() => validateRequest('exec', {}), { code: 'INVALID_REQUEST' });
+  assert.doesNotThrow(() => validateRequest('delete', { baseRevision: 1, ids: [noteId] }));
+  assert.throws(() => validateRequest('delete', { baseRevision: 1, id: noteId, ids: [noteId] }), { code: 'INVALID_REQUEST' });
   const restored = { id: noteId, text: 'a', color: 'yellow', modified: 1, canvas: { next: [] } };
   assert.doesNotThrow(() => validateRequest('restore', { baseRevision: 1, notes: [restored], changes: [] }));
   assert.throws(() => validateRequest('restore', { baseRevision: 1, notes: [{ ...restored, path: '/x' }], changes: [] }), { code: 'INVALID_REQUEST' });

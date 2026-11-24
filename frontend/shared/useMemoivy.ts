@@ -95,8 +95,8 @@ export function useMemoivy(injectedBridge?: DesktopBridge) {
     return request('canvas', { changes });
   }, [request]);
   const removeNote = useCallback(async (id: string) => request('delete', { id }), [request]);
-  // shortcut: 엔진 delete가 한 건씩이라 차례로 지운다(중간 실패 시 앞의 것만 지워짐), 여러 장 삭제가 느려지면 일괄 delete 검토.
-  const removeNotes = useCallback(async (ids: readonly string[]) => { for (const id of ids) await removeNote(id); }, [removeNote]);
+  /** 여러 장을 한 트랜잭션으로 지운다: 전부 지워지거나 하나도 안 지워진다. */
+  const removeNotes = useCallback(async (ids: readonly string[]) => request('delete', { ids }), [request]);
   const restoreNotes = useCallback(async (notes: Note[], changes: Array<{ id: string; canvas: Partial<Note['canvas']> }>) => request('restore', { notes, changes }), [request]);
 
   return { bridge, snapshot, notes: snapshot?.notes ?? [], assets: snapshot?.assets ?? [], error, saving, request, editNoteText, createNote, updateNote, mutateCanvas, removeNote, removeNotes, restoreNotes };

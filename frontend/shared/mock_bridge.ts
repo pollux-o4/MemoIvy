@@ -9,6 +9,12 @@ export const fixtureNoteIds = {
   daily: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
 } as const;
 const sampleNotes = visualFixture as unknown as Note[];
+type CanvasPatch = { id: string; canvas: Partial<Note['canvas']> };
+/** canvas·restore가 함께 쓰는 패치 적용. 패치를 id로 색인해 O(메모 + 패치). */
+const patchCanvas = (notes: Note[], patches: CanvasPatch[]) => {
+  const byId = new Map(patches.map((patch) => [patch.id, patch.canvas]));
+  return notes.map((note) => byId.has(note.id) ? { ...note, canvas: { ...note.canvas, ...byId.get(note.id) } } : note);
+};
 
 export function createMockBridge(initial?: Snapshot): DesktopBridge {
   let snapshot: Snapshot = initial ?? { notes: structuredClone(sampleNotes), assets: [], revision: 1, savedRevision: 1, preferences: { expandedProjects: [], expandedNotes: [], navigation: {}, autoPrune: false } };
@@ -54,29 +60,22 @@ export function createMockBridge(initial?: Snapshot): DesktopBridge {
       }
       if (op === 'delete') {
         return update(() => {
-          const id = String(params.id);
-          snapshot = { ...snapshot, notes: snapshot.notes.filter((note) => note.id !== id).map((note) => ({ ...note, canvas: { ...note.canvas, parent: note.canvas.parent === id ? null : note.canvas.parent, next: note.canvas.next.filter((target) => target !== id) } })) };
+          const ids = new Set((params.ids as string[] | undefined) ?? [String(params.id)]);
+          const parents = new Map(snapshot.notes.filter((note) => ids.has(note.id)).map((note) => [note.id, note.canvas.parent ?? null]));
+          const survivor = (id: string | null | undefined): string | null => (id && parents.has(id) ? survivor(parents.get(id)) : id ?? null);
+          snapshot = { ...snapshot, notes: snapshot.notes.filter((note) => !ids.has(note.id)).map((note) => ({ ...note, canvas: { ...note.canvas, parent: survivor(note.canvas.parent), next: note.canvas.next.filter((target) => !ids.has(target)) } })) };
           return {};
         });
       }
       if (op === 'restore') {
         return update(() => {
-          const restored = structuredClone(params.notes as Note[]);
-          const patches = params.changes as Array<{ id: string; canvas: Partial<Note['canvas']> }>;
-          snapshot = { ...snapshot, notes: [...restored, ...snapshot.notes].map((note) => {
-            const patch = patches.find((change) => change.id === note.id);
-            return patch ? { ...note, canvas: { ...note.canvas, ...patch.canvas } } : note;
-          }) };
+          snapshot = { ...snapshot, notes: patchCanvas([...structuredClone(params.notes as Note[]), ...snapshot.notes], params.changes as CanvasPatch[]) };
           return {};
         });
       }
       if (op === 'canvas') {
         return update(() => {
-          const patches = params.changes as Array<{ id: string; canvas: Partial<Note['canvas']> }>;
-          snapshot = { ...snapshot, notes: snapshot.notes.map((note) => {
-            const patch = patches.find((change) => change.id === note.id);
-            return patch ? { ...note, canvas: { ...note.canvas, ...patch.canvas } } : note;
-          }) };
+          snapshot = { ...snapshot, notes: patchCanvas(snapshot.notes, params.changes as CanvasPatch[]) };
           return {};
         });
       }
