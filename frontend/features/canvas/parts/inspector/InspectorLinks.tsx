@@ -20,7 +20,7 @@ export function InspectorLinks({ note, notes, incomingInOutline, childrenInOutli
   return <section className="inspector-group" aria-label="연결">
     <header><b>연결</b><span className="inspector-actions">
       {linkedOut.length > 0 && <button className="inspector-mini" title="연결된 다음 메모로 신호를 보냅니다. 완료 상태는 바꾸지 않습니다." onClick={onSignal}><Icon name="signal" size={13}/>신호</button>}
-      <button className="inspector-mini" title="이 메모에서 이어지는 새 메모를 오른쪽에 만듭니다" aria-keyshortcuts="Tab" onClick={onAddBranch}><Icon name="plus" size={13}/>하위 가지<kbd>Tab</kbd></button>
+      <button className="inspector-mini" title="이 메모에서 이어지는 새 메모를 오른쪽에 만듭니다" aria-keyshortcuts="Tab" onClick={onAddBranch}><Icon name="plus" size={13}/>하위 가지<kbd className="inspector-kbd">Tab</kbd></button>
     </span></header>
     {incoming.length > 0 && <div className="inspector-chips" role="group" aria-label="이전 메모"><small>이전</small>{incoming.map((item) =>
       <button className="inspector-chip" key={item.id} title={canvasTitle(item)} onClick={() => onSelect(item.id)}>{canvasTitle(item)}</button>)}</div>}

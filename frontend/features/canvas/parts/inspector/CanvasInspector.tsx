@@ -46,8 +46,8 @@ export const CanvasInspector = memo(function CanvasInspector({ note, notes, proj
   const alsoFrom = showOutline ? notes.filter((item) => item.canvas.next.includes(note.id) && item.id !== treeParent) : [];
   useEffect(() => { if (renameRequest) { titleRef.current?.focus(); titleRef.current?.select(); } }, [renameRequest]);
   return <aside className="canvas-inspector floating" aria-label={project ? '선택한 프로젝트' : '선택한 메모'}>
-    <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onToggleTask={(line) => onToggleTask(note, line)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal} onOpenAsNote={() => onOpenAsNote(note)}/>
-    <InspectorPrimary note={note} childCount={progress.children(note.id).length} tasks={hasTasks ? tasks : undefined} onOpen={() => onOpen(note)} onToggleDone={onToggleDone}/>
+    <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onToggleTask={(line) => onToggleTask(note, line)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal}/>
+    <InspectorPrimary note={note} childCount={progress.children(note.id).length} tasks={hasTasks ? tasks : undefined} onOpen={() => onOpen(note)} onOpenAsNote={() => onOpenAsNote(note)} onToggleDone={onToggleDone}/>
     <InspectorLinks note={note} notes={notes} incomingInOutline={showOutline} childrenInOutline={showOutline ? directChildren(outline.rows, note.id) : undefined} onSelect={onSelect} openLinkPicker={openLinkPicker} onToggleLink={onToggleLink} onSignal={onSignal} onAddBranch={onAddBranch}/>
     {showOutline && <InspectorOutline rows={outline.rows} current={note.id} alsoFrom={alsoFrom.map((item) => item.id)} onSelect={onSelect} onUnlink={(id) => onToggleLink(note, id)} onIndent={outline.onIndent} onOutdent={outline.onOutdent} onMove={outline.onMove} onShift={outline.onShift}
       labelOf={(id) => { const item = byId.get(id); return item ? canvasTitle(item) : id; }}/>}

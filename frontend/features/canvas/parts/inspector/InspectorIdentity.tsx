@@ -12,13 +12,11 @@ import { useTitledText } from './useTitledText';
 /**
  * 1층 · 정체성: 색·이름·(프로젝트면) 소개를 그 자리에서 고친다. 메모는 본문 미리보기만 보이고 본문 편집은 메모 열기로 한다.
  */
-export function InspectorIdentity({ note, revision, titleRef, onSaveText, onToggleTask, onColor, onClose, onExternal, onOpenAsNote }: {
+export function InspectorIdentity({ note, revision, titleRef, onSaveText, onToggleTask, onColor, onClose, onExternal }: {
   note: Note; revision?: number; titleRef: RefObject<HTMLInputElement | null>;
   onSaveText: (text: string, baseRevision?: number) => Promise<number | undefined>; onColor: (color: string) => void; onClose: () => void;
   onToggleTask: (sourceLine: number) => void;
   onExternal: (url: string) => void;
-  /** 프로젝트 설명을 전체 메모 편집기로 연다. */
-  onOpenAsNote: () => void;
 }) {
   const project = Boolean(note.canvas.project);
   const { title, body: intro } = useTitledText(note.text, onSaveText, { version: revision, fallbackTitle: canvasTitle(note) });
@@ -28,7 +26,6 @@ export function InspectorIdentity({ note, revision, titleRef, onSaveText, onTogg
     <div className="inspector-title-row">
       <button className="inspector-color" style={{ background: noteColor(note.color).accent }} aria-label={`색 바꾸기 · 지금 ${noteColor(note.color).label}`} aria-expanded={palette} title="색 바꾸기" onClick={() => setPalette(!palette)}/>
       <input ref={titleRef} className="inspector-title" aria-label={project ? '프로젝트 이름' : '메모 제목'} placeholder={project ? '프로젝트 이름' : '제목'} title="이름 바꾸기 · F2" {...bindInput(title)}/>
-      {project && <button className="inspector-head-action" aria-label="메모로 열기" title="메모로 열기 · Shift+Enter" onClick={onOpenAsNote}><Icon name="note" size={14}/></button>}
       <button className="inspector-head-action" aria-label="선택 해제" title="선택 해제 · Esc" onClick={onClose}><Icon name="close" size={14}/></button>
     </div>
     {palette && <div className="inspector-palette" role="radiogroup" aria-label="메모 색">
