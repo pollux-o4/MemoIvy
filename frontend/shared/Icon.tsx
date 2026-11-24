@@ -27,6 +27,7 @@ import undo from './assets/icons/canvas/history/undo.svg?raw';
 import redo from './assets/icons/canvas/history/redo.svg?raw';
 import chevronRight from './assets/icons/canvas/navigation/chevron.svg?raw';
 import home from './assets/icons/canvas/navigation/home.svg?raw';
+import compass from './assets/icons/canvas/navigation/compass.svg?raw';
 import pin from './assets/icons/canvas/navigation/pin.svg?raw';
 import open from './assets/icons/canvas/open.svg?raw';
 import enter from './assets/icons/canvas/project/enter.svg?raw';
@@ -53,7 +54,7 @@ const svgFiles = {
   keyboard, note, source, trash, alignFlow, flow: alignFlow, canvas: alignFlow,
   alignTidy, tidy: alignTidy, align: alignTidy, alignLeft, alignCenterX, alignRight, alignTop,
   alignCenterY, alignBottom, distributeX, distributeY, canvasCheck, check: canvasCheck,
-  canvasLink, link: canvasLink, signal, help, undo, redo, chevronRight, home, pin,
+  canvasLink, link: canvasLink, signal, help, undo, redo, chevronRight, home, compass, pin,
   open, enter, arrow: enter, project, up, fit, zoomIn, zoomOut, close, maximize,
   minimize, restore,
 } as const;

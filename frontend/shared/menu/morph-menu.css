@@ -1,6 +1,6 @@
 /* morph 메뉴: 버튼 크기(origin)에서 표면으로 280ms ease-out-cubic 펼침, 버튼 바탕(--morph-from)→raised, 반경 --morph-radius→14.
    tone이 바꾸는 값은 버튼 바탕과 반경뿐이다. */
-.morph { --morph-ease: cubic-bezier(.33, 1, .68, 1); --morph-turn: 180deg; position: relative; -webkit-app-region: no-drag; }
+.morph { --morph-ease: cubic-bezier(.33, 1, .68, 1); --morph-turn: 0deg; position: relative; -webkit-app-region: no-drag; }
 .morph-accent { --morph-from: var(--memoivy-accent); --morph-radius: 9px; }
 .morph-quiet { --morph-from: var(--memoivy-hover); --morph-radius: 8px; }
 /* 열 때는 표면이 같은 색으로 이어받으므로 배경을 즉시 비우고, 닫을 때는 표면이 접히는 동안 버튼이 위에서 같은 시간에 차오른다.
@@ -12,8 +12,10 @@
 .morph.morph-open .morph-trigger, .morph.morph-open .morph-trigger:hover { background: transparent; box-shadow: none; color: var(--memoivy-text); }
 .morph-turn { display: inline-grid; transition: transform 280ms cubic-bezier(.22, 1, .36, 1); }
 .morph-open .morph-turn { transform: rotate(var(--morph-turn)); }
-/* 회전량은 아이콘 뜻을 따른다: 펼침 화살표는 뒤집혀 접기가 되고(UI-001 disclosure와 같은 규칙), + 는 45° 돌아 닫기가 된다. */
+/* 회전량은 아이콘 뜻을 따른다: + 는 45° 돌아 닫기가 된다. */
 .creation { --morph-turn: 45deg; }
+/* 메모 창 이동: 나침반 바늘이 90° 돌아 방향을 고르는 중임을 보인다. */
+.note-nav { --morph-turn: 90deg; }
 
 .morph-surface {
   position: absolute; z-index: 1; top: 0; right: 0;
