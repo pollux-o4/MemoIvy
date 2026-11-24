@@ -17,16 +17,24 @@ export const OUTLINE_SHORTCUTS: readonly ShortcutRow[] = [
   ['들여쓰기', '', ['Tab']], ['내어쓰기', '', ['Shift+Tab']], ['순서 바꾸기', '', ['Alt+↑↓']], ['다른 자리로 옮기기', '', ['끌기']],
 ];
 
+/** 카드 열기 동작의 이름·키. 도움말 표와 카드 메뉴·인스펙터(openActions)가 함께 쓴다. */
+export const OPEN_COMMANDS = {
+  note: { label: '메모 열기', key: 'Enter' },
+  enterProject: { label: '프로젝트 들어가기', key: 'Enter' },
+  projectAsNote: { label: '메모로 열기', key: 'Shift+Enter' },
+} as const;
+const { note, enterProject, projectAsNote } = OPEN_COMMANDS;
+
 const CONNECT_NEXT: ShortcutRow = ['다음 메모 잇기', '', ['Ctrl+L']];
 
 export const CANVAS_SHORTCUTS: readonly ShortcutSection[] = [
   ['캔버스 선택', [
-    ['메모 열기', '', ['두 번 누르기', 'Enter']], ['선택에 더하기', '', ['Shift+누르기']], ['모두 선택', '', ['Ctrl+A']], ['선택 해제', '', ['Esc']],
+    [note.label, '', ['두 번 누르기', note.key]], ['선택에 더하기', '', ['Shift+누르기']], ['모두 선택', '', ['Ctrl+A']], ['선택 해제', '', ['Esc']],
     ['선택한 메모 삭제', '', ['Delete', 'Backspace']], ['완료 표시', '', ['Ctrl+Enter']], CONNECT_NEXT, ['복사 · 잘라내기', '', ['Ctrl+C', 'Ctrl+X']], ['붙여넣기', '', ['Ctrl+V']], ['복제', '', ['Ctrl+D']], ['이름 바꾸기', '', ['F2']], ['카드 메뉴', '', ['오른쪽 클릭', 'Shift+F10']], ['이동', '', ['방향키']], ['크게 이동', '', ['Shift+방향키']],
   ]],
   ['가지 개요', OUTLINE_SHORTCUTS],
   ['캔버스 보기', [['전체 보기', '', ['Shift+1']], ['선택 영역 보기', '', ['Shift+2']], ['확대 · 축소', '', ['Ctrl++', 'Ctrl+-']], ['100%로 보기', '', ['Ctrl+0']], ['보드 이동', '', ['Space+끌기']]]],
-  ['프로젝트', [['프로젝트 들어가기', '', ['두 번 누르기', 'Enter']], ['메모로 열기', '', ['Shift+Enter']], ['밖으로 나가기', '', ['Esc', 'Alt+↑']], ['새 프로젝트로 묶기', '', ['Alt+G']], ['밖으로 꺼내기', '', ['Alt+Shift+G']]]],
+  ['프로젝트', [[enterProject.label, '', ['두 번 누르기', enterProject.key]], [projectAsNote.label, '', [projectAsNote.key]], ['밖으로 나가기', '', ['Esc', 'Alt+↑']], ['새 프로젝트로 묶기', '', ['Alt+G']], ['밖으로 꺼내기', '', ['Alt+Shift+G']]]],
   ['캔버스 정렬', [
     ['왼쪽 · 가운데 · 오른쪽', '', ['Alt+A', 'Alt+H', 'Alt+D']], ['위쪽 · 가운데 · 아래쪽', '', ['Alt+W', 'Alt+V', 'Alt+S']],
     ['간격 같게 (가로 · 세로)', '', ['Alt+Shift+H', 'Alt+Shift+V']], ['격자로 정리', '', ['Alt+T']], ['연결 순서로 배치', '', ['Alt+F']],
@@ -40,5 +48,5 @@ export const NOTE_ESSENTIALS: readonly Essential[] = [
 ];
 export const CANVAS_ESSENTIALS: readonly Essential[] = [
   ['카드 옮기기', ['끌기'], 'drag'], [CONNECT_NEXT[0], ['손잡이 끌기', ...CONNECT_NEXT[2]], 'connect'],
-  ['보드 이동', ['Space+끌기'], 'pan'], ['메모 열기', ['두 번 누르기', 'Enter'], 'open'],
+  ['보드 이동', ['Space+끌기'], 'pan'], [note.label, ['두 번 누르기', note.key], 'open'],
 ];
