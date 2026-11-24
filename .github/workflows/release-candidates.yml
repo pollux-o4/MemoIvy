@@ -46,7 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag || github.sha }}
+          # 출시 호출은 초안 Release라 태그가 아직 없으므로 병합 커밋을, 수동 재빌드는 지정 태그를 빌드한다.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - uses: ./.github/actions/setup
         with:
           browsers: 'false'
