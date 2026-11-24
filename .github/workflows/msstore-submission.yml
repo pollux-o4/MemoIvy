@@ -1,0 +1,86 @@
+name: Microsoft Store submission
+# 공개된 GitHub Release의 MSIX를 체크섬 확인 뒤 Store 제품에 새 제출로 올린다.
+# Store 인증·공개는 Partner Center가 이어서 처리한다(OPS-005).
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      MSSTORE_TENANT_ID:
+        required: true
+      MSSTORE_CLIENT_ID:
+        required: true
+      MSSTORE_CLIENT_SECRET:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 공개된 GitHub Release 태그
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    concurrency:
+      group: msstore-submission
+      cancel-in-progress: false
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download and verify the current release MSIX
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "$latest" ]]; then
+            echo "::error::Use the latest published MemoIvy release tag ($latest)."
+            exit 1
+          fi
+          cd "$RUNNER_TEMP"
+          package="MemoIvy-${TAG#v}-x64.msix"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$package" --pattern SHA256SUMS-windows
+          # SHA256SUMS-windows에는 설치 파일(.exe)도 있으므로 받은 MSIX 줄만 확인한다.
+          # Windows sha256sum은 이진 모드 표시로 파일명 앞에 *를 붙인다.
+          awk -v f="$package" '$2 == f || $2 == "*" f' SHA256SUMS-windows | grep . | sha256sum --check --strict
+          printf 'MSIX_PACKAGE=%s\n' "$(cygpath -w "$RUNNER_TEMP/$package")" >> "$GITHUB_ENV"
+      - name: Check Store configuration
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+          SELLER: ${{ vars.MSSTORE_SELLER_ID }}
+          PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+        run: |
+          missing=()
+          for name in TENANT CLIENT SECRET SELLER PRODUCT; do [[ -n "${!name}" ]] || missing+=("$name"); done
+          if (( ${#missing[@]} )); then
+            echo "::error::Missing Store settings: ${missing[*]} (secrets MSSTORE_TENANT_ID/CLIENT_ID/CLIENT_SECRET, variables MSSTORE_SELLER_ID/PRODUCT_ID)."
+            exit 1
+          fi
+      - uses: microsoft/setup-msstore-cli@v1
+      - name: Submit to Microsoft Store
+        shell: pwsh
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+          SELLER: ${{ vars.MSSTORE_SELLER_ID }}
+          PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+        run: |
+          msstore reconfigure --tenantId $env:TENANT --sellerId $env:SELLER --clientId $env:CLIENT --clientSecret $env:SECRET
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # 프로젝트 폴더 대신 받은 MSIX를 --inputFile로 지정한다. 제출은 커밋돼 Store 인증으로 넘어간다.
+          msstore publish (Split-Path $env:MSIX_PACKAGE) --inputFile $env:MSIX_PACKAGE --appId $env:PRODUCT
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

@@ -1,0 +1,58 @@
+name: Snap Store candidate
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      SNAPCRAFT_STORE_CREDENTIALS:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 공개된 GitHub Release 태그
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: snap-store-candidate
+      cancel-in-progress: false
+    steps:
+      - name: Download and verify the current release Snap
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "$latest" ]]; then
+            echo "::error::Use the latest published MemoIvy release tag ($latest)."
+            exit 1
+          fi
+          cd "$RUNNER_TEMP"
+          package="memoivy_${TAG#v}_amd64.snap"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$package" --pattern SHA256SUMS-snap
+          sha256sum --check --strict SHA256SUMS-snap
+          test -f "$package"
+          test "$(sha256sum -- "$package")" = "$(cat SHA256SUMS-snap)"
+          printf 'SNAP_PACKAGE=%s/%s\n' "$RUNNER_TEMP" "$package" >> "$GITHUB_ENV"
+      - run: sudo snap install snapcraft --classic
+      - name: Upload to latest/candidate
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          if [[ -z "$SNAPCRAFT_STORE_CREDENTIALS" ]]; then
+            echo '::error::Set the SNAPCRAFT_STORE_CREDENTIALS Actions secret.'
+            exit 1
+          fi
+          snapcraft upload --release=latest/candidate "$SNAP_PACKAGE"

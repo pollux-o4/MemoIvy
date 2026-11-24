@@ -285,21 +285,25 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await library.getByRole('button', { name: 'New' }).click();
       await library.getByRole('menuitem', { name: /메모/ }).click();
       const editor = await windowWith(app, '.editor-screen');
+      // 마우스: 펼친 메뉴에 두 갈래가 모두 보이고, 캔버스를 고르면 메모 창은 남긴 채 목록 자리를 캔버스가 차지한다.
       await editor.getByRole('button', { name: '이동' }).click();
-      await editor.getByRole('menuitem', { name: '메모 목록' }).waitFor();
-      await editor.waitForTimeout(320);
-      await editor.screenshot({ path: path.join(process.env.E2E_SHOT_DIR ?? tmpdir(), 'note-nav-open.png') });
-      await editor.getByRole('menuitem', { name: '캔버스', exact: true }).click();
+      const toCanvas = editor.getByRole('menuitem', { name: '캔버스', exact: true });
+      const toLibrary = editor.getByRole('menuitem', { name: '메모 목록' });
+      await expect.poll(() => Promise.all([toCanvas.isVisible(), toLibrary.isVisible()])).toEqual([true, true]);
+      await toCanvas.click();
       const canvas = await windowWith(app, '.canvas-screen');
-      expect(canvas.isClosed()).toBe(false);
-      expect(editor.isClosed()).toBe(false);
       // 목록과 캔버스는 홈 자리 하나를 나눠 쓴다.
       await expect.poll(() => library.isClosed()).toBe(true);
+      expect(editor.isClosed()).toBe(false);
+      // 키보드: 메뉴가 첫 항목에 포커스를 준 뒤에 화살표로 옮겨야 입력이 메뉴에 닿는다.
       await editor.getByRole('button', { name: '이동' }).click();
+      await expect.poll(() => toCanvas.evaluate((node) => node === document.activeElement)).toBe(true);
       await editor.keyboard.press('ArrowDown');
+      await expect.poll(() => toLibrary.evaluate((node) => node === document.activeElement)).toBe(true);
       await editor.keyboard.press('Enter');
-      await expect.poll(async () => (await windowWith(app, '.library-screen')).isClosed()).toBe(false);
+      await windowWith(app, '.library-screen');
       await expect.poll(() => canvas.isClosed()).toBe(true);
+      expect(editor.isClosed()).toBe(false);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
@@ -576,16 +580,21 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(async () => (await ids()).length).toBe(before.length + 1);
     const root = (await ids()).find((id) => !before.includes(id)) ?? '';
     const card = (id: string) => canvas.locator(`[data-note-id="${id}"]`);
+    // 카드를 눌러 고른 뒤, 이름 칸 같은 입력에서 포커스가 빠질 때까지 기다린다. 그 전에 누른 키는 입력이 먹는다.
+    const select = async (id: string) => {
+      await card(id).click();
+      await expect.poll(() => canvas.evaluate(() => !document.activeElement?.matches('input, textarea, [contenteditable="true"]'))).toBe(true);
+    };
     const outlineDepths = () => canvas.locator('.inspector-outline li').evaluateAll((items) => items.map((item) => (item as HTMLElement).style.getPropertyValue('--depth')));
 
     // Tab: 하위 가지를 만들고 바로 이름 칸에 포커스한다.
-    await card(root).click();
+    await select(root);
     await canvas.keyboard.press('Tab');
     await expect.poll(async () => (await ids()).length).toBe(before.length + 2);
     await expect.poll(() => canvas.evaluate(() => document.activeElement?.classList.contains('inspector-title'))).toBe(true);
     const child = (await ids()).find((id) => !before.includes(id) && id !== root) ?? '';
     // Enter: 같은 부모의 형제. 부모 없는 카드의 Enter는 그대로 열기라 자식 카드에서 누른다.
-    await card(child).click();
+    await select(child);
     await canvas.keyboard.press('Enter');
     await expect.poll(async () => (await ids()).length).toBe(before.length + 3);
     await expect.poll(outlineDepths).toEqual(['0', '1', '1']);
@@ -603,13 +612,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await expect.poll(() => firstBranch.evaluate((item) => item === document.activeElement)).toBe(true);
     await expect.poll(() => canvas.locator('.inspector-outline').locator('xpath=..').locator('.inspector-hint').textContent()).toBe('위에 같은 단계 항목이 없어요');
     // 마인드맵 배치 후 실행 취소로 원위치.
-    await card(root).click();
+    await select(root);
     const placed = await card(child).evaluate((item) => item.style.cssText);
     await canvas.keyboard.press('Alt+m');
     await canvas.keyboard.press('Control+z');
     await expect.poll(() => card(child).evaluate((item) => item.style.cssText)).toBe(placed);
     // 하위 메모 수는 정보로 남고, 종이 더미는 호버와 키보드 포커스로 미리 본다.
-    await card(child).click();
+    await select(child);
     await canvas.keyboard.press('Alt+g');
     const project = canvas.locator('.canvas-note.project').filter({ hasText: '메모 1개' }).last();
     expect(await project.locator('.canvas-project-meta button').count()).toBe(0);
@@ -625,7 +634,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     await canvas.keyboard.press('Shift+Tab');
     await expect.poll(fanTitleOpacity).toBe('1');
     // 보이는 입구: 인스펙터의 하위 가지 버튼도 Tab과 같이 가지를 만든다(화면이 새 가지로 옮겨 가므로 마지막에 둔다).
-    await card(root).click();
+    await select(root);
     const count = (await ids()).length;
     await canvas.locator('.canvas-inspector').getByRole('button', { name: /하위 가지/ }).click();
     await expect.poll(async () => (await ids()).length).toBe(count + 1);

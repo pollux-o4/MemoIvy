@@ -3,17 +3,20 @@ import type { OutlineRow } from './types';
 
 export interface NextChange { id: string; next: string[] }
 
+function editableRowIndex(rows: readonly OutlineRow[], id: string, minimumDepth: number): number {
+  const idx = rows.findIndex((r) => r.id === id);
+  return idx < 0 || rows[idx].depth < minimumDepth ? -1 : idx;
+}
+
 /** 행을 바로 위 형제의 마지막 자식으로 들여쓴 next 변경 목록을 반환한다. */
-// shortcut: 들여쓰기·내어쓰기의 행 탐색은 비슷해도 바꾸는 간선 순서가 달라 공통화하지 않음, 두 편집 규칙이 함께 바뀔 때 재검토.
 export function indentRow(
   rows: readonly OutlineRow[],
   id: string,
   nextOf: (id: string) => readonly string[],
 ): NextChange[] {
-  const idx = rows.findIndex((r) => r.id === id);
+  const idx = editableRowIndex(rows, id, 1);
   if (idx < 0) return [];
   const depth = rows[idx].depth;
-  if (depth <= 0) return [];
 
   const siblingIdx = findPrecedingSibling(rows, idx, depth);
   if (siblingIdx < 0) return [];
@@ -33,16 +36,13 @@ export function indentRow(
 }
 
 /** 행을 조부모의 next에서 부모 바로 뒤로 내어쓴 next 변경 목록을 반환한다. */
-// shortcut: 들여쓰기·내어쓰기의 행 탐색은 비슷해도 바꾸는 간선 순서가 달라 공통화하지 않음, 두 편집 규칙이 함께 바뀔 때 재검토.
 export function outdentRow(
   rows: readonly OutlineRow[],
   id: string,
   nextOf: (id: string) => readonly string[],
 ): NextChange[] {
-  const idx = rows.findIndex((r) => r.id === id);
+  const idx = editableRowIndex(rows, id, 2);
   if (idx < 0) return [];
-  const depth = rows[idx].depth;
-  if (depth < 2) return [];
 
   const parentIdx = parentIndex(rows, idx);
   if (parentIdx < 0) return [];
