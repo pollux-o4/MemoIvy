@@ -50,9 +50,8 @@ export function App({ bridge, preview, initialScreen, initialId, initialFilesTab
     setNavigationError(null);
     try {
       if (window.memoivy || bridge) {
-        // 목록과 캔버스는 서로를 대체한다: 대상 창이 열린 뒤에만 현재 창을 닫아 실패 시 화면을 잃지 않는다.
+        // 목록·캔버스 교체(홈 자리 하나)는 메인 프로세스 창 정책이 맡는다: 대상 창이 뜬 뒤 현재 창을 닫는다.
         await store.bridge.openWindow(target, id);
-        store.bridge.windowAction('close');
         return;
       }
       setActiveId(id); setScreen(target);

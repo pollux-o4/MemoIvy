@@ -9,6 +9,7 @@ const { pathToFileURL, fileURLToPath } = require('node:url');
 const { EngineTransport } = require('./engine_transport.cjs');
 const { validateRequest, validateWindowTarget, isId } = require('./ipc_validation.cjs');
 const { windowChrome } = require('./window_chrome.cjs');
+const { homeToReplace, shouldShowLibrary } = require('./window_policy.cjs');
 const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 function overrideDataPath() {
@@ -38,7 +39,7 @@ const CLOSE_TIMEOUT_MS = 12000;
 const windows = new Set();
 const windowByKey = new Map();
 const pendingFlushAcks = new Map();
-const closing = new WeakSet();
+const closing = new WeakMap();
 const permittedClose = new WeakSet();
 const approvedContents = new Set();
 let engine;
@@ -150,16 +151,20 @@ async function flushWindow(win) {
   await requireEngine().request('flush', {});
 }
 
-/**
- * 메모 목록이 앱의 본 창이다. 작업 창(캔버스·메모)을 닫으면 목록으로 돌아가고, 앱 종료는 목록 창을 닫을 때만 일어난다.
- * 설정 같은 보조 창은 닫아도 보던 창에 머문다. 단 보이는 창이 하나도 남지 않으면 목록을 띄워 앱이 사라지지 않게 한다.
- * 닫기 버튼·OS 닫기(Alt+F4)가 모두 이 경로를 지난다.
- */
-function returnsToLibrary(win) {
-  const key = [...windowByKey].find(([, value]) => value === win)?.[0];
-  if (!key || key === 'library') return false;
-  if (key === 'canvas' || key.startsWith('note:')) return true;
-  return ![...windows].some((other) => other !== win && !other.isDestroyed() && other.isVisible());
+// 닫히는 창의 키와 나머지 보이는 창의 키를 한 번에 수집한다.
+function closeContext(win) {
+  let closingKey;
+  const visibleKeys = [];
+  for (const [key, other] of windowByKey) {
+    if (other === win) closingKey = key;
+    else if (!other.isDestroyed() && other.isVisible()) visibleKeys.push(key);
+  }
+  return { closingKey, visibleKeys };
+}
+
+function replaceOtherHome(key) {
+  const otherKey = homeToReplace(key, windowByKey.keys());
+  if (otherKey !== null) void requestWindowClose(windowByKey.get(otherKey), { replaced: true });
 }
 
 function showLibrary() {
@@ -168,15 +173,22 @@ function showLibrary() {
   createWindow('library');
 }
 
-async function requestWindowClose(win, { hide = false } = {}) {
-  if (!win || win.isDestroyed() || closing.has(win)) return;
-  closing.add(win);
+async function requestWindowClose(win, { hide = false, replaced = false } = {}) {
+  if (!win || win.isDestroyed()) return;
+  const pending = closing.get(win);
+  if (pending) {
+    if (replaced) pending.replaced = true;
+    return;
+  }
+  const intent = { replaced };
+  closing.set(win, intent);
   try {
     await flushWindow(win);
     if (!win.isDestroyed()) {
-      if (hide) win.hide();
+      if (hide && !intent.replaced) win.hide();
       else {
-        if (returnsToLibrary(win)) showLibrary();
+        const { closingKey, visibleKeys } = closeContext(win);
+        if (!intent.replaced && closingKey !== undefined && shouldShowLibrary(closingKey, visibleKeys)) showLibrary();
         permittedClose.add(win); win.close();
       }
     }
@@ -268,7 +280,9 @@ function createWindow(kind = 'library', id) {
   const existing = windowByKey.get(key);
   if (existing && !existing.isDestroyed()) {
     if (existing.isMinimized()) existing.restore();
+    existing.show();
     existing.focus();
+    replaceOtherHome(key);
     return existing;
   }
   const win = new BrowserWindow({
@@ -290,7 +304,10 @@ function createWindow(kind = 'library', id) {
   windows.add(win);
   approvedContents.add(contents);
   windowByKey.set(key, win);
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    replaceOtherHome(key);
+  });
   const sendWindowState = () => { if (!contents.isDestroyed()) contents.send('memoivy:window-state', windowState(win)); };
   for (const name of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(name, sendWindowState);
   win.webContents.on('will-navigate', (event, target) => {
