@@ -8,7 +8,7 @@ let url: string;
 beforeAll(async () => {
   server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: false } });
   await server.listen();
-  const address = server.httpServer!.address();
+  const address = server.httpServer?.address();
   if (!address || typeof address === 'string') throw new Error('Missing test server port');
   url = `http://127.0.0.1:${address.port}`;
   browser = await chromium.launch({ headless: true });

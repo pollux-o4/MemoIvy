@@ -83,7 +83,8 @@ describe('목록과 캔버스 전환', () => {
     expect(render('canvas', true).some((element) => element.type === Canvas)).toBe(true);
     expect(state.values[2]).toContain('화면을 열지 못했어요');
     const alert = render('canvas', true).find((element) => element.props.role === 'alert');
-    const button = (alert?.props.children as ReactElement<{ onClick: () => void }>[]).find((element) => element.type === 'button');
+    if (!alert) throw new Error('오류 알림이 없음');
+    const button = (alert.props.children as ReactElement<{ onClick: () => void }>[]).find((element) => element.type === 'button');
     button?.props.onClick();
     expect(state.values[2]).toBeNull();
   });

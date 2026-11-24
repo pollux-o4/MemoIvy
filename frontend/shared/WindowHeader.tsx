@@ -8,6 +8,7 @@ type WindowControl = 'minimize' | 'maximize';
 export function WindowHeader({ title, bridge, onClose, controls = ['minimize', 'maximize'], actions, className = 'window-header' }: {
   title: ReactNode; bridge: DesktopBridge; onClose: () => void; controls?: WindowControl[]; actions?: ReactNode; className?: string;
 }) {
+  // biome-ignore lint/a11y/noStaticElementInteractions: 제목 줄 더블클릭 최대화는 포인터 편의다. 키보드는 최대화 버튼을 쓴다.
   return <header className={className} onDoubleClick={(event) => {
     if (!(event.target as HTMLElement).closest('button, a, input, textarea, [contenteditable="true"], [role="button"]')) bridge.windowAction('maximize');
   }}>
