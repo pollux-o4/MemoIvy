@@ -28,10 +28,14 @@
 .canvas-screen .inspector-palette button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--canvas-surface), 0 0 0 4px var(--canvas-accent); }
 .canvas-screen .inspector-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot-yellow); }
 .canvas-screen .inspector-dot.pink { background: var(--dot-pink); }.canvas-screen .inspector-dot.blue { background: var(--dot-blue); }.canvas-screen .inspector-dot.green { background: var(--dot-green); }.canvas-screen .inspector-dot.purple { background: var(--dot-purple); }
-.canvas-screen .inspector-body[role="group"] { border-radius: 8px; cursor: text; }
-.canvas-screen .inspector-body[role="group"]:hover { background: var(--canvas-hover); }
-.canvas-screen .inspector-body[role="group"]:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: 1px; }
-.canvas-screen .inspector-body[role="group"] .inspector-preview { padding-block: 3px; }
+.canvas-screen .inspector-body:not(.editing) { position: relative; border-radius: 8px; cursor: text; }
+.canvas-screen .inspector-body:not(.editing):hover { background: var(--canvas-hover); }
+.canvas-screen .inspector-body:not(.editing) .inspector-preview { padding-block: 3px; padding-right: 28px; }
+/* 고치기 버튼: 평소엔 숨고, 본문에 마우스를 올리거나 키보드로 오면 오른쪽 위에 드러난다. */
+.canvas-screen .inspector-body-edit { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; color: var(--canvas-muted); background: transparent; opacity: 0; cursor: pointer; transition: opacity 120ms; }
+.canvas-screen .inspector-body:hover .inspector-body-edit, .canvas-screen .inspector-body-edit:focus-visible { opacity: 1; }
+.canvas-screen .inspector-body-edit:hover { color: var(--canvas-text); background: var(--canvas-hover); }
+.canvas-screen .inspector-body-edit:focus-visible { outline: 2px solid var(--canvas-accent); outline-offset: 1px; }
 .canvas-screen .inspector-preview { --preview-gutter: 23px; padding: 0 8px; }
 .canvas-screen .inspector-preview li { align-items: center; gap: 7px; height: 20px; color: var(--canvas-muted); }
 .canvas-screen .inspector-preview li > span { flex: 0 0 16px; width: 16px; display: grid; place-items: center; color: var(--canvas-muted); font-size: 11px; }

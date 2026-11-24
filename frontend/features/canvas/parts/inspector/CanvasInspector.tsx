@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type Ref } from 'react';
+import { memo, useEffect, useMemo, useRef, type Ref } from 'react';
 import './inspector.css';
 import type { Note } from '../../../../shared/engine_contract';
 import { progressLabel } from '../../../../shared/progress';
@@ -34,7 +34,8 @@ export const CanvasInspector = memo(function CanvasInspector({ note, notes, proj
   /** 가지 개요. 가지가 없으면(행 1개 이하) 칸을 숨긴다. */
   outline?: { rows: readonly OutlineRow[]; onIndent: (id: string) => boolean; onOutdent: (id: string) => boolean; onMove: (id: string, target: string, place: 'before' | 'after') => boolean; onShift: (id: string, step: -1 | 1) => boolean };
 }) {
-  const byId = new Map(notes.map((item) => [item.id, item]));
+  // 개요 제목 찾기용 색인. 목록이 같으면 다시 만들지 않는다(O(n) 한 번).
+  const byId = useMemo(() => new Map(notes.map((item) => [item.id, item])), [notes]);
   const titleRef = useRef<HTMLInputElement>(null);
   const project = Boolean(note.canvas.project);
   const progress = useProgress();
@@ -43,13 +44,13 @@ export const CanvasInspector = memo(function CanvasInspector({ note, notes, proj
   const showOutline = outline !== undefined && outline.rows.length > 1;
   // 개요는 한 뿌리의 나무라 여러 부모 중 하나만 담는다. 나머지 부모는 개요 안 "다른 곳에서도 이어짐"으로 함께 보인다.
   const treeParent = showOutline ? outlineParent(outline.rows, note.id) : undefined;
-  const alsoFrom = showOutline ? notes.filter((item) => item.canvas.next.includes(note.id) && item.id !== treeParent) : [];
+  const alsoFrom = useMemo(() => showOutline ? notes.filter((item) => item.id !== treeParent && item.canvas.next.includes(note.id)).map((item) => item.id) : [], [showOutline, notes, note.id, treeParent]);
   useEffect(() => { if (renameRequest) { titleRef.current?.focus(); titleRef.current?.select(); } }, [renameRequest]);
   return <aside className="canvas-inspector floating" aria-label={project ? '선택한 프로젝트' : '선택한 메모'}>
     <InspectorIdentity key={note.id} note={note} titleRef={titleRef} revision={revision} onSaveText={(text, base) => onSaveText(note, text, base)} onToggleTask={(line) => onToggleTask(note, line)} onColor={(color) => onColor(note, color)} onClose={onClose} onExternal={onExternal}/>
     <InspectorPrimary note={note} childCount={progress.children(note.id).length} tasks={hasTasks ? tasks : undefined} onOpen={() => onOpen(note)} onOpenAsNote={() => onOpenAsNote(note)} onToggleDone={onToggleDone}/>
     <InspectorLinks note={note} notes={notes} incomingInOutline={showOutline} childrenInOutline={showOutline ? directChildren(outline.rows, note.id) : undefined} onSelect={onSelect} openLinkPicker={openLinkPicker} onToggleLink={onToggleLink} onSignal={onSignal} onAddBranch={onAddBranch}/>
-    {showOutline && <InspectorOutline rows={outline.rows} current={note.id} alsoFrom={alsoFrom.map((item) => item.id)} onSelect={onSelect} onUnlink={(id) => onToggleLink(note, id)} onIndent={outline.onIndent} onOutdent={outline.onOutdent} onMove={outline.onMove} onShift={outline.onShift}
+    {showOutline && <InspectorOutline rows={outline.rows} current={note.id} alsoFrom={alsoFrom} onSelect={onSelect} onUnlink={(id) => onToggleLink(note, id)} onIndent={outline.onIndent} onOutdent={outline.onOutdent} onMove={outline.onMove} onShift={outline.onShift}
       labelOf={(id) => { const item = byId.get(id); return item ? canvasTitle(item) : id; }}/>}
     <InspectorOrganize projects={projects} onLift={onLift} onMoveInto={onMoveInto}/>
     <footer><button className="inspector-delete" title="삭제 · Delete" onClick={onDelete}>{project ? '프로젝트 삭제…' : '메모 삭제…'}</button></footer>
