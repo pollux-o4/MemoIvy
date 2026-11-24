@@ -63,3 +63,14 @@ jobs:
       tag: ${{ needs.draft.outputs.tag }}
     secrets:
       SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+
+  msstore-submission:
+    needs: [draft, publish]
+    if: vars.MSSTORE_PRODUCT_ID != ''
+    uses: ./.github/workflows/msstore-submission.yml
+    with:
+      tag: ${{ needs.draft.outputs.tag }}
+    secrets:
+      MSSTORE_TENANT_ID: ${{ secrets.MSSTORE_TENANT_ID }}
+      MSSTORE_CLIENT_ID: ${{ secrets.MSSTORE_CLIENT_ID }}
+      MSSTORE_CLIENT_SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}

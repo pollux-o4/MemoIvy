@@ -20,5 +20,14 @@
 ## 게시와 복구
 
 - 서명과 Store·Snap 게시 자격 증명은 권한을 제한한 작업 환경에서 사용한다. 테스트 패키지와 후보 체크섬을 검토한 뒤 선택한 산출물만 게시한다.
-- Snap은 `snapcraft upload 후보.snap --release=latest/candidate` 후 위 검증을 진행한다. 통과한 리비전만 `snapcraft release memoivy 리비전 latest/stable`로 승격한다.
+- GitHub Actions에 `SNAPCRAFT_STORE_CREDENTIALS`를 등록하고 저장소 변수 `SNAP_STORE_CANDIDATE_ENABLED`를 `true`로 설정하면 GitHub Release 공개 후 Snap을 `latest/candidate`에 올린다. 토큰은 `memoivy`와 `latest/candidate`에 한정한다.
+- 재실행하려면 `main`에서 `Snap Store candidate` 워크플로에 최신 공개 태그를 지정한다. 업로드 전에 Release에서 받은 Snap의 SHA-256을 확인한다. 위 검증을 통과한 리비전은 게시 담당자가 `snapcraft release memoivy 리비전 latest/stable`로 승격한다.
+- Microsoft Store 첫 공개는 Partner Center에서 진행한다(완료). 이후에는 GitHub Release 공개 뒤 `Microsoft Store submission` 워크플로가 체크섬을 확인한 MSIX를 `msstore publish`로 새 제출에 올리고 커밋한다. 시크릿 `MSSTORE_TENANT_ID`·`MSSTORE_CLIENT_ID`·`MSSTORE_CLIENT_SECRET`, 변수 `MSSTORE_SELLER_ID`·`MSSTORE_PRODUCT_ID`가 필요하고, `MSSTORE_PRODUCT_ID`가 비면 건너뛴다. Entra 앱은 Partner Center 사용자 관리에 관리자 권한으로 연결돼 있어야 한다. MSIX 신원은 변수 `MSIX_IDENTITY`·`MSIX_PUBLISHER`·`MSIX_PUBLISHER_NAME`이 Partner Center 값과 같아야 한다.
+- 재제출은 `main`에서 `Microsoft Store submission` 워크플로에 최신 공개 태그를 지정한다.
 - 장애 시 게시 담당자가 이전 리비전을 채널에 재지정하고, 장치에서 `snap revert memoivy`와 OPS-002 복구 절차를 확인한다. 새 SQLite 파일은 별도로 보존한다.
+
+## 공용 배포 검증 환경
+
+- 공용 공간의 `ReleaseQA` README에서 베이스 이미지·변경분 디스크·프로젝트별 검증 자료를 찾는다. 로컬에서는 저장소와 같은 상위 폴더에 둔다.
+- Windows VM에서 Store 설치·첫 실행을, 격리 Ubuntu에서 Snap 설치·갱신·롤백을 확인한다. 검증 기록과 변경분 디스크는 `projects/MemoIvy`에 둔다.
+- 성공 확인 후 커밋·패키지 체크섬·채널 또는 리비전·검증 결과를 남기고 임시 디스크와 빌드 중간물을 정리한다. 실패 재현에 필요한 변경분은 원인 확인까지 보관한다.
