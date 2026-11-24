@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: jdx/mise-action@v3
         with:
           install_args: node rust
@@ -29,6 +29,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-machete
+      - run: rustup component add rustfmt clippy
       - run: npm ci
       - run: mise run check
       - run: mise run check:web
@@ -41,7 +42,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: jdx/mise-action@v3
         with:
           install_args: node rust
@@ -52,6 +53,8 @@ jobs:
       # Ubuntu 24.04의 AppArmor가 비특권 user namespace를 막아 Chromium 샌드박스가 뜨지 않는다. 앱 샌드박스는 끄지 않는다.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: npm ci
+      # 일부 캔버스 e2e는 Electron 밖의 Chromium 헤드리스 셸로 렌더러를 띄운다.
+      - run: npx playwright install chromium --only-shell
       - run: mise run test:e2e
         env:
           E2E_SHOT_DIR: ${{ runner.temp }}/e2e-shots
@@ -67,7 +70,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: jdx/mise-action@v3
