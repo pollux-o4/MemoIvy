@@ -12,5 +12,9 @@
     "desktop/**/*.cjs",
     "tools/**/*.cjs",
     "e2e/**/*.ts"
+  ],
+  "ignoreBinaries": [
+    "snapcraft",
+    "unsquashfs"
   ]
 }

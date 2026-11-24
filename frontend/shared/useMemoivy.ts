@@ -3,7 +3,7 @@ import type { DesktopBridge, EngineEvent, EngineResult, Note, Snapshot } from '.
 import { createMockBridge } from './mock_bridge';
 
 type RequestQueue = { bridge: DesktopBridge; pending: Promise<unknown>; writes: number };
-const WRITE_OPS = new Set(['create', 'update', 'delete', 'canvas', 'importAsset', 'deleteAsset', 'preference']);
+const WRITE_OPS = new Set(['create', 'update', 'delete', 'canvas', 'restore', 'importAsset', 'deleteAsset', 'preference']);
 
 export function useMemoivy(injectedBridge?: DesktopBridge) {
   const bridge = useMemo(() => injectedBridge ?? window.memoivy ?? createMockBridge(), [injectedBridge]);
@@ -95,8 +95,11 @@ export function useMemoivy(injectedBridge?: DesktopBridge) {
     return request('canvas', { changes });
   }, [request]);
   const removeNote = useCallback(async (id: string) => request('delete', { id }), [request]);
+  /** 여러 장을 한 트랜잭션으로 지운다: 전부 지워지거나 하나도 안 지워진다. */
+  const removeNotes = useCallback(async (ids: readonly string[]) => request('delete', { ids }), [request]);
+  const restoreNotes = useCallback(async (notes: Note[], changes: Array<{ id: string; canvas: Partial<Note['canvas']> }>) => request('restore', { notes, changes }), [request]);
 
-  return { bridge, snapshot, notes: snapshot?.notes ?? [], assets: snapshot?.assets ?? [], error, saving, request, editNoteText, createNote, updateNote, mutateCanvas, removeNote };
+  return { bridge, snapshot, notes: snapshot?.notes ?? [], assets: snapshot?.assets ?? [], error, saving, request, editNoteText, createNote, updateNote, mutateCanvas, removeNote, removeNotes, restoreNotes };
 }
 
 export type MemoStore = ReturnType<typeof useMemoivy>;

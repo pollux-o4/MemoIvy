@@ -1,31 +1,6 @@
-import { syntaxTree } from '@codemirror/language';
 import type { EditorView } from '@codemirror/view';
 import { continueListItem, handleListKey } from './list_markers';
-
-function completeCodeFence(view: EditorView): boolean {
-  const { state } = view;
-  const { main, ranges } = state.selection;
-  if (view.composing || ranges.length !== 1 || !main.empty) return false;
-  const line = state.doc.lineAt(main.head);
-  if (main.head !== line.to) return false;
-  const match = /^( {0,3})(`{3,})([^`]*)$/.exec(line.text);
-  if (!match) return false;
-  const [, indent, fence] = match;
-  const start = line.from + indent.length;
-  const mark = syntaxTree(state).resolveInner(start + 1);
-  const block = mark.parent;
-  if (mark.name !== 'CodeMark' || block?.name !== 'FencedCode' || block.from !== start) return false;
-  const last = block.lastChild;
-  if (last?.name === 'CodeMark' && last.from !== mark.from) return false;
-
-  view.dispatch({
-    changes: { from: line.to, insert: `\n${indent}\n${indent}${fence}` },
-    selection: { anchor: line.to + 1 + indent.length },
-    scrollIntoView: true,
-    userEvent: 'input',
-  });
-  return true;
-}
+import { commitCodeFence } from './fence_input';
 
 export function formattingKeymap() {
   const wrap = (left: string, right = left) => (view: EditorView) => {
@@ -58,8 +33,8 @@ export function formattingKeymap() {
     { key: 'Mod-1', run: linePrefix('# ') }, { key: 'Mod-2', run: linePrefix('## ') },
     { key: 'Mod-Shift-7', run: linePrefix('1. ') }, { key: 'Mod-Shift-8', run: linePrefix('- ') }, { key: 'Mod-Shift-9', run: linePrefix('- [ ] ') },
     { key: 'Mod-k', run: wrap('[', '](https://example.com)') },
-    { key: 'Enter', run: completeCodeFence },
-    { key: 'Shift-Enter', run: continueListItem },
+    { key: 'Enter', run: commitCodeFence },
+    { key: 'Shift-Enter', run: (view: EditorView) => commitCodeFence(view) || continueListItem(view) },
     ...['Enter', 'Backspace', 'Delete', 'Tab', 'Shift-Tab', 'Home', 'ArrowLeft'].map((key) => ({ key, run: (view: EditorView) => handleListKey(view, key) })),
     { key: 'Mod-Enter', run: mark(/^(\s*[-*+]\s+\[)([ x/])(\])/, (match) => `${match[1]}${match[2].toLowerCase() === 'x' ? ' ' : 'x'}${match[3]}`) },
   ];

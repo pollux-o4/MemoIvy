@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMenu } from '../../shared/menu/useMenu';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import { Icon } from '../../shared/Icon';
@@ -16,6 +17,6 @@ export function NoteMenu({ id, title, store }: { id: string; title: string; stor
       <hr className="menu-divider"/>
       <button className="menu-row destructive" role="menuitem" onClick={() => { setOpen(false); setConfirmDelete(true); }}><Icon name="trash" size={16}/><span>삭제…</span></button>
     </div>}
-    {confirmDelete && <ConfirmDialog question="이 메모를 삭제할까요?" subject={title} detail="삭제한 메모는 복구할 수 없습니다." acceptLabel="삭제" onCancel={() => { setConfirmDelete(false); trigger.current?.focus(); }} onAccept={() => { setConfirmDelete(false); void store.removeNote(id).catch(() => undefined); }}/ >}
+    {confirmDelete && createPortal(<ConfirmDialog question="이 메모를 삭제할까요?" subject={title} detail="삭제한 메모는 복구할 수 없습니다." acceptLabel="삭제" onCancel={() => { setConfirmDelete(false); trigger.current?.focus(); }} onAccept={() => { setConfirmDelete(false); void store.removeNote(id).catch(() => undefined); }}/>, document.body)}
   </div>;
 }

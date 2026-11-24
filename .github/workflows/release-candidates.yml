@@ -1,81 +1,105 @@
 name: Desktop release candidates
+# CI 전체 통과 후 Windows·Snap 후보를 빌드하고 체크섬·빌드 출처 증명을 남긴다. 태그가 있으면 GitHub Release에 붙인다(OPS-005).
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 산출물을 붙일 릴리스 태그(비우면 산출물만 보관)
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 jobs:
-  windows:
-    runs-on: windows-2025
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            os: windows-2025
+          - target: snap
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       MSIX_IDENTITY: ${{ vars.MSIX_IDENTITY || 'MemoIvy.Development' }}
       MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER || 'CN=MemoIvy Development' }}
       MSIX_PUBLISHER_NAME: ${{ vars.MSIX_PUBLISHER_NAME || 'MemoIvy Development' }}
+      TAG: ${{ inputs.tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: actions/checkout@v5
         with:
-          install_args: node rust
-      - run: npm ci
-      - run: mise run test:engine
-      - run: mise run test:desktop
-      - run: npm run release:windows
-      - run: >
-          .\scripts\package-msix.ps1
-          -IdentityName $env:MSIX_IDENTITY
-          -Publisher $env:MSIX_PUBLISHER
-          -PublisherDisplayName $env:MSIX_PUBLISHER_NAME
-      - name: Verify payload and record checksums
+          # 출시 호출은 초안 Release라 태그가 아직 없으므로 병합 커밋을, 수동 재빌드는 지정 태그를 빌드한다.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: ./.github/actions/setup
+        with:
+          browsers: 'false'
+
+      - if: matrix.target == 'windows'
         shell: pwsh
         run: |
-          if (!(Test-Path artifacts/installers/win-unpacked/resources/engine/memoivy-engine.exe)) { throw "Windows engine missing" }
-          Set-Location artifacts/installers
-          Get-ChildItem -File -Path *.exe,*.msix | ForEach-Object {
-            "$( (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() )  $($_.Name)"
-          } | Set-Content SHA256SUMS
-          Set-Content SOURCE_COMMIT $env:GITHUB_SHA
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-x64-${{ github.sha }}
-          if-no-files-found: error
-          path: |
-            artifacts/installers/*.exe
-            artifacts/installers/*.msix
-            artifacts/installers/SHA256SUMS
-            artifacts/installers/SOURCE_COMMIT
+          npm run release:windows
+          .\scripts\package-msix.ps1 -IdentityName $env:MSIX_IDENTITY -Publisher $env:MSIX_PUBLISHER -PublisherDisplayName $env:MSIX_PUBLISHER_NAME
 
-  snap:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
-        with:
-          install_args: node rust
-      - name: Prepare isolated Snapcraft builder
+      - if: matrix.target == 'snap'
         run: |
           sudo snap install snapcraft --classic
           if ! command -v lxd >/dev/null; then sudo snap install lxd; fi
           sudo lxd waitready
           sudo lxd init --auto
           sudo usermod -aG lxd "$USER"
-      - run: npm ci
-      - run: mise run test:engine
-      - run: mise run test:desktop
-      - run: sg lxd -c 'npm run release:snap'
-      - name: Verify payload and record checksums
+          # runner의 Docker가 FORWARD 기본 정책을 DROP으로 둬 LXD 빌드 컨테이너가 네트워크를 못 쓴다.
+          sudo iptables -P FORWARD ACCEPT
+          sg lxd -c 'npm run release:snap'
+
+      - name: Verify package
+        run: node scripts/verify-package.mjs ${{ matrix.target }}
+
+      # 두 대상 공통: 산출물 목록 → 체크섬 → 출처 증명 → 보관·릴리스 첨부.
+      - name: Record checksums
+        shell: bash
+        working-directory: artifacts/installers
         run: |
-          cd artifacts/installers
-          test "$(find . -maxdepth 1 -name '*.snap' | wc -l)" -eq 1
-          unsquashfs -ll ./*.snap | grep 'resources/engine/memoivy-engine$'
-          sha256sum -- *.snap > SHA256SUMS
-          printf '%s\n' "$GITHUB_SHA" > SOURCE_COMMIT
+          shopt -s nullglob
+          files=(*.exe *.msix *.snap)
+          sha256sum -- "${files[@]}" > "SHA256SUMS-${{ matrix.target }}"
+          printf '%s\n' "$GITHUB_SHA" > "SOURCE_COMMIT-${{ matrix.target }}"
+          printf '%s\n' "${files[@]/#/artifacts/installers/}" > "$RUNNER_TEMP/payload.txt"
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-checksums: artifacts/installers/SHA256SUMS-${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
-          name: snap-amd64-${{ github.sha }}
+          name: ${{ matrix.target }}-${{ github.sha }}
           if-no-files-found: error
           path: |
+            artifacts/installers/*.exe
+            artifacts/installers/*.msix
             artifacts/installers/*.snap
-            artifacts/installers/SHA256SUMS
-            artifacts/installers/SOURCE_COMMIT
+            artifacts/installers/SHA256SUMS-${{ matrix.target }}
+            artifacts/installers/SOURCE_COMMIT-${{ matrix.target }}
+      - if: env.TAG != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files < "$RUNNER_TEMP/payload.txt"
+          gh release upload "$TAG" --clobber "${files[@]}" \
+            "artifacts/installers/SHA256SUMS-${{ matrix.target }}" "artifacts/installers/SOURCE_COMMIT-${{ matrix.target }}"

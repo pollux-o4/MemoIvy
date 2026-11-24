@@ -14,6 +14,7 @@ files:
   - package.json
   - '!desktop/**/*.test.cjs'
 mac:
+  # 엔진 동봉 위치는 scripts/verify-package.mjs의 ENGINE과 같아야 한다.
   extraResources: &unixEngine
     - from: engine/target/release/memoivy-engine
       to: engine/memoivy-engine
@@ -43,21 +44,3 @@ linux:
   target:
     - AppImage
     - deb
-snapcraft:
-  base: core24
-  core24:
-    confinement: strict
-    useLXD: true
-    plugs:
-      - browser-support
-      - desktop
-      - desktop-legacy
-      - gsettings
-      - home
-      - network
-      - opengl
-      - wayland
-      - x11
-    stagePackages:
-      - default
-      - libasound2t64

@@ -1,0 +1,56 @@
+name: Release
+# dev→main squash 병합이 곧 출시다: package.json 버전(SSoT)으로 초안 Release를 만들고,
+# 후보 빌드가 산출물을 붙인 뒤에만 공개해 태그를 남긴다. Release 본문은 squash 커밋 본문이다(OPS-005).
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: plan
+        run: node scripts/release-plan.mjs
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          git log -1 --format=%b > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "MemoIvy $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+
+  candidates:
+    needs: draft
+    uses: ./.github/workflows/release-candidates.yml
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      tag: ${{ needs.draft.outputs.tag }}
+    secrets: inherit
+
+  publish:
+    needs: [draft, candidates]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.draft.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

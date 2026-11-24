@@ -1,7 +1,9 @@
+import { createBlockScanner } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
-import { createListScanner } from './list_markers';
+import { listDecorations } from './list_markers';
+import { pendingFenceLine } from './fence_input';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
 import { parseImageLine } from './image_tools/commands';
 import { imageBoundary, keepImageOnOwnLine, splitComposedImageLine } from './image_tools/input';
@@ -48,18 +50,36 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
         range.empty ? range.head >= from && range.head <= to : range.from < to && range.to > from);
       const active = view.state.doc.lineAt(view.state.selection.main.head).number;
       const activeLineObj = view.state.doc.line(active);
-      const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'CodeMark', 'URL']);
+      const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'URL']);
       const ranges: Array<{ from: number; to: number; value: Decoration }> = [{ from: activeLineObj.from, to: activeLineObj.from, value: activeLine }];
-      const listLine = createListScanner();
+      const pendingLine = pendingFenceLine(view.state);
       const imageLines = new Set<number>();
+      const codeLines = new Set<number>();
+      const scanBlock = createBlockScanner({ pendingLine });
+      const blocks: Array<{ from: number; to: number; boundaries: Array<{ from: number; to: number; indent: number }> }> = [];
+      let block: (typeof blocks)[number] | undefined;
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {
         const line = view.state.doc.line(lineNumber);
-        const listDecorations = listLine(line);
+        // 한 줄을 한 번만 스캔하고 목록 장식과 코드 블록 판정이 같은 결과를 쓴다.
+        const blockLine = scanBlock(line.text);
+        const { fence: boundary, code } = blockLine;
+        const listRanges = listDecorations(line, blockLine);
+        if (boundary?.kind === 'open') {
+          block = { from: line.from, to: view.state.doc.length, boundaries: [] };
+          blocks.push(block);
+        }
+        if (code) {
+          codeLines.add(lineNumber);
+          ranges.push({ from: line.from, to: line.from, value: codeBlock });
+          if (boundary && block) block.boundaries.push({ from: line.from, to: line.to, indent: boundary.indent.length });
+          if (boundary?.kind === 'close' && block) { block.to = line.to; block = undefined; }
+          continue;
+        }
         const image = parseImageLine(line.text);
         if (image) {
           imageLines.add(lineNumber);
           // 이미지는 원문을 대체하므로 목록 정렬만 적용한다.
-          const alignment = listDecorations[0];
+          const alignment = listRanges[0];
           if (alignment) ranges.push(alignment);
           const widget = new AssetWidget({
             ...image, src: assetUrls[image.hash], from: line.from, to: line.to, view, handlers: imageHandlers,
@@ -68,32 +88,22 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push(line.number === active ? { from: line.from, to: line.from, value: Decoration.widget({ widget, side: -1 }) } : { from: line.from, to: line.to, value: Decoration.replace({ widget }) });
           continue;
         }
-        ranges.push(...listDecorations);
+        ranges.push(...listRanges);
+      }
+      for (const fenced of blocks) {
+        if (touchesSelection(fenced.from, fenced.to)) continue;
+        for (const boundary of fenced.boundaries) {
+          ranges.push({ from: boundary.from + boundary.indent, to: boundary.to, value: hiddenMark });
+          ranges.push({ from: boundary.from, to: boundary.from, value: hiddenFenceLine });
+        }
       }
       const { from: visibleFrom, to: visibleTo } = view.viewport;
       syntaxTree(view.state).iterate({ from: visibleFrom, to: visibleTo, enter(node) {
+        if (codeLines.has(view.state.doc.lineAt(node.from).number)) return;
         if (node.name === 'InlineCode') {
           ranges.push({ from: node.from, to: node.to, value: inlineCode });
         }
-        if (node.name === 'FencedCode') {
-          const doc = view.state.doc;
-          const first = doc.lineAt(Math.max(node.from, visibleFrom)).number;
-          const last = doc.lineAt(Math.min(node.to, visibleTo)).number;
-          for (let number = first; number <= last; number++) {
-            const { from } = doc.line(number);
-            ranges.push({ from, to: from, value: codeBlock });
-          }
-        }
         const parent = node.node.parent;
-        if (node.name === 'CodeMark' && parent?.name === 'FencedCode') {
-          if (touchesSelection(parent.from, parent.to)) return;
-          const line = view.state.doc.lineAt(node.from);
-          ranges.push({ from: node.from, to: node.to, value: hiddenMark });
-          if (!view.state.sliceDoc(line.from, node.from).trim() && !view.state.sliceDoc(node.to, line.to).trim()) {
-            ranges.push({ from: line.from, to: line.from, value: hiddenFenceLine });
-          }
-          return;
-        }
         if (marks.has(node.name) && (node.name !== 'URL' || parent?.name === 'Link') && node.to > node.from) {
           if (imageLines.has(view.state.doc.lineAt(node.from).number)) return;
           const reveal = node.name === 'HeaderMark'

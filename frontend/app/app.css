@@ -19,3 +19,4 @@ button:focus-visible, input:focus-visible { outline: 2px solid color-mix(in srgb
 /* GTK .memoivy-window:backdrop · .maximized */
 .app-root.is-backdrop .window-title { color: var(--memoivy-muted); }
 .app-root.is-maximized { border-radius: 0; border-color: transparent; }
+.app-root.is-square-frame { border-radius: 0; }

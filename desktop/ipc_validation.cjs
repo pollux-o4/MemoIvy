@@ -1,7 +1,7 @@
 'use strict';
 
 const OPERATIONS = new Set([
-  'snapshot', 'create', 'update', 'delete', 'canvas', 'flush',
+  'snapshot', 'create', 'update', 'delete', 'canvas', 'restore', 'flush',
   'importAsset', 'readAsset', 'deleteAsset', 'preference',
 ]);
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -21,13 +21,14 @@ function validateRequest(op, params) {
     snapshot: [], flush: [],
     create: ['baseRevision', 'text', 'color', 'parent', 'project', 'position'],
     update: ['baseRevision', 'id', 'text', 'color', 'canvas'],
-    delete: ['baseRevision', 'id'],
+    delete: ['baseRevision', 'id', 'ids'],
     canvas: ['baseRevision', 'changes'],
+    restore: ['baseRevision', 'notes', 'changes'],
     importAsset: ['baseRevision', 'name', 'data', 'mime'],
     readAsset: ['id'], deleteAsset: ['baseRevision', 'id'], preference: ['baseRevision', 'key', 'value'],
   }[op];
   exactKeys(params, allowed);
-  if (['create', 'update', 'delete', 'canvas', 'importAsset', 'deleteAsset', 'preference'].includes(op)) revision(params.baseRevision);
+  if (['create', 'update', 'delete', 'canvas', 'restore', 'importAsset', 'deleteAsset', 'preference'].includes(op)) revision(params.baseRevision);
   if (op === 'create') {
     optionalText(params.text, MAX_TEXT, 'text');
     optionalColor(params.color);
@@ -39,16 +40,29 @@ function validateRequest(op, params) {
     optionalText(params.text, MAX_TEXT, 'text');
     optionalColor(params.color);
     if (params.canvas !== undefined) canvas(params.canvas);
-  } else if (op === 'delete' || op === 'deleteAsset') {
-    (op === 'delete' ? id : assetId)(params.id);
-  } else if (op === 'canvas') {
-    if (!Array.isArray(params.changes) || params.changes.length > 5000) throw bad('Invalid canvas changes');
-    for (const change of params.changes) {
-      if (!plainObject(change)) throw bad('Invalid canvas change');
-      exactKeys(change, ['id', 'canvas']);
-      id(change.id);
-      canvas(change.canvas);
+  } else if (op === 'delete') {
+    // 한 건(id) 또는 여러 건(ids) 중 하나만 받는다.
+    if ((params.id === undefined) === (params.ids === undefined)) throw bad('Give id or ids');
+    if (params.ids === undefined) id(params.id);
+    else if (!Array.isArray(params.ids) || !params.ids.length || params.ids.length > 5000) throw bad('Invalid note ids');
+    else params.ids.forEach(id);
+  } else if (op === 'deleteAsset') {
+    assetId(params.id);
+  } else if (op === 'canvas') canvasChanges(params.changes);
+  else if (op === 'restore') {
+    if (!Array.isArray(params.notes) || !params.notes.length || params.notes.length > 5000) throw bad('Invalid restored notes');
+    for (const note of params.notes) {
+      if (!plainObject(note)) throw bad('Invalid restored note');
+      exactKeys(note, ['id', 'text', 'color', 'modified', 'canvas']);
+      id(note.id);
+      if (typeof note.text !== 'string') throw bad('Invalid text');
+      optionalText(note.text, MAX_TEXT, 'text');
+      if (typeof note.color !== 'string') throw bad('Invalid color');
+      optionalColor(note.color);
+      if (!Number.isSafeInteger(note.modified) || note.modified < 0) throw bad('Invalid modified time');
+      canvas(note.canvas);
     }
+    canvasChanges(params.changes);
   } else if (op === 'readAsset') assetId(params.id);
   else if (op === 'preference') validatePreference(params.key, params.value);
   else if (op === 'importAsset') {
@@ -59,6 +73,16 @@ function validateRequest(op, params) {
     if (params.mime !== undefined && (typeof params.mime !== 'string' || params.mime.length > 127 || !/^[\w.+-]+\/[\w.+-]+$/.test(params.mime))) throw bad('Invalid MIME type');
   }
   return params;
+}
+
+function canvasChanges(changes) {
+  if (!Array.isArray(changes) || changes.length > 5000) throw bad('Invalid canvas changes');
+  for (const change of changes) {
+    if (!plainObject(change)) throw bad('Invalid canvas change');
+    exactKeys(change, ['id', 'canvas']);
+    id(change.id);
+    canvas(change.canvas);
+  }
 }
 
 function validateWindowTarget(kind, id) {

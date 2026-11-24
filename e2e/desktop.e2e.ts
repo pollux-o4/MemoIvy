@@ -38,7 +38,8 @@ async function quit(app: ElectronApplication) {
 }
 async function windowWith(app: ElectronApplication, selector: string): Promise<Page> {
   for (const end = Date.now() + 10_000; Date.now() < end; await new Promise((r) => setTimeout(r, 100))) {
-    for (const page of app.windows()) if (await page.$(selector)) return page;
+    // 목록↔캔버스 전환은 원래 창을 닫으므로 닫히는 중인 페이지는 건너뛴다.
+    for (const page of app.windows()) if (!page.isClosed() && await page.$(selector).catch(() => null)) return page;
   }
   throw new Error(`no window with ${selector}`);
 }
@@ -111,7 +112,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await library.getByRole('button', { name: '설정', exact: true }).click();
         const settings = await windowWith(app, '.settings-screen');
         await settings.getByRole('button', { name: '가져오기', exact: true }).click();
-        await settings.getByText('이전 메모를 가져왔습니다.').waitFor();
+        const status = settings.getByRole('status');
+        await expect.poll(() => status.textContent(), { timeout: 30_000 }).not.toMatch(/^$|가져오는 중/);
+        if (await status.textContent() !== '이전 메모를 가져왔습니다.') {
+          // 화면 문구만으로는 원인을 알 수 없어 같은 경로를 다시 불러 엔진 오류를 실패 메시지에 남긴다.
+          const cause = await settings.evaluate(() => window.memoivy?.importLegacy().then(() => 'ok', (error: Error) => `${(error as { code?: string }).code}: ${error.message}`));
+          throw new Error(`가져오기 실패(${await status.textContent()}) — ${cause}`);
+        }
       }
       await library.getByRole('button', { name: title, exact: true }).waitFor();
       await quit(app);
@@ -170,7 +177,8 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     const settings = await windowWith(app, '.settings-screen');
     await settings.getByRole('radio', { name: '다크' }).click();
     await settings.getByRole('radiogroup', { name: '모션 줄이기' }).getByRole('radio', { name: '켜기' }).click();
-    await expect.poll(() => library.evaluate(() => [document.documentElement.classList.contains('theme-dark'), document.documentElement.dataset.motion])).toEqual([true, 'reduce']);
+    // 목록 창은 캔버스로 전환되며 닫혔으므로 열린 캔버스 창으로 전체 반영을 확인한다.
+    await expect.poll(() => canvas.evaluate(() => [document.documentElement.classList.contains('theme-dark'), document.documentElement.dataset.motion])).toEqual([true, 'reduce']);
     // 연결선 모양은 엔진 설정으로 저장되어 오류 없이 선택 상태가 바뀐다.
     await settings.getByRole('radio', { name: '직각' }).click();
     await expect.poll(() => settings.getByRole('radio', { name: '직각' }).getAttribute('aria-checked')).toBe('true');
@@ -211,7 +219,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await canvas.mouse.up();
 
       // 저장 완료 신호는 다른 렌더러가 받은 엔진 스냅숏으로 확인한다.
-      const persisted = () => library.evaluate(async (noteId) => {
+      const persisted = () => canvas.evaluate(async (noteId) => {
         const result = await window.memoivy?.request('snapshot');
         return result?.snapshot?.notes.find((note) => note.id === noteId)?.canvas.position;
       }, id);
@@ -228,6 +236,115 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => positionIn(restored)).toEqual(saved);
     } finally {
       if (running) await quit(running);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('마지막 메모·캔버스 창을 닫을 때만 메모 목록으로 돌아간다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-close-canvas-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      await expect.poll(() => library.isClosed()).toBe(true);
+      // 캔버스가 남아 있으면 메모 창을 닫아도 목록이 뜨지 않는다.
+      await canvas.getByRole('button', { name: 'New' }).click();
+      await canvas.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await editor.getByRole('button', { name: '창 닫기' }).click();
+      await expect.poll(() => editor.isClosed()).toBe(true);
+      const libraryVisible = () => app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().some((w) => w.isVisible() && w.webContents.getURL().includes('window=library')));
+      expect(await libraryVisible()).toBe(false);
+      // 메모가 남아 있으면 캔버스를 닫아도 목록이 뜨지 않고, 마지막 메모를 닫으면 뜬다.
+      await canvas.evaluate(async () => {
+        const bridge = window.memoivy;
+        if (!bridge) throw new Error('데스크톱 bridge 없음');
+        const { snapshot } = await bridge.request('snapshot') as { snapshot: { notes: { id: string }[] } };
+        await bridge.openNote(snapshot.notes[0].id);
+      });
+      const last = await windowWith(app, '.editor-screen');
+      // OS 닫기(Alt+F4)도 닫기 버튼과 같은 경로를 지난다.
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('window=canvas'))?.close());
+      await expect.poll(() => canvas.isClosed()).toBe(true);
+      expect(await libraryVisible()).toBe(false);
+      await last.getByRole('button', { name: '창 닫기' }).click();
+      const again = await windowWith(app, '.library-screen');
+      await expect.poll(() => last.isClosed()).toBe(true);
+      expect(again.isClosed()).toBe(false);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('메모 창의 이동 메뉴는 펼쳐져 캔버스나 메모 목록으로 보낸다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-note-nav-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: 'New' }).click();
+      await library.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await editor.getByRole('button', { name: '이동' }).click();
+      await editor.getByRole('menuitem', { name: '메모 목록' }).waitFor();
+      await editor.waitForTimeout(320);
+      await editor.screenshot({ path: path.join(process.env.E2E_SHOT_DIR ?? tmpdir(), 'note-nav-open.png') });
+      await editor.getByRole('menuitem', { name: '캔버스', exact: true }).click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      expect(canvas.isClosed()).toBe(false);
+      expect(editor.isClosed()).toBe(false);
+      // 목록과 캔버스는 홈 자리 하나를 나눠 쓴다.
+      await expect.poll(() => library.isClosed()).toBe(true);
+      await editor.getByRole('button', { name: '이동' }).click();
+      await editor.keyboard.press('ArrowDown');
+      await editor.keyboard.press('Enter');
+      await expect.poll(async () => (await windowWith(app, '.library-screen')).isClosed()).toBe(false);
+      await expect.poll(() => canvas.isClosed()).toBe(true);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('삭제는 Ctrl+Z로 원래 id·연결 그대로 되살아나고 그 전 기록도 이어서 되돌린다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-undo-delete-'));
+    const kept = 'd0000000-0000-4000-8000-000000000001';
+    const removed = 'd0000000-0000-4000-8000-000000000002';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([
+      { id: kept, text: '남길 메모', color: 'yellow', modified: 100, canvas: { position: [0, 0], next: [removed] } },
+      { id: removed, text: '지울 메모', color: 'blue', modified: 100, canvas: { position: [400, 0], next: [] } },
+    ]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      const card = (id: string) => canvas.locator(`.canvas-note[data-note-id="${id}"]`);
+      await card(removed).waitFor();
+      await settle(canvas);
+      // 지울 메모를 옮겨 실행 취소 기록 맨 위에 그 메모의 변경을 남긴다.
+      const box = await card(removed).boundingBox();
+      if (!box) throw new Error('카드가 보이지 않음');
+      await canvas.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await canvas.mouse.down();
+      await canvas.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 40, { steps: 6 });
+      await canvas.mouse.up();
+      await card(removed).click();
+      await canvas.locator('.canvas-screen').press('Delete');
+      await canvas.getByRole('button', { name: '삭제', exact: true }).click();
+      await expect.poll(() => card(removed).count()).toBe(0);
+      await canvas.locator('.canvas-screen').press('Control+z');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(await canvas.getByRole('alert').count()).toBe(0);
+      await expect.poll(() => card(removed).count()).toBe(1);
+      const links = async () => (await canvas.evaluate(() => window.memoivy.request('snapshot'))).snapshot?.notes.find((note) => note.id === 'd0000000-0000-4000-8000-000000000001')?.canvas.next;
+      await expect.poll(links).toEqual([removed]);
+      // 삭제 앞의 이동 기록도 되살아난 메모에 이어서 적용된다.
+      const moved = await card(removed).boundingBox();
+      await canvas.locator('.canvas-screen').press('Control+z');
+      await expect.poll(async () => (await card(removed).boundingBox())?.x).not.toBe(moved?.x);
+      await expect.poll(() => canvas.locator('.canvas-status').textContent()).not.toContain('실패');
+    } finally {
+      await quit(app);
       rmSync(dir, { recursive: true, force: true });
     }
   });
@@ -263,7 +380,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         const snapshot = await canvas.evaluate(() => window.memoivy.request('snapshot'));
         expect(snapshot.snapshot?.notes.find((note) => note.text === '내부 메모')?.canvas.position).toEqual([400, 200]);
       };
-      for (const leave of [() => home.click(), keyboardLeave]) {
+      // 마우스 뒤로 버튼은 키보드 뒤로와 같은 명령이다(Playwright 마우스는 뒤로 버튼이 없어 이벤트로 보낸다).
+      const mouseBack = () => canvas.evaluate(() => {
+        for (const type of ['mousedown', 'mouseup']) window.dispatchEvent(new MouseEvent(type, { button: 3, bubbles: true, cancelable: true }));
+      });
+      for (const leave of [() => home.click(), keyboardLeave, mouseBack]) {
         await enter.click();
         await canvas.locator('.canvas-note').getByText('내부 메모', { exact: true }).waitFor();
         await settle(canvas);
@@ -273,6 +394,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await expect.poll(() => canvas.locator(`.canvas-note.selected[data-note-id="${project}"]`).count()).toBe(1);
         await settle(canvas);
       }
+      // 최상위에서 뒤로 가면 들어왔던 목록으로 돌아가고 캔버스는 닫힌다.
+      await mouseBack();
+      await windowWith(app, '.library-screen');
+      await expect.poll(() => app.windows().filter((page) => !page.isClosed() && page.url().includes('window=canvas')).length).toBe(0);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
@@ -613,6 +738,35 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('코드 펜스는 Enter로 확정할 때만 블록이 되고 아래 블록을 건드리지 않는다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-fence-'));
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: '펜스 확인\n위 글\n```\n아래 코드\n```\n아래 글', color: 'blue', modified: 100 }]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '펜스 확인', exact: true }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      const content = editor.locator('.cm-content');
+      // 펜스 줄은 기호를 숨겨 빈 줄로 그린다.
+      const codeTexts = () => content.locator('.md-code-block').allTextContents();
+      await expect.poll(codeTexts).toEqual(['', '아래 코드', '']);
+      await content.getByText('위 글', { exact: true }).click();
+      await editor.keyboard.press('End');
+      await editor.keyboard.press('Enter');
+      await editor.keyboard.type('```');
+      // 입력 중에는 아래 블록이 그대로이고, 새 줄은 일반 글이다.
+      await expect.poll(codeTexts).toEqual(['', '아래 코드', '']);
+      await editor.keyboard.press('Enter');
+      await editor.keyboard.type('새 코드');
+      // 커서가 든 새 블록은 펜스 기호를 드러내므로 블록 구조(두 블록 · 각 3줄)만 본다.
+      await expect.poll(async () => (await codeTexts()).map((text) => text.replace(/^`{3}$/, ''))).toEqual(['', '새 코드', '', '', '아래 코드', '']);
+      await expect.poll(() => content.locator('.cm-line').last().textContent()).toBe('아래 글');
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('이미지 옆 한글 조합과 후속 입력이 첨부를 보존한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
     const id = 'd0000000-0000-4000-8000-000000000001';
@@ -705,10 +859,6 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => gauge.getAttribute('aria-valuenow')).toBe('0');
       expect(await gauge.getAttribute('aria-valuemax')).toBe('1');
       expect(await roots.getByRole('progressbar', { name: '최근 메모 진행률' }).count()).toBe(0);
-      await library.getByRole('button', { name: '작업 프로젝트 캔버스 열기', exact: true }).click();
-      const canvas = await windowWith(app, '.canvas-screen');
-      const canvasGauge = canvas.getByRole('progressbar', { name: '작업 메모 진행률' });
-      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('0');
       const gaugeOffset = await gauge.evaluate((element: HTMLElement) => element.offsetTop);
       const preview = card.locator('.preview-list');
       const noteTask = preview.getByRole('checkbox', { name: '본문 할 일' });
@@ -729,7 +879,6 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       expect(await preview.locator('.preview-bullet').evaluate((row) => parseFloat(getComputedStyle(row).paddingInlineStart))).toBeGreaterThan(0);
       await expect.poll(() => card.locator('.task-chip').textContent()).toBe('1/1');
       expect(await gauge.getAttribute('aria-valuenow')).toBe('1');
-      await expect.poll(() => canvasGauge.getAttribute('aria-valuenow')).toBe('1');
       expect(await gauge.evaluate((element: HTMLElement) => element.offsetTop)).toBe(gaugeOffset);
       await expect.poll(() => library.locator('.project-heading .task-chip').textContent()).toBe('3/3');
       expect(app.windows().filter((page) => page.url().includes('window=note'))).toHaveLength(0);
@@ -748,6 +897,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await library.mouse.click(point.x, point.y);
       const editor = await windowWith(app, '.editor-screen');
       await expect.poll(() => editor.locator('.md-checkbox.is-checked').count()).toBe(1);
+      // 목록·캔버스는 동시에 열리지 않으므로(NOTE-001) 캔버스로 바꿔 같은 진행률을 확인한다.
+      await library.evaluate((id) => window.memoivy?.openWindow('canvas', id), project);
+      const canvas = await windowWith(app, '.canvas-screen');
+      await expect.poll(() => canvas.getByRole('progressbar', { name: '작업 메모 진행률' }).getAttribute('aria-valuenow')).toBe('1');
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
@@ -857,7 +1010,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => firstTask.getAttribute('aria-checked')).toBe('false');
       await secondTask.click();
       await expect.poll(() => secondTask.getAttribute('aria-checked')).toBe('true');
-      const savedTask = await library.evaluate(async () => {
+      const savedTask = await canvas.evaluate(async () => {
         const result = await window.memoivy?.request('snapshot');
         return result?.snapshot?.notes.find((note) => note.text.startsWith('펼치면 길어지는 메모'));
       });
