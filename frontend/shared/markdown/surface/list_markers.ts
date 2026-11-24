@@ -88,8 +88,8 @@ const lineStyle = (depth: number, extra = '') => Decoration.line({ class: `md-li
  * 목록 줄은 기호를 숨기고 표식 칸에 글머리표·체크박스를 그린다(커서 줄에서도 유지, GTK와 동일).
  * 항목 아래 표식 너비 이상 들여쓴 줄은 같은 항목의 이어쓰기로 보고, 공백을 숨겨 항목 글자와 같은 칸에서 시작한다.
  */
-export function createListScanner() {
-  const scan = createBlockScanner();
+export function createListScanner(options: Parameters<typeof createBlockScanner>[0] = {}) {
+  const scan = createBlockScanner(options);
   return (line: Line): Range[] => {
     const { item, owner, code } = scan(line.text);
     if (code) return [];

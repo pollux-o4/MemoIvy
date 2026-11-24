@@ -3,6 +3,7 @@ import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { createListScanner } from './list_markers';
+import { pendingFenceLine } from './fence_input';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
 import { parseImageLine } from './image_tools/commands';
 import { imageBoundary, keepImageOnOwnLine, splitComposedImageLine } from './image_tools/input';
@@ -51,10 +52,11 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
       const activeLineObj = view.state.doc.line(active);
       const marks = new Set(['HeaderMark', 'EmphasisMark', 'StrongEmphasisMark', 'StrikethroughMark', 'LinkMark', 'ImageMark', 'URL']);
       const ranges: Array<{ from: number; to: number; value: Decoration }> = [{ from: activeLineObj.from, to: activeLineObj.from, value: activeLine }];
-      const listLine = createListScanner();
+      const pendingLine = pendingFenceLine(view.state);
+      const listLine = createListScanner({ pendingLine });
       const imageLines = new Set<number>();
       const codeLines = new Set<number>();
-      const scanBlock = createBlockScanner();
+      const scanBlock = createBlockScanner({ pendingLine });
       const blocks: Array<{ from: number; to: number; boundaries: Array<{ from: number; to: number; indent: number }> }> = [];
       let block: (typeof blocks)[number] | undefined;
       for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber++) {

@@ -8,6 +8,7 @@ import { markdownStyle } from './markdown_style';
 import { EditorView, keymap, placeholder as hint } from '@codemirror/view';
 import { editorTheme } from './editor_theme';
 import { formattingKeymap } from './formatting_keymap';
+import { pendingFence } from './fence_input';
 import { liveMarkdown } from './live_markdown';
 import { linkPreview } from './link_preview/link_preview';
 import { externalLinkUrl, findLinkAt } from './link_preview/link_model';
@@ -44,6 +45,7 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
     const state = EditorState.create({ doc: value, extensions: [
       history(), EditorView.lineWrapping, hints.of(hintExtensions()), markdown({ base: markdownLanguage }), syntaxHighlighting(markdownStyle), editorTheme, linkPreview({ open: (url) => callbacks.current.onExternal(url) }),
       rawMode.of(raw ? [] : [liveMarkdown(assetUrls, imageHandlers)]),
+      pendingFence,
       Prec.highest(keymap.of(formattingKeymap())),
       keymap.of([...historyKeymap, ...defaultKeymap, indentWithTab]),
       EditorView.domEventHandlers({

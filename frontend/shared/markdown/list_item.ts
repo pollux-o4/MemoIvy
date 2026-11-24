@@ -34,6 +34,14 @@ export type ParsedListItem = ListItem & { markerEnd: number };
 export type BlockLine = { item: ParsedListItem | null | undefined; owner: ListOwner | null; code: boolean; fence?: FenceBoundary };
 
 const FENCE_LINE = /^(\s*)(`{3,}|~{3,})([^\n]*)$/;
+/** 여는 펜스: 정보 문자열은 공백 없는 한 단어(언어 이름)까지만. 문장을 이어 쓴 줄은 일반 글이다. */
+const FENCE_OPENER = /^(\s*)(`{3,}|~{3,})([^\s`]*)\s*$/;
+
+/** 여는 펜스 모양의 줄이면 경계를 돌려준다(입력 규칙과 스캐너의 공통 판정). */
+export function fenceOpener(text: string): FenceBoundary | undefined {
+  const match = FENCE_OPENER.exec(text);
+  return match ? { kind: 'open', delimiter: match[2], indent: match[1] } : undefined;
+}
 const QUOTE_LINE = /^\s*>/;
 
 /** 코드 펜스 짝짓기: 여는 펜스와 같은 문자·같거나 긴 길이의 빈 정보 줄만 닫는다(CommonMark). */
@@ -42,19 +50,19 @@ class FenceTracker {
 
   get inside(): boolean { return this.open !== undefined; }
 
-  /** 이 줄이 펜스 경계면 경계를 돌려주고 상태를 바꾼다. */
-  advance(text: string): FenceBoundary | undefined {
-    const match = FENCE_LINE.exec(text);
-    if (!match) return undefined;
-    const [, indent, delimiter, info] = match;
+  /** 이 줄이 펜스 경계면 경계를 돌려주고 상태를 바꾼다. `pending`인 줄은 아직 확정되지 않은 입력이라 블록을 열지 않는다. */
+  advance(text: string, pending = false): FenceBoundary | undefined {
     if (this.open) {
+      const match = FENCE_LINE.exec(text);
+      if (!match) return undefined;
+      const [, indent, delimiter, info] = match;
       if (delimiter[0] !== this.open[0] || delimiter.length < this.open.length || info.trim()) return undefined;
       this.open = undefined;
       return { kind: 'close', delimiter, indent };
     }
-    if (delimiter[0] === '`' && info.includes('`')) return undefined;
-    this.open = delimiter;
-    return { kind: 'open', delimiter, indent };
+    const opener = pending ? undefined : fenceOpener(text);
+    if (opener) this.open = opener.delimiter;
+    return opener;
   }
 }
 
@@ -86,15 +94,18 @@ class ListOwners {
   blank(): void { if (++this.blanks > 1) this.stack.length = 0; }
 }
 
-/** 문서 순서로 줄마다 한 번 호출하는 블록 스캐너(줄당 O(목록 깊이), 상태 O(목록 깊이)). */
-export function createBlockScanner(): (text: string) => BlockLine {
+/**
+ * 문서 순서로 줄마다 한 번 호출하는 블록 스캐너(줄당 O(목록 깊이), 상태 O(목록 깊이)).
+ * `pendingLine`(1부터)은 Enter로 확정하기 전인 여는 펜스 줄이다. 입력 중에는 아래 블록과 짝짓지 않는다.
+ */
+export function createBlockScanner({ pendingLine }: { pendingLine?: number } = {}): (text: string) => BlockLine {
   const fence = new FenceTracker();
   const owners = new ListOwners();
   let line = 0;
   return (text) => {
     line++;
     const wasInside = fence.inside;
-    const boundary = fence.advance(text);
+    const boundary = fence.advance(text, line === pendingLine);
     const code = wasInside || boundary !== undefined;
     const quote = QUOTE_LINE.test(text);
     const item = code || quote ? undefined : parseListItem(text);

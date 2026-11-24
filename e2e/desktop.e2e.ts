@@ -623,6 +623,35 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('코드 펜스는 Enter로 확정할 때만 블록이 되고 아래 블록을 건드리지 않는다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-fence-'));
+    const id = 'd0000000-0000-4000-8000-000000000001';
+    writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text: '펜스 확인\n위 글\n```\n아래 코드\n```\n아래 글', color: 'blue', modified: 100 }]));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '펜스 확인', exact: true }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      const content = editor.locator('.cm-content');
+      // 펜스 줄은 기호를 숨겨 빈 줄로 그린다.
+      const codeTexts = () => content.locator('.md-code-block').allTextContents();
+      await expect.poll(codeTexts).toEqual(['', '아래 코드', '']);
+      await content.getByText('위 글', { exact: true }).click();
+      await editor.keyboard.press('End');
+      await editor.keyboard.press('Enter');
+      await editor.keyboard.type('```');
+      // 입력 중에는 아래 블록이 그대로이고, 새 줄은 일반 글이다.
+      await expect.poll(codeTexts).toEqual(['', '아래 코드', '']);
+      await editor.keyboard.press('Enter');
+      await editor.keyboard.type('새 코드');
+      // 커서가 든 새 블록은 펜스 기호를 드러내므로 블록 구조(두 블록 · 각 3줄)만 본다.
+      await expect.poll(async () => (await codeTexts()).map((text) => text.replace(/^`{3}$/, ''))).toEqual(['', '새 코드', '', '', '아래 코드', '']);
+      await expect.poll(() => content.locator('.cm-line').last().textContent()).toBe('아래 글');
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('이미지 옆 한글 조합과 후속 입력이 첨부를 보존한다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-editor-ime-'));
     const id = 'd0000000-0000-4000-8000-000000000001';
