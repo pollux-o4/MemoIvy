@@ -17,17 +17,17 @@ export function InspectorPrimary({ note, childCount, tasks, onOpen, onOpenAsNote
       </button>
     </div>
     <div className="inspector-actions-stack">
-      <InspectorAction tone="primary" icon={project ? 'enter' : 'note'} label={project ? '프로젝트 들어가기' : '메모 열기'} keys="Enter" shortcut="Enter" hint="두 번 누르기 또는 Enter" onClick={onOpen}/>
-      {project && <InspectorAction tone="quiet" icon="note" label="메모로 열기" keys="⇧ Enter" shortcut="Shift+Enter" hint="Shift+Enter" onClick={onOpenAsNote}/>}
+      <InspectorAction primary icon={project ? 'enter' : 'note'} label={project ? '프로젝트 들어가기' : '메모 열기'} keys="Enter" shortcut="Enter" hint="두 번 누르기 또는 Enter" onClick={onOpen}/>
+      {project && <InspectorAction icon="note" label="메모로 열기" keys="⇧ Enter" shortcut="Shift+Enter" hint="Shift+Enter" onClick={onOpenAsNote}/>}
     </div>
   </section>;
 }
 
-/** 인스펙터 동작 한 줄: 아이콘·이름·단축키 배치는 같고 강조(tone)만 다르다. */
-function InspectorAction({ tone, icon, label, keys, shortcut, hint, onClick }: {
-  tone: 'primary' | 'quiet'; icon: IconName; label: string; keys: string; shortcut: string; hint: string; onClick: () => void;
+/** 인스펙터 동작 한 줄: 아이콘·이름·단축키 배치는 같고 강조(primary)만 다르다. 기본 모양은 정리 줄과 같은 .inspector-action. */
+function InspectorAction({ primary = false, icon, label, keys, shortcut, hint, onClick }: {
+  primary?: boolean; icon: IconName; label: string; keys: string; shortcut: string; hint: string; onClick: () => void;
 }) {
-  return <button className={`inspector-action ${tone}`} aria-keyshortcuts={shortcut} title={`${label} · ${hint}`} onClick={onClick}>
+  return <button className={primary ? 'inspector-action primary' : 'inspector-action'} aria-keyshortcuts={shortcut} title={`${label} · ${hint}`} onClick={onClick}>
     <Icon name={icon} size={15}/><span>{label}</span><kbd className="inspector-kbd" aria-hidden>{keys}</kbd>
   </button>;
 }
