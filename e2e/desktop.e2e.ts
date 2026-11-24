@@ -112,7 +112,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await library.getByRole('button', { name: '설정', exact: true }).click();
         const settings = await windowWith(app, '.settings-screen');
         await settings.getByRole('button', { name: '가져오기', exact: true }).click();
-        await settings.getByText('이전 메모를 가져왔습니다.').waitFor();
+        const status = settings.getByRole('status');
+        await expect.poll(() => status.textContent(), { timeout: 30_000 }).not.toMatch(/^$|가져오는 중/);
+        if (await status.textContent() !== '이전 메모를 가져왔습니다.') {
+          // 화면 문구만으로는 원인을 알 수 없어 같은 경로를 다시 불러 엔진 오류를 실패 메시지에 남긴다.
+          const cause = await settings.evaluate(() => window.memoivy?.importLegacy().then(() => 'ok', (error: Error) => `${(error as { code?: string }).code}: ${error.message}`));
+          throw new Error(`가져오기 실패(${await status.textContent()}) — ${cause}`);
+        }
       }
       await library.getByRole('button', { name: title, exact: true }).waitFor();
       await quit(app);
