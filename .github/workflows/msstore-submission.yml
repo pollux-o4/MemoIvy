@@ -27,7 +27,8 @@ permissions:
 
 jobs:
   submit:
-    if: github.ref == 'refs/heads/main'
+    # 출시 호출은 main에서, 수동 재제출은 고친 워크플로를 쓰도록 어느 브랜치에서든 연다. 태그는 아래에서 최신 공개 출시로 제한한다.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 30
     concurrency:
@@ -47,14 +48,16 @@ jobs:
             echo "::error::Use the latest published MemoIvy release tag ($latest)."
             exit 1
           fi
-          cd "$RUNNER_TEMP"
+          # CLI는 폴더에서 MSIX를 찾으므로 이 출시 파일만 담는 폴더를 쓴다.
+          mkdir -p "$RUNNER_TEMP/msix" && cd "$RUNNER_TEMP/msix"
           package="MemoIvy-${TAG#v}-x64.msix"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern "$package" --pattern SHA256SUMS-windows
           # SHA256SUMS-windows에는 설치 파일(.exe)도 있으므로 받은 MSIX 줄만 확인한다.
           # Windows sha256sum은 이진 모드 표시로 파일명 앞에 *를 붙인다.
           awk -v f="$package" '$2 == f || $2 == "*" f' SHA256SUMS-windows | grep . | sha256sum --check --strict
-          printf 'MSIX_PACKAGE=%s\n' "$(cygpath -w "$RUNNER_TEMP/$package")" >> "$GITHUB_ENV"
+          rm SHA256SUMS-windows
+          printf 'MSIX_DIR=%s\n' "$(cygpath -w "$RUNNER_TEMP/msix")" >> "$GITHUB_ENV"
       - name: Check Store configuration
         env:
           TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
@@ -81,6 +84,6 @@ jobs:
         run: |
           msstore reconfigure --tenantId $env:TENANT --sellerId $env:SELLER --clientId $env:CLIENT --clientSecret $env:SECRET
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          # 프로젝트 폴더 대신 받은 MSIX를 --inputFile로 지정한다. 제출은 커밋돼 Store 인증으로 넘어간다.
-          msstore publish (Split-Path $env:MSIX_PACKAGE) --inputFile $env:MSIX_PACKAGE --appId $env:PRODUCT
+          # 설치된 CLI는 --inputDirectory(폴더)를 받는다(문서의 --inputFile과 다름). 제출은 커밋돼 Store 인증으로 넘어간다.
+          msstore publish $env:MSIX_DIR --inputDirectory $env:MSIX_DIR --appId $env:PRODUCT
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
