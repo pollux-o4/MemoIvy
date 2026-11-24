@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/Icon';
 import { SettingsButton } from '../../shared/SettingsButton';
 import { useMemo, useRef, useState } from 'react';
 import { ProgressProvider } from '../../shared/ProgressProvider';
@@ -6,6 +7,7 @@ import type { Note } from '../../shared/engine_contract';
 import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
+import { useMouseBack } from '../../shared/useMouseBack';
 import { AlignmentBar } from './parts/alignment/AlignmentBar';
 import { CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, type CanvasPoint } from './model/align';
 
@@ -39,7 +41,7 @@ import { useFanQuiet } from './interaction/state/useFanQuiet';
 const CARD_SIZE_VARS = { '--card-width': `${CARD_WIDTH}px`, '--card-height': `${CARD_HEIGHT}px`, '--card-radius': `${CARD_RADIUS}px` } as React.CSSProperties;
 
 /** 캔버스 화면 조립: 범위·선택·카메라·명령·포인터 훅을 묶고 화면 부품에 전달한다. */
-export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void }) {
+export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSettings, onOpenLibrary }: { store: MemoStore; scope?: string; onOpenNote: (id: string) => void; onBack: () => void; onHelp: () => void; onOpenSettings: () => void; onOpenLibrary: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[]>([]);
   const openLinkPicker = useRef<(() => void) | null>(null);
@@ -49,7 +51,9 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const draftPositions = useMemo(() => ({ ...pendingPositions, ...dragPositions }), [pendingPositions, dragPositions]);
   const selection = useCanvasSelection();
   const { selected, setSelected, mode } = selection;
-  const scopeState = useCanvasScope(store.notes, scope, setSelected, onBack);
+  // 최상위에서 뒤로 가면 이 캔버스로 들어온 목록으로 돌아간다(목록↔캔버스는 서로를 대체한다).
+  const scopeState = useCanvasScope(store.notes, scope, setSelected, onOpenLibrary);
+  useMouseBack(scopeState.leave);
   const { activeScope, scopedProject } = scopeState;
   const notes = useMemo(() => store.notes.filter((note) => (note.canvas.parent ?? null) === activeScope), [store.notes, activeScope]);
   const { noteById, positions, cardRects, selectedRects } = useCanvasLayout(notes, draftPositions, selected);
@@ -132,9 +136,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const inspectorOutline = useMemo(() => ({ rows: outlineRows, onIndent: inspectorActions.indent, onOutdent: inspectorActions.outdent, onMove: inspectorActions.move, onShift: inspectorActions.shift }), [outlineRows, inspectorActions]);
 
   const confirmDelete = async () => {
-    for (const id of deleteTarget) {
-      try { await store.removeNote(id); } catch { break; }
-    }
+    await commands.remove(deleteTarget).catch(() => undefined);
     setSelected([]);
     setDeleteTarget([]);
   };
@@ -147,6 +149,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   // biome-ignore lint/a11y/noStaticElementInteractions: 키 입력은 안쪽 컨트롤에서 올라온 것을 모아 처리한다.
   return <ProgressProvider notes={store.notes}><div className="canvas-screen" style={CARD_SIZE_VARS} onKeyDown={keyboard.onKeyDown} onKeyUp={keyboard.onKeyUp} onBlur={keyboard.onBlur} tabIndex={0}>
     <WindowHeader className="window-header canvas-header" title={title} bridge={store.bridge} onClose={onBack} actions={<>
+      <button type="button" className="icon-button" title="메모 목록" aria-label="메모 목록" onClick={onOpenLibrary}><Icon name="note"/></button>
       <SettingsButton onClick={onOpenSettings}/>
       <CreationMenu onCreate={createItem} projectAllowed={scopeState.depth < MAX_PROJECT_DEPTH}/>
     </>}/>

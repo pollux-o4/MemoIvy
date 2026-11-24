@@ -5,3 +5,6 @@
 - 화면 상호작용과 접근성은 `mise run test:stories`, 실제 Electron 창과 저장 복원은 `mise run test:e2e`로 확인한다. Electron 검사는 합성 데이터와 가상 X 화면을 사용한다.
 - 캔버스 프레임·메모리 변화 판단은 OPS-004의 PERF 검사를 사용한다. 실제 GPU·Wayland 결과와 헤드리스 결과는 구별해 기록한다.
 - 배포 전 이력 검사는 `mise run check:secrets`를 사용한다. 커밋·푸시 훅 설치는 `mise run hooks:install`이다.
+- CI(`.github/workflows/ci.yml`)는 `dev`·`main` 푸시와 PR마다 위 mise 작업을 그대로 실행한다: 정적 점검·단위 테스트, Linux·Windows Electron e2e, 비밀정보 검사. 검사 추가·변경은 mise 작업에 하고 워크플로는 호출만 한다. 도구 준비는 `.github/actions/setup` 하나를 공유한다. e2e 실패 시 화면 캡처를 산출물로 올린다.
+- 의존성 갱신은 Dependabot이 주 1회 묶음 PR로 올리고, CI 통과 후 병합한다. 릴리스 흐름은 OPS-005.
+- 브랜치: 작업은 별도 브랜치·워크트리에서 해 `dev`에 병합한다. `main`은 사용자에게 보이는 출시 이력이며 기본 브랜치다. `dev→main`은 PR을 squash 병합하고, 제목은 가장 큰 변경(`feat: …`), 본문에 나머지 `fix: …`·`feat: …`를 한 줄씩 적어 release-please가 각각 CHANGELOG에 넣게 한다. 릴리스 PR 병합 뒤 `main`을 `dev`에 병합해 버전을 맞춘다.

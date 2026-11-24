@@ -1,0 +1,44 @@
+name: memoivy
+title: MemoIvy
+base: core24
+summary: Desktop notes and canvas
+description: Write notes, organize projects, and connect ideas on a canvas.
+website: https://github.com/pollux-o4/MemoIvy
+source-code: https://github.com/pollux-o4/MemoIvy
+issues: https://github.com/pollux-o4/MemoIvy/issues
+contact: https://github.com/pollux-o4/MemoIvy/issues
+license: MIT
+grade: stable
+confinement: strict
+adopt-info: desktop
+
+parts:
+  desktop:
+    plugin: dump
+    source: payload
+    override-pull: |
+      craftctl default
+      craftctl set version="$(cat release-version)"
+    stage:
+      - -release-version
+    stage-packages:
+      - libasound2t64
+      - libnspr4
+      - libnss3
+      - libsecret-1-0
+      - libxss1
+
+apps:
+  memoivy:
+    command: app/memoivy --no-sandbox
+    common-id: io.github.pollux_o4.MemoIvy
+    extensions:
+      - gnome
+    desktop: usr/share/applications/io.github.pollux_o4.MemoIvy.desktop
+    plugs:
+      - browser-support
+      - home
+      - network
+      - x11
+      - wayland
+      - opengl

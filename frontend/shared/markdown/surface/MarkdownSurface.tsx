@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 import './markdown_surface.css';
 import { indentWithTab, history, historyKeymap, defaultKeymap } from '@codemirror/commands';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { syntaxHighlighting } from '@codemirror/language';
 import { markdownStyle } from './markdown_style';
 import { EditorView, keymap, placeholder as hint } from '@codemirror/view';
 import { editorTheme } from './editor_theme';
 import { formattingKeymap } from './formatting_keymap';
+import { pendingFence } from './fence_input';
 import { liveMarkdown } from './live_markdown';
 import { linkPreview } from './link_preview/link_preview';
 import { externalLinkUrl, findLinkAt } from './link_preview/link_model';
@@ -44,7 +45,9 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
     const state = EditorState.create({ doc: value, extensions: [
       history(), EditorView.lineWrapping, hints.of(hintExtensions()), markdown({ base: markdownLanguage }), syntaxHighlighting(markdownStyle), editorTheme, linkPreview({ open: (url) => callbacks.current.onExternal(url) }),
       rawMode.of(raw ? [] : [liveMarkdown(assetUrls, imageHandlers)]),
-      keymap.of([...formattingKeymap(), ...historyKeymap, ...defaultKeymap, indentWithTab]),
+      pendingFence,
+      Prec.highest(keymap.of(formattingKeymap())),
+      keymap.of([...historyKeymap, ...defaultKeymap, indentWithTab]),
       EditorView.domEventHandlers({
         compositionstart: () => { callbacks.current.onComposing(true); return false; },
         compositionend: () => { window.setTimeout(() => callbacks.current.onComposing(false), 0); return false; },

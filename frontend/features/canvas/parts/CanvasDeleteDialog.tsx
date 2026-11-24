@@ -9,6 +9,6 @@ export function CanvasDeleteDialog({ ids, notes, onCancel, onAccept }: { ids: st
   return <ConfirmDialog
     question={ids.length === 1 ? '이 메모를 삭제할까요?' : `메모 ${ids.length}개를 삭제할까요?`}
     subject={subject ? canvasTitle(subject) : undefined}
-    detail={hasLinks ? '삭제한 메모는 복구할 수 없습니다. 내용과 연결이 모두 사라져요.' : '삭제한 메모는 복구할 수 없습니다.'}
+    detail={hasLinks ? '내용과 연결이 함께 지워져요. 이 창에서 Ctrl+Z로 되돌릴 수 있어요.' : '이 창에서 Ctrl+Z로 되돌릴 수 있어요.'}
     acceptLabel="삭제" onCancel={onCancel} onAccept={onAccept}/>;
 }

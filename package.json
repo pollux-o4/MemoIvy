@@ -25,7 +25,7 @@
     "check:deps": "depcruise frontend desktop --config .dependency-cruiser.cjs",
     "check:dupes": "jscpd",
     "release:windows": "npm run build && electron-builder --win nsis --x64 --publish never --config desktop/electron-builder.yml",
-    "release:snap": "npm run build && electron-builder --linux snap --x64 --publish never --config desktop/electron-builder.yml"
+    "release:snap": "npm run build && electron-builder --linux --x64 --dir --publish never --config desktop/electron-builder.yml && node scripts/package-snap.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",

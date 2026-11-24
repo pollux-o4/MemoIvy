@@ -1,0 +1,73 @@
+name: CI
+# 병합 관문: 로컬 mise 작업을 그대로 실행해 로컬·CI 검증 정의를 하나로 유지한다(OPS-003).
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+
+jobs:
+  check:
+    name: 정적 점검·단위 테스트
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          rust-components: rustfmt clippy
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - run: mise run check
+      - run: mise run check:web
+      - run: npm run typecheck
+      - run: mise run test:web
+      - run: mise run test:desktop
+
+  e2e:
+    name: Electron e2e (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y xvfb
+          # Ubuntu 24.04 AppArmor가 비특권 user namespace를 막아 Chromium 샌드박스가 뜨지 않는다. 앱 샌드박스는 끄지 않는다.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: mise run test:e2e
+        env:
+          E2E_SHOT_DIR: ${{ runner.temp }}/e2e-shots
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/e2e-shots
+          if-no-files-found: ignore
+
+  secrets:
+    name: 비밀정보 검사
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v3
+        with:
+          install_args: aqua:gitleaks/gitleaks
+      - run: mise run check:secrets

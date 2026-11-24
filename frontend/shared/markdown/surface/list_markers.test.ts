@@ -1,14 +1,14 @@
 import { EditorState } from '@codemirror/state';
 import { expect, test } from 'vitest';
-import { parseListItem } from '../list_item';
-import { createListScanner, nextListMarker } from './list_markers';
+import { createBlockScanner, parseListItem } from '../list_item';
+import { listDecorations, nextListMarker } from './list_markers';
 
 const scan = (doc: string) => {
   const state = EditorState.create({ doc });
-  const next = createListScanner();
+  const next = createBlockScanner();
   return Array.from({ length: state.doc.lines }, (_, i) => {
     const line = state.doc.line(i + 1);
-    return next(line).map((range) => [range.from - line.from, range.to - line.from]);
+    return listDecorations(line, next(line.text)).map((range) => [range.from - line.from, range.to - line.from]);
   });
 };
 

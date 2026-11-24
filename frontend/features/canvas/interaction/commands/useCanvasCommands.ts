@@ -6,7 +6,7 @@ import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedP
 import { bounds } from '../../model/motion';
 import { branchRoot, buildGraph, scopeEdges, treeParent } from '../../model/links/graph';
 import { DEFAULT_COLUMN_GAP as BRANCH_GAP_X, DEFAULT_ROW_GAP as BRANCH_GAP_Y, mindmapLayout } from '../../model/links/mindmap_layout';
-import { useCanvasHistory, type CanvasChange } from './useCanvasHistory';
+import { deletionCommand, type Step, useCanvasHistory, type CanvasChange } from './useCanvasHistory';
 
 type Positions = Record<string, CanvasPoint>;
 const NUDGE: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -24,7 +24,20 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
     void store.mutateCanvas(changes).catch(() => undefined).finally(() => setDraftPositions((current) => settleDraft(current, moved)));
   };
   const states = useMemo(() => Object.fromEntries(notes.map((note) => [note.id, { ...note.canvas, position: note.canvas.position ?? [positions[note.id].x, positions[note.id].y] }])), [notes, positions]);
-  const history = useCanvasHistory(states, persist);
+  const noteIds = useMemo(() => new Set(store.notes.map((note) => note.id)), [store.notes]);
+  const apply = (step: Step) => {
+    if (step.restore) void store.restoreNotes(step.restore, step.changes).catch(() => undefined);
+    else if (step.remove) void store.removeNotes(step.remove).catch(() => undefined);
+    else persist(step.changes);
+  };
+  const history = useCanvasHistory(states, apply, noteIds);
+  /** 삭제도 되돌리기 기록에 남긴다. 저장소 전체 메모로 담아 범위 밖 자식·연결도 복원한다. */
+  const remove = async (ids: string[]) => {
+    const command = deletionCommand(store.notes, ids);
+    if (!command.after.remove?.length) return;
+    await store.removeNotes(command.after.remove);
+    history.push(command);
+  };
   const commit = (changes: CanvasChange[]) => { if (!changes.length) return; history.record(changes); persist(changes); };
 
   const commitPositions = (next: Positions) => commit(changedPositions(next, Object.fromEntries(notes.map((note) => [note.id, note.canvas.position])))
@@ -81,6 +94,7 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
     /** 형제를 만들 부모가 있는지(Enter를 가로챌지) 판정한다. */
     canAddSibling: () => selected.length === 1 && Boolean(treeParent(buildGraph(scopeEdges(store.notes, activeScope)), selected[0])),
     history,
+    remove,
     commit,
     commitPositions,
     moveInto,

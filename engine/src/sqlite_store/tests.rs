@@ -330,3 +330,114 @@ fn appearance_preference_accepts_known_choices_and_rejects_others() {
         assert_eq!(error.code, "INVALID_PARAMS");
     }
 }
+
+#[test]
+fn deleted_note_is_absent_from_result_reload_and_reopen() {
+    let (d, mut e) = open();
+    let created = req(
+        &mut e,
+        "create",
+        json!({"baseRevision":0,"text":"delete me"}),
+    )
+    .unwrap();
+    let id = created["note"]["id"].clone();
+    let deleted = req(&mut e, "delete", json!({"baseRevision":1,"id":id})).unwrap();
+    assert_eq!(deleted["snapshot"]["notes"], json!([]));
+    assert_eq!(deleted["snapshot"]["revision"], 2);
+    assert_eq!(
+        req(&mut e, "snapshot", json!({})).unwrap()["snapshot"],
+        deleted["snapshot"]
+    );
+    drop(e);
+    let mut reopened = Engine::open(d.path(), None).unwrap();
+    assert_eq!(
+        req(&mut reopened, "snapshot", json!({})).unwrap()["snapshot"],
+        deleted["snapshot"]
+    );
+}
+#[test]
+fn restore_brings_back_deleted_note_with_links_and_children() {
+    let (_d, mut e) = open();
+    let make = |e: &mut Engine, extra: Value| {
+        let rev = e.snapshot().unwrap().revision;
+        let mut p = json!({"baseRevision":rev});
+        p.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        req(e, "create", p).unwrap()["note"].clone()
+    };
+    let parent = make(&mut e, json!({"text":"p","project":true}));
+    let pid = parent["id"].as_str().unwrap().to_owned();
+    let target = make(&mut e, json!({"text":"t","parent":pid}));
+    let tid = target["id"].as_str().unwrap().to_owned();
+    let source = make(&mut e, json!({"text":"s"}));
+    let sid = source["id"].as_str().unwrap().to_owned();
+    let rev = e.snapshot().unwrap().revision;
+    req(
+        &mut e,
+        "canvas",
+        json!({"baseRevision":rev,"changes":[{"id":sid,"canvas":{"next":[pid]}}]}),
+    )
+    .unwrap();
+    let before = e.snapshot().unwrap();
+    let deleted: Value =
+        serde_json::to_value(before.notes.iter().find(|n| n.id == pid).unwrap()).unwrap();
+    req(
+        &mut e,
+        "delete",
+        json!({"baseRevision":before.revision,"id":pid}),
+    )
+    .unwrap();
+    let rev = e.snapshot().unwrap().revision;
+    let out = req(
+        &mut e,
+        "restore",
+        json!({"baseRevision":rev,"notes":[deleted],"changes":[
+        {"id":sid,"canvas":{"next":[pid]}},{"id":tid,"canvas":{"parent":pid}}]}),
+    )
+    .unwrap();
+    let notes = out["snapshot"]["notes"].as_array().unwrap();
+    let find = |id: &str| notes.iter().find(|n| n["id"] == id).unwrap().clone();
+    assert_eq!(find(&pid)["text"], "p");
+    assert_eq!(find(&sid)["canvas"]["next"], json!([pid]));
+    assert_eq!(find(&tid)["canvas"]["parent"], json!(pid));
+    let rev = out["snapshot"]["revision"].as_u64().unwrap();
+    let again = req(
+        &mut e,
+        "restore",
+        json!({"baseRevision":rev,"notes":[find(&pid)],"changes":[]}),
+    )
+    .unwrap_err();
+    assert_eq!(again.code, "CONFLICT");
+}
+#[test]
+fn batch_delete_lifts_children_past_removed_ancestors() {
+    let (_d, mut e) = open();
+    let mut make = |parent: Option<&str>, project: bool| {
+        let rev = e.snapshot().unwrap().revision;
+        let out = req(
+            &mut e,
+            "create",
+            json!({"baseRevision":rev,"parent":parent,"project":project}),
+        )
+        .unwrap();
+        out["note"]["id"].as_str().unwrap().to_owned()
+    };
+    let top = make(None, true);
+    let mid = make(Some(&top), true);
+    let leaf = make(Some(&mid), false);
+    let rev = e.snapshot().unwrap().revision;
+    let out = req(
+        &mut e,
+        "delete",
+        json!({"baseRevision":rev,"ids":[mid, top]}),
+    )
+    .unwrap();
+    let notes = out["snapshot"]["notes"].as_array().unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0]["id"], json!(leaf));
+    assert!(notes[0]["canvas"].get("parent").is_none());
+    let rev = out["snapshot"]["revision"].as_u64().unwrap();
+    let missing = req(&mut e, "delete", json!({"baseRevision":rev,"ids":[top]})).unwrap_err();
+    assert_eq!(missing.code, "NOT_FOUND");
+}

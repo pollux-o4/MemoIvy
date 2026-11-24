@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, shell, session } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, session, nativeTheme } = require('electron');
 const windowKinds = require('./window_kinds.json');
 const fs = require('node:fs');
 const { absoluteDirectory, linuxDataHome, snapDataDirectory, legacyNotesPath: findLegacyNotes } = require('./data_paths.cjs');
@@ -8,6 +8,8 @@ const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const { EngineTransport } = require('./engine_transport.cjs');
 const { validateRequest, validateWindowTarget, isId } = require('./ipc_validation.cjs');
+const { windowChrome } = require('./window_chrome.cjs');
+const { homeToReplace, shouldShowLibrary } = require('./window_policy.cjs');
 const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 function overrideDataPath() {
@@ -37,7 +39,7 @@ const CLOSE_TIMEOUT_MS = 12000;
 const windows = new Set();
 const windowByKey = new Map();
 const pendingFlushAcks = new Map();
-const closing = new WeakSet();
+const closing = new WeakMap();
 const permittedClose = new WeakSet();
 const approvedContents = new Set();
 let engine;
@@ -83,6 +85,20 @@ function isApprovedFrame(frameUrl) {
 
 function broadcast(event) {
   for (const win of windows) if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('memoivy:event', event);
+}
+
+// Engine snapshots alone determine shared state and deleted-note window lifetime.
+function applySnapshot(snapshot) {
+  if (!snapshot || (currentSnapshot && snapshot.revision <= currentSnapshot.revision)) return;
+  currentSnapshot = snapshot;
+  broadcast({ version: 1, event: 'snapshot', snapshot });
+  const liveIds = new Set(snapshot.notes.map((note) => note.id));
+  for (const [key, win] of windowByKey) {
+    if (!key.startsWith('note:') || liveIds.has(key.slice(5)) || win.isDestroyed()) continue;
+    // A committed deletion must not flush the removed note's obsolete draft.
+    permittedClose.add(win);
+    win.close();
+  }
 }
 
 function openExternalWithoutWaiting(url) {
@@ -135,14 +151,46 @@ async function flushWindow(win) {
   await requireEngine().request('flush', {});
 }
 
-async function requestWindowClose(win, { hide = false } = {}) {
-  if (!win || win.isDestroyed() || closing.has(win)) return;
-  closing.add(win);
+// 닫히는 창의 키와 나머지 보이는 창의 키를 한 번에 수집한다.
+function closeContext(win) {
+  let closingKey;
+  const visibleKeys = [];
+  for (const [key, other] of windowByKey) {
+    if (other === win) closingKey = key;
+    else if (!other.isDestroyed() && other.isVisible()) visibleKeys.push(key);
+  }
+  return { closingKey, visibleKeys };
+}
+
+function replaceOtherHome(key) {
+  const otherKey = homeToReplace(key, windowByKey.keys());
+  if (otherKey !== null) void requestWindowClose(windowByKey.get(otherKey), { replaced: true });
+}
+
+function showLibrary() {
+  const library = windowByKey.get('library');
+  if (library && !library.isDestroyed()) { library.show(); library.focus(); return; }
+  createWindow('library');
+}
+
+async function requestWindowClose(win, { hide = false, replaced = false } = {}) {
+  if (!win || win.isDestroyed()) return;
+  const pending = closing.get(win);
+  if (pending) {
+    if (replaced) pending.replaced = true;
+    return;
+  }
+  const intent = { replaced };
+  closing.set(win, intent);
   try {
     await flushWindow(win);
     if (!win.isDestroyed()) {
-      if (hide) win.hide();
-      else { permittedClose.add(win); win.close(); }
+      if (hide && !intent.replaced) win.hide();
+      else {
+        const { closingKey, visibleKeys } = closeContext(win);
+        if (!intent.replaced && closingKey !== undefined && shouldShowLibrary(closingKey, visibleKeys)) showLibrary();
+        permittedClose.add(win); win.close();
+      }
     }
   } catch (error) {
     broadcast({ version: 1, event: 'error', error: { code: 'CLOSE_FLUSH_FAILED', message: error.message, snapshot: currentSnapshot } });
@@ -158,7 +206,7 @@ function installIpc() {
     try {
       if (engineFailure && engineConfig && ['snapshot', 'readAsset', 'flush'].includes(op)) await launchEngine();
       const result = await requireEngine().request(op, params);
-      if (result.snapshot) currentSnapshot = result.snapshot;
+      applySnapshot(result.snapshot);
       return { __memoivyResult: result };
     } catch (error) {
       if (error.code === 'ENGINE_UNAVAILABLE' || /Engine (?:exited|sent malformed|request timed out)/.test(error.message)) setEngineFailure(error);
@@ -181,7 +229,7 @@ function installIpc() {
     assertSender(event);
     if (!isId(id)) throw new TypeError('Invalid note id');
     const result = await requireEngine().request('snapshot', {});
-    currentSnapshot = result.snapshot;
+    applySnapshot(result.snapshot);
     if (!currentSnapshot?.notes?.some((note) => note.id === id)) throw new Error('Note no longer exists');
     createWindow('note', id);
   });
@@ -205,7 +253,7 @@ function installIpc() {
       // shortcut: 자동 탐색한 JSON의 오류가 수동 가져오기 재시작도 막음, 가져오기 오류 복구를 개선할 때 자동 탐색 건너뛰기 검토.
       if (engineFailure && engineConfig) await launchEngine();
       const result = await requireEngine().request('importLegacy', { path: selected });
-      if (result.snapshot) currentSnapshot = result.snapshot;
+      applySnapshot(result.snapshot);
       return { __memoivyResult: result };
     } catch (error) {
       return { __memoivyError: { code: error.code || 'ENGINE_ERROR', message: error.message, snapshot: error.snapshot } };
@@ -218,7 +266,13 @@ function installIpc() {
     else if (win.isMaximized()) win.unmaximize();
     else win.maximize();
   });
+  ipcMain.handle('memoivy:window-state', (event) => windowState(assertSender(event)));
   ipcMain.handle('memoivy:close-window', (event) => requestWindowClose(assertSender(event)));
+}
+
+/** 렌더러 창 장식이 따르는 상태(DesktopBridge.onWindowState). */
+function windowState(win) {
+  return { maximized: win.isMaximized() || win.isFullScreen(), rounded: windowChrome(process.platform).transparent };
 }
 
 function createWindow(kind = 'library', id) {
@@ -226,14 +280,15 @@ function createWindow(kind = 'library', id) {
   const existing = windowByKey.get(key);
   if (existing && !existing.isDestroyed()) {
     if (existing.isMinimized()) existing.restore();
+    existing.show();
     existing.focus();
+    replaceOtherHome(key);
     return existing;
   }
   const win = new BrowserWindow({
     ...windowKinds[kind],
     frame: false,
-    transparent: true, // 둥근 창 모서리(GTK CSD와 동일)를 위해 창 바탕을 투명하게 둔다
-    backgroundColor: '#00000000',
+    ...windowChrome(process.platform, nativeTheme.shouldUseDarkColors),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -249,7 +304,12 @@ function createWindow(kind = 'library', id) {
   windows.add(win);
   approvedContents.add(contents);
   windowByKey.set(key, win);
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    replaceOtherHome(key);
+  });
+  const sendWindowState = () => { if (!contents.isDestroyed()) contents.send('memoivy:window-state', windowState(win)); };
+  for (const name of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(name, sendWindowState);
   win.webContents.on('will-navigate', (event, target) => {
     if (!isApprovedFrame(target)) {
       event.preventDefault();
@@ -272,10 +332,6 @@ function createWindow(kind = 'library', id) {
     windows.delete(win);
     approvedContents.delete(contents);
     if (windowByKey.get(key) === win) windowByKey.delete(key);
-    if (kind === 'note' && !isQuitting && !quitApproved && ![...windowByKey.keys()].some((windowKey) => windowKey.startsWith('note:'))) {
-      const library = windowByKey.get('library');
-      if (library && !library.isDestroyed()) library.show();
-    }
   });
   const target = rendererTarget(kind, id);
   const load = app.isPackaged ? win.loadURL(target) : win.loadURL(target).catch((error) => {
@@ -312,8 +368,8 @@ async function spawnEngineAndReadSnapshot() {
   engine = transport;
   transport.on('event', (event) => {
     if (engine !== transport) return;
-    if (event.snapshot) currentSnapshot = event.snapshot;
-    broadcast(event);
+    if (event.snapshot) applySnapshot(event.snapshot);
+    else broadcast(event);
   });
   transport.on('failure', (error) => { if (engine === transport) setEngineFailure(error); });
   transport.on('stderr', (line) => { if (engine === transport) console.error(`[memoivy-engine] ${line.trimEnd()}`); });
@@ -321,8 +377,7 @@ async function spawnEngineAndReadSnapshot() {
   const initial = await transport.request('snapshot', {});
   if (engine !== transport) throw new Error('A newer engine process replaced this startup');
   engineFailure = null;
-  currentSnapshot = initial.snapshot;
-  broadcast({ version: 1, event: 'snapshot', snapshot: currentSnapshot });
+  applySnapshot(initial.snapshot);
 }
 
 async function doQuit() {

@@ -12,7 +12,7 @@ const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
 
 test('external URL policy is shared and only valid bounded web or mail links open', async () => {
   for (const url of ['https://example.com/path', 'http://example.com', 'mailto:user@example.com']) assert.equal(isSafeExternal(url), true);
-  for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:pass@example.com', 'https://example.com/' + 'a'.repeat(4096), null]) assert.equal(isSafeExternal(url), false);
+  for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:pass@example.com', `https://example.com/${'a'.repeat(4096)}`, null]) assert.equal(isSafeExternal(url), false);
 
   const opened = [];
   await openExternal('https://example.com', async (url) => opened.push(url));
@@ -30,6 +30,12 @@ test('IPC window targets allow settings and reject invalid kinds or ids', () => 
 
 test('IPC boundary rejects unsafe, stale-shape and invalid preference payloads', () => {
   assert.throws(() => validateRequest('exec', {}), { code: 'INVALID_REQUEST' });
+  assert.doesNotThrow(() => validateRequest('delete', { baseRevision: 1, ids: [noteId] }));
+  assert.throws(() => validateRequest('delete', { baseRevision: 1, id: noteId, ids: [noteId] }), { code: 'INVALID_REQUEST' });
+  const restored = { id: noteId, text: 'a', color: 'yellow', modified: 1, canvas: { next: [] } };
+  assert.doesNotThrow(() => validateRequest('restore', { baseRevision: 1, notes: [restored], changes: [] }));
+  assert.throws(() => validateRequest('restore', { baseRevision: 1, notes: [{ ...restored, path: '/x' }], changes: [] }), { code: 'INVALID_REQUEST' });
+  assert.throws(() => validateRequest('restore', { baseRevision: 1, notes: [], changes: [] }), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('delete', { baseRevision: 1, id: noteId, path: '/etc/passwd' }), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('create', { baseRevision: 0, color: '#ffffff' }), { code: 'INVALID_REQUEST' });
   assert.throws(() => validateRequest('canvas', { baseRevision: 0, changes: [{ id: noteId, canvas: { position: [-20001, 0] } }] }), { code: 'INVALID_REQUEST' });

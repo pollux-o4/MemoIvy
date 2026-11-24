@@ -19,3 +19,4 @@
 
 - 기존 GTK 배포본은 리비전별 `$SNAP_USER_DATA/.local/share/memoivy`에 JSON과 첨부를 저장한다. Electron Snap은 갱신 때 복사된 리비전의 원본을 가져오고 SQLite를 `$SNAP_USER_COMMON/memoivy`에 저장한다.
 - 앱을 닫고 리비전별 원본, 공유 SQLite 폴더와 첨부를 백업한다. 리비전을 되돌리면 GTK는 기존 JSON을 읽는다. Electron에서 새로 작성한 메모는 공유 SQLite에 남으므로, Electron 후보를 다시 설치한 뒤 확인한다.
+- 되돌린 GTK 앱이 SVG 로더 오류로 종료되면 앱을 닫고, 되돌린 리비전의 `~/snap/memoivy/<리비전>/.last_revision`을 다른 이름으로 보관한다. 다시 실행하면 GNOME 런처가 현재 리비전의 캐시를 재생성한다. JSON·첨부·공유 SQLite는 그대로 둔다.

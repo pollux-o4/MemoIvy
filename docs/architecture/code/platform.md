@@ -2,7 +2,8 @@
 
 | 관심사 | 탐색 키 |
 |---|---|
-| 창 수명과 엔진 실행 | `desktop/main.cjs`의 `createWindow`·`launchEngine`·`doQuit` |
+| 창 수명과 엔진 실행 | `desktop/main.cjs`의 `createWindow`·`requestWindowClose`·`launchEngine`·`doQuit` |
+| 창 역할·홈 교체·목록 복귀 규칙 | `desktop/window_policy.cjs`의 `roleOf`·`homeToReplace`·`shouldShowLibrary` (NOTE-001) |
 | 앱 경계 | `preload.cjs`, `ipc_validation.cjs`, `EngineTransport`, `external_links.cjs` |
 | 화면 자산 | `frontend/shared/assets/icons`, `Icon`, 화면별 CSS와 공통 `tokens.css` |
 | Linux 설치 | `integration/install.sh`, `launcher.c`, 데스크톱 파일 |

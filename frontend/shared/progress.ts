@@ -1,6 +1,6 @@
 import type { Note } from './engine_contract';
 import { type ChildIndex, createChildIndex } from './hierarchy';
-import { createListItemReader } from './markdown/list_item';
+import { createBlockScanner } from './markdown/list_item';
 
 /** 완료 수 / 전체 수. 할 일·하위 항목 모두 같은 모양이다. */
 export type Progress = { done: number; total: number };
@@ -10,9 +10,9 @@ const NONE: Progress = { done: 0, total: 0 };
 /** 본문의 체크박스 할 일. 줄 문법은 markdown/list_item이 단일 출처다. */
 function checklist(markdown: string): Progress {
   let done = 0, total = 0;
-  const readItem = createListItemReader();
+  const scan = createBlockScanner();
   for (const line of markdown.split('\n')) {
-    const task = readItem(line)?.task;
+    const task = scan(line).item?.task;
     if (!task) continue;
     total++; if (task === 'x') done++;
   }
