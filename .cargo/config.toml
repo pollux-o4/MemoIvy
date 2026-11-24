@@ -1,0 +1,3 @@
+# Windows 엔진은 MSVC 런타임을 정적 링크한다: 새 Windows에는 VCRUNTIME140.dll이 없어 엔진이 시작하지 못한다(OPS-005).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
