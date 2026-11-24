@@ -2,6 +2,7 @@ version: 2
 # 1인 개발: 주 1회 묶음 PR로 알림 부담을 줄이고 CI가 갱신을 검증한다.
 updates:
   - package-ecosystem: github-actions
+    target-branch: dev
     directory: /
     schedule:
       interval: weekly
@@ -9,6 +10,7 @@ updates:
       actions:
         patterns: ['*']
   - package-ecosystem: npm
+    target-branch: dev
     directory: /
     schedule:
       interval: weekly
@@ -17,6 +19,7 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: cargo
+    target-branch: dev
     directory: /engine
     schedule:
       interval: weekly
