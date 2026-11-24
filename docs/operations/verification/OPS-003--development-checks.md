@@ -7,3 +7,4 @@
 - 배포 전 이력 검사는 `mise run check:secrets`를 사용한다. 커밋·푸시 훅 설치는 `mise run hooks:install`이다.
 - CI(`.github/workflows/ci.yml`)는 `dev` 푸시·PR마다 위 mise 작업을 그대로 실행한다: 정적 점검·단위 테스트, Linux·Windows Electron e2e, 비밀정보 검사. 검사 추가·변경은 mise 작업에 하고 워크플로는 호출만 한다. 도구 준비는 `.github/actions/setup` 하나를 공유한다. e2e 실패 시 화면 캡처를 산출물로 올린다.
 - 의존성 갱신은 Dependabot이 주 1회 묶음 PR로 올리고, CI 통과 후 병합한다. 릴리스 흐름은 OPS-005.
+- CI 실험·수정 시도는 별도 브랜치에서 하고 PR을 squash 병합해 `dev` 이력을 깔끔하게 유지한다.

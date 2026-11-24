@@ -65,6 +65,8 @@ jobs:
           sudo lxd waitready
           sudo lxd init --auto
           sudo usermod -aG lxd "$USER"
+          # runner의 Docker가 FORWARD 기본 정책을 DROP으로 둬 LXD 빌드 컨테이너가 네트워크를 못 쓴다.
+          sudo iptables -P FORWARD ACCEPT
           sg lxd -c 'npm run release:snap'
           test "$(find artifacts/installers -maxdepth 1 -name '*.snap' | wc -l)" -eq 1
           unsquashfs -ll artifacts/installers/*.snap | grep 'resources/engine/memoivy-engine$'

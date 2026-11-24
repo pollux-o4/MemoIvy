@@ -2,6 +2,7 @@
 
 ## 산출물
 
+- 흐름: `dev` 커밋·푸시 → CI(Linux·Windows) → release-please 릴리스 PR → 병합(출시 결정) → 태그·Release → 설치본 자동 빌드·첨부 → Windows VM 설치 확인 → 스토어 승격.
 - 버전 SSoT는 `package.json`이다. `Release` 워크플로(release-please)가 `dev`의 Conventional Commits로 릴리스 PR(버전·CHANGELOG)을 유지하고, 병합하면 `v<버전>` 태그와 GitHub Release를 만든다.
 - 이어서 `Desktop release candidates`가 CI 전체(Linux·Windows e2e 포함)를 다시 통과한 커밋에서 Windows와 Snap을 빌드한다. 대상별 `SHA256SUMS-*`·`SOURCE_COMMIT-*`와 빌드 출처 증명을 남기고 산출물을 해당 Release에 붙인다. 태그 없이 수동 실행하면 산출물만 보관한다. 스토어 업로드와 채널 변경은 이 작업에서 실행하지 않는다.
 - Windows 검증 단계: 매 푸시의 CI Windows e2e가 기능 회귀를 막고, 공용 Windows VM은 릴리스 후보의 설치·Store·첫 실행 확인에만 사용한다.
