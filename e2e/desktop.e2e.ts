@@ -272,7 +272,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await editor.getByRole('menuitem', { name: '메모 목록' }).waitFor();
       await editor.waitForTimeout(320);
       await editor.screenshot({ path: path.join(process.env.E2E_SHOT_DIR ?? tmpdir(), 'note-nav-open.png') });
-      await editor.getByRole('menuitem', { name: '캔버스에서 보기' }).click();
+      await editor.getByRole('menuitem', { name: '캔버스', exact: true }).click();
       const canvas = await windowWith(app, '.canvas-screen');
       expect(canvas.isClosed()).toBe(false);
       expect(editor.isClosed()).toBe(false);

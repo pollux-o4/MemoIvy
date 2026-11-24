@@ -19,8 +19,8 @@ export function EditorToolbar({ note, store, onClose, raw, onToggleRaw, onDelete
   const [menu, setMenu] = useState(false);
   const { root, trigger } = useMenu(menu, () => setMenu(false));
   const actions = <div className="editor-tools menu-anchor" ref={root}>
-    <MorphMenu tone="quiet" label="이동" title="캔버스나 메모 목록으로 이동" trigger={() => <Icon name="open"/>} choices={[
-      { key: 'canvas', icon: 'canvas', label: '캔버스에서 보기', onSelect: () => void store.bridge.openWindow('canvas', note.id) },
+    <MorphMenu tone="quiet" label="이동" title="캔버스나 메모 목록으로 이동" trigger={() => <span className="morph-turn"><Icon name="chevron"/></span>} choices={[
+      { key: 'canvas', icon: 'canvas', label: '캔버스', onSelect: () => void store.bridge.openWindow('canvas', note.id) },
       { key: 'library', icon: 'note', label: '메모 목록', onSelect: () => void store.bridge.openWindow('library') },
     ]}/>
     <ColorPalette color={note.color} onChange={onColor}/>
