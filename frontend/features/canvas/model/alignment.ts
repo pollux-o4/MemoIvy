@@ -1,4 +1,4 @@
-import { CARD_HEIGHT, CARD_WIDTH, type CanvasPoint } from './geometry';
+import { CARD_HEIGHT, CARD_WIDTH, type CanvasPoint, pointBounds } from './geometry';
 
 export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-x' | 'distribute-y' | 'grid' | 'flow' | 'mindmap';
 
@@ -19,10 +19,7 @@ export function alignPositions(ids: string[], positions: Record<string, CanvasPo
   if (ids.length < 2) return {};
   const points = ids.map((id) => positions[id]).filter((point): point is CanvasPoint => Boolean(point));
   if (points.length < 2) return {};
-  const minX = Math.min(...points.map((point) => point.x));
-  const maxX = Math.max(...points.map((point) => point.x));
-  const minY = Math.min(...points.map((point) => point.y));
-  const maxY = Math.max(...points.map((point) => point.y));
+  const { minX, maxX, minY, maxY } = pointBounds(points);
   if (kind === 'distribute-x' || kind === 'distribute-y') {
     if (ids.length < 3) return {};
     const horizontal = kind === 'distribute-x';

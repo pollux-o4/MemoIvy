@@ -16,9 +16,17 @@ export const cardRect = (point: CanvasPoint) => ({ x: point.x, y: point.y, w: CA
 export function canvasSlot(index: number): CanvasPoint {
   return { x: 64 + ((index % 4 + Math.floor(index / 336) * 4) % 60) * 320, y: 64 + (Math.floor(index / 4) % 84) * 232 };
 }
+/** 점들의 경계. 한 번 훑어 O(n)으로 구하고, 전개 인자(Math.min(...))의 호출 스택 한도를 피한다. 빈 목록은 ±Infinity. */
+export function pointBounds(points: readonly CanvasPoint[]) {
+  let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+  for (const { x, y } of points) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  return { minX, maxX, minY, maxY };
+}
 export function clampCanvasDelta(points: CanvasPoint[], dx: number, dy: number): CanvasPoint {
   if (!points.length) return { x: dx, y: dy };
-  const minX = Math.min(...points.map((point) => point.x)); const maxX = Math.max(...points.map((point) => point.x));
-  const minY = Math.min(...points.map((point) => point.y)); const maxY = Math.max(...points.map((point) => point.y));
+  const { minX, maxX, minY, maxY } = pointBounds(points);
   return { x: Math.min(Math.max(dx, CANVAS_MIN - minX), Math.max(CANVAS_MIN - minX, CANVAS_LIMIT - maxX)), y: Math.min(Math.max(dy, CANVAS_MIN - minY), Math.max(CANVAS_MIN - minY, CANVAS_LIMIT - maxY)) };
 }
