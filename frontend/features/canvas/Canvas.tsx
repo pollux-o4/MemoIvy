@@ -7,6 +7,7 @@ import type { Note } from '../../shared/engine_contract';
 import { CreationMenu } from '../../shared/menu/CreationMenu';
 import type { MemoStore } from '../../shared/useMemoivy';
 import { WindowHeader } from '../../shared/WindowHeader';
+import { useMouseBack } from '../../shared/useMouseBack';
 import { AlignmentBar } from './parts/alignment/AlignmentBar';
 import { CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, type CanvasPoint } from './model/align';
 
@@ -50,7 +51,9 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const draftPositions = useMemo(() => ({ ...pendingPositions, ...dragPositions }), [pendingPositions, dragPositions]);
   const selection = useCanvasSelection();
   const { selected, setSelected, mode } = selection;
-  const scopeState = useCanvasScope(store.notes, scope, setSelected, onBack);
+  // 최상위에서 뒤로 가면 이 캔버스로 들어온 목록으로 돌아간다(목록↔캔버스는 서로를 대체한다).
+  const scopeState = useCanvasScope(store.notes, scope, setSelected, onOpenLibrary);
+  useMouseBack(scopeState.leave);
   const { activeScope, scopedProject } = scopeState;
   const notes = useMemo(() => store.notes.filter((note) => (note.canvas.parent ?? null) === activeScope), [store.notes, activeScope]);
   const { noteById, positions, cardRects, selectedRects } = useCanvasLayout(notes, draftPositions, selected);

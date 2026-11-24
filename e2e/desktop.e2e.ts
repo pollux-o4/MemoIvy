@@ -265,7 +265,11 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         const snapshot = await canvas.evaluate(() => window.memoivy.request('snapshot'));
         expect(snapshot.snapshot?.notes.find((note) => note.text === '내부 메모')?.canvas.position).toEqual([400, 200]);
       };
-      for (const leave of [() => home.click(), keyboardLeave]) {
+      // 마우스 뒤로 버튼은 키보드 뒤로와 같은 명령이다(Playwright 마우스는 뒤로 버튼이 없어 이벤트로 보낸다).
+      const mouseBack = () => canvas.evaluate(() => {
+        for (const type of ['mousedown', 'mouseup']) window.dispatchEvent(new MouseEvent(type, { button: 3, bubbles: true, cancelable: true }));
+      });
+      for (const leave of [() => home.click(), keyboardLeave, mouseBack]) {
         await enter.click();
         await canvas.locator('.canvas-note').getByText('내부 메모', { exact: true }).waitFor();
         await settle(canvas);
@@ -275,6 +279,10 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await expect.poll(() => canvas.locator(`.canvas-note.selected[data-note-id="${project}"]`).count()).toBe(1);
         await settle(canvas);
       }
+      // 최상위에서 뒤로 가면 들어왔던 목록으로 돌아가고 캔버스는 닫힌다.
+      await mouseBack();
+      await windowWith(app, '.library-screen');
+      await expect.poll(() => app.windows().filter((page) => !page.isClosed() && page.url().includes('window=canvas')).length).toBe(0);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });
