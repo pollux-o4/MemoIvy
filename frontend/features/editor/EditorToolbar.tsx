@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MorphMenu } from '../../shared/menu/MorphMenu';
 import { useMenu } from '../../shared/menu/useMenu';
 import { Icon } from '../../shared/Icon';
 import { WindowHeader } from '../../shared/WindowHeader';
@@ -18,7 +19,10 @@ export function EditorToolbar({ note, store, onClose, raw, onToggleRaw, onDelete
   const [menu, setMenu] = useState(false);
   const { root, trigger } = useMenu(menu, () => setMenu(false));
   const actions = <div className="editor-tools menu-anchor" ref={root}>
-    <button className="icon-button" title="캔버스에서 메모 보기" aria-label="캔버스에서 메모 보기" onClick={() => void store.bridge.openWindow('canvas', note.id)}><Icon name="canvas"/></button>
+    <MorphMenu tone="quiet" label="이동" title="캔버스나 메모 목록으로 이동" trigger={() => <Icon name="open"/>} choices={[
+      { key: 'canvas', icon: 'canvas', label: '캔버스에서 보기', onSelect: () => void store.bridge.openWindow('canvas', note.id) },
+      { key: 'library', icon: 'note', label: '메모 목록', onSelect: () => void store.bridge.openWindow('library') },
+    ]}/>
     <ColorPalette color={note.color} onChange={onColor}/>
     <button ref={trigger} className="icon-button" title="더보기" aria-label="더보기" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon name="more"/></button>
     {menu && <div className="menu-popover menu-surface" role="menu" aria-label="메모 메뉴">

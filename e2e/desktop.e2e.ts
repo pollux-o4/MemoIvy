@@ -261,6 +261,31 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
+  test('메모 창의 이동 메뉴는 펼쳐져 캔버스나 메모 목록으로 보낸다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-note-nav-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: 'New' }).click();
+      await library.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await editor.getByRole('button', { name: '이동' }).click();
+      await editor.getByRole('menuitem', { name: '메모 목록' }).waitFor();
+      await editor.waitForTimeout(320);
+      await editor.screenshot({ path: path.join(process.env.E2E_SHOT_DIR ?? tmpdir(), 'note-nav-open.png') });
+      await editor.getByRole('menuitem', { name: '캔버스에서 보기' }).click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      expect(canvas.isClosed()).toBe(false);
+      expect(editor.isClosed()).toBe(false);
+      await editor.getByRole('button', { name: '이동' }).click();
+      await editor.keyboard.press('ArrowDown');
+      await editor.keyboard.press('Enter');
+      await expect.poll(async () => (await windowWith(app, '.library-screen')).isClosed()).toBe(false);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('삭제는 Ctrl+Z로 원래 id·연결 그대로 되살아나고 그 전 기록도 이어서 되돌린다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-undo-delete-'));
     const kept = 'd0000000-0000-4000-8000-000000000001';

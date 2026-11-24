@@ -60,7 +60,7 @@ const svgFiles = {
 
 type SvgName = keyof typeof svgFiles;
 type FallbackName = keyof typeof fallbackPaths;
-type IconName = SvgName | FallbackName;
+export type IconName = SvgName | FallbackName;
 type IconProps = Omit<SVGProps<SVGSVGElement>, 'children' | 'dangerouslySetInnerHTML'> & {
   name: IconName;
   size?: number;
