@@ -44,7 +44,7 @@ jobs:
       MSIX_PUBLISHER_NAME: ${{ vars.MSIX_PUBLISHER_NAME || 'MemoIvy Development' }}
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.sha }}
       - uses: ./.github/actions/setup
@@ -81,10 +81,10 @@ jobs:
           sha256sum -- "${files[@]}" > "SHA256SUMS-${{ matrix.target }}"
           printf '%s\n' "$GITHUB_SHA" > "SOURCE_COMMIT-${{ matrix.target }}"
           printf '%s\n' "${files[@]/#/artifacts/installers/}" > "$RUNNER_TEMP/payload.txt"
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: artifacts/installers/SHA256SUMS-${{ matrix.target }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}-${{ github.sha }}
           if-no-files-found: error
