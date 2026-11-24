@@ -4,6 +4,7 @@ import type { Note } from '../../../../shared/engine_contract';
 import type { MemoStore } from '../../../../shared/useMemoivy';
 import { alignPositions, CARD_HEIGHT, CARD_WIDTH, canvasSlot, cardRect, changedPositions, clampCanvasDelta, savedPoint, settleDraft, type Alignment, type CanvasPoint, vacantGroup } from '../../model/align';
 import { bounds } from '../../model/motion';
+import { pointBounds } from '../../model/geometry';
 import { branchRoot, buildGraph, scopeEdges, treeParent } from '../../model/links/graph';
 import { DEFAULT_COLUMN_GAP as BRANCH_GAP_X, DEFAULT_ROW_GAP as BRANCH_GAP_Y, mindmapLayout } from '../../model/links/mindmap_layout';
 import { deletionCommand, type Step, useCanvasHistory, type CanvasChange } from './useCanvasHistory';
@@ -78,9 +79,10 @@ export function useCanvasCommands({ store, notes, positions, selected, activeSco
     if (!parent || !positions[parent.id]) return undefined;
     const siblings = parent.canvas.next.flatMap((id) => positions[id] ? [positions[id]] : []);
     const base = positions[parent.id];
+    const { maxX, maxY } = pointBounds(siblings);
     // 끌어서 빈 곳에 놓았으면 그 자리(포인터가 카드 왼쪽 가운데), 아니면 마지막 가지 아래.
     const position = from?.at ? { x: from.at.x, y: from.at.y - CARD_HEIGHT / 2 } : siblings.length
-      ? { x: Math.max(...siblings.map((point) => point.x)), y: Math.max(...siblings.map((point) => point.y)) + CARD_HEIGHT + BRANCH_GAP_Y }
+      ? { x: maxX, y: maxY + CARD_HEIGHT + BRANCH_GAP_Y }
       : { x: base.x + CARD_WIDTH + BRANCH_GAP_X, y: base.y };
     const created = await store.createNote({ parent: activeScope });
     if (!created) return undefined;
