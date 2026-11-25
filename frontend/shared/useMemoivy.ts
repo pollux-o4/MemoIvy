@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesktopBridge, EngineEvent, EngineResult, Note, Snapshot } from './engine_contract';
 import { createMockBridge } from './mock_bridge';
+import { withEngineErrors } from './desktop_errors';
+import { isConflict, rebaseRevision, userMessage } from './text_write';
 
 type RequestQueue = { bridge: DesktopBridge; pending: Promise<unknown>; writes: number };
 const WRITE_OPS = new Set(['create', 'update', 'delete', 'canvas', 'restore', 'importAsset', 'deleteAsset', 'preference']);
 
 export function useMemoivy(injectedBridge?: DesktopBridge) {
-  const bridge = useMemo(() => injectedBridge ?? window.memoivy ?? createMockBridge(), [injectedBridge]);
+  const bridge = useMemo(() => injectedBridge ?? (window.memoivy ? withEngineErrors(window.memoivy) : createMockBridge()), [injectedBridge]);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,6 +92,17 @@ export function useMemoivy(injectedBridge?: DesktopBridge) {
   const updateNote = useCallback(async (note: Note, text?: string, canvas?: Partial<Note['canvas']>, color?: string, baseRevision?: number) => {
     return request('update', { id: note.id, ...(text !== undefined ? { text } : {}), ...(canvas ? { canvas } : {}), ...(color ? { color } : {}), ...(baseRevision !== undefined ? { baseRevision } : {}) });
   }, [request]);
+  /** 본문을 낙관적으로 쓴다. origin은 이 편집이 출발한 본문이며, 본문 외 변경으로 생긴 충돌은 최신 revision으로 한 번 다시 쓴다. */
+  const saveText = useCallback(async (note: Note, text: string, baseRevision: number | undefined, origin: string) => {
+    try { return await updateNote(note, text, undefined, undefined, baseRevision); }
+    catch (reason) {
+      if (!isConflict(reason)) throw reason;
+      // 엔진 충돌 응답에는 스냅숏이 없어 최신 상태를 받아 본문 변경 여부를 판단한다.
+      const next = rebaseRevision((await request('snapshot')).snapshot, note.id, origin);
+      if (next === undefined) throw reason;
+      return updateNote(note, text, undefined, undefined, next);
+    }
+  }, [updateNote, request]);
   const mutateCanvas = useCallback(async (changes: Array<{ id: string; canvas: Partial<Note['canvas']> }>) => {
     if (!changes.length) return;
     return request('canvas', { changes });
@@ -99,12 +112,11 @@ export function useMemoivy(injectedBridge?: DesktopBridge) {
   const removeNotes = useCallback(async (ids: readonly string[]) => request('delete', { ids }), [request]);
   const restoreNotes = useCallback(async (notes: Note[], changes: Array<{ id: string; canvas: Partial<Note['canvas']> }>) => request('restore', { notes, changes }), [request]);
 
-  return { bridge, snapshot, notes: snapshot?.notes ?? [], assets: snapshot?.assets ?? [], error, saving, request, editNoteText, createNote, updateNote, mutateCanvas, removeNote, removeNotes, restoreNotes };
+  return { bridge, snapshot, notes: snapshot?.notes ?? [], assets: snapshot?.assets ?? [], error, saving, request, editNoteText, createNote, updateNote, saveText, mutateCanvas, removeNote, removeNotes, restoreNotes };
 }
 
 export type MemoStore = ReturnType<typeof useMemoivy>;
 function messageOf(reason: unknown): string {
-  const message = reason instanceof Error ? reason.message : String(reason);
-  return message === 'This note changed in another window.' ? '다른 창에서 메모가 바뀌었어요.' : message;
+  return userMessage(reason instanceof Error ? reason.message : String(reason));
 }
 

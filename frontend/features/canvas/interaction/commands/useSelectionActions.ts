@@ -14,7 +14,7 @@ export function useSelectionActions({ store, selected, selectedNote, openCard, c
 }) {
   const ignore = () => undefined;
   /** 기준 revision과 함께 저장하고 새 revision을 돌려준다. 충돌·실패는 호출자(초안)가 처리하도록 reject를 그대로 넘긴다. */
-  const saveText = async (note: Note, text: string, baseRevision?: number) => (await store.updateNote(note, text, undefined, undefined, baseRevision)).snapshot?.revision;
+  const saveText = async (note: Note, text: string, baseRevision: number | undefined, origin: string) => (await store.saveText(note, text, baseRevision, origin)).snapshot?.revision;
   const recolor = (ids: string[], color: string) => {
     for (const note of store.notes) if (ids.includes(note.id) && note.color !== color) void store.updateNote(note, undefined, undefined, color).catch(ignore);
   };
