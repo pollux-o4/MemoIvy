@@ -8,7 +8,6 @@ export const markdownStyle = HighlightStyle.define([
   { tag: tags.strong, fontWeight: '700' },
   { tag: tags.emphasis, fontStyle: 'italic' },
   { tag: tags.strikethrough, textDecoration: 'line-through' },
-  { tag: tags.link, textDecoration: 'underline', textUnderlineOffset: '3px' },
   { tag: tags.url, color: 'var(--note-muted)' },
   { tag: tags.processingInstruction, color: 'var(--note-muted)', fontWeight: '400' },
   { tag: tags.monospace, fontFamily: 'ui-monospace, "Noto Sans Mono CJK KR", monospace', fontSize: '.92em' },

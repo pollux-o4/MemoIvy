@@ -2,6 +2,7 @@ import { createBlockScanner } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
+import { isMarkdownLink } from './link_syntax';
 import { listDecorations } from './list_markers';
 import { pendingFenceLine } from './fence_input';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
@@ -104,6 +105,8 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push({ from: node.from, to: node.to, value: inlineCode });
         }
         const parent = node.node.parent;
+        // 주소 없는 `[글자]`의 대괄호는 글자이므로 숨기지 않는다.
+        if (parent?.name === 'Link' && !isMarkdownLink(parent)) return;
         if (marks.has(node.name) && (node.name !== 'URL' || parent?.name === 'Link') && node.to > node.from) {
           if (imageLines.has(view.state.doc.lineAt(node.from).number)) return;
           const reveal = node.name === 'HeaderMark'

@@ -58,3 +58,8 @@
   min-height: 0;
   line-height: 0;
 }
+
+.markdown-surface .md-link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

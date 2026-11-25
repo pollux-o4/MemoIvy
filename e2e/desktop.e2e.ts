@@ -760,7 +760,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
   test('링크 미리보기 카드 유지와 인라인 주소 수정', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-link-preview-'));
     const id = 'd0000000-0000-4000-8000-000000000002';
-    const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)';
+    const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)\n[질병청] 말머리';
     writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
     const { app, library } = await launch(dir);
     try {
@@ -768,6 +768,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const editor = await windowWith(app, '.editor-screen');
       const content = editor.locator('.cm-content');
       const preview = editor.locator('.link-preview-card');
+      // 주소 없는 대괄호는 링크 서식 없이 대괄호까지 글자로 남는다.
+      await expect.poll(() => editor.locator('.md-link').allTextContents()).toEqual(['링크', '네이버']);
+      await content.getByText('[질병청] 말머리', { exact: true }).waitFor();
       await app.evaluate(({ shell }) => {
         shell.openExternal = async (url) => { process.env.MEMOIVY_TEST_OPENED_URL = url; };
       });
