@@ -20,8 +20,12 @@ export const at = (x, y, body) => `<g transform="translate(${x},${y})">${body}</
 export const outArrow = (x, y, color = ACCENT, width = 1.6) =>
   `<path d="M${x},${y} l7,-7 M${x + 2},${y - 7} h5 v5" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`;
 
-export const chip = (palette, { x, y, width, value }) =>
-  `<rect x="${x}" y="${y - 21}" width="${width}" height="30" rx="6" fill="${palette.chip}" stroke="${palette.line}"/>${text(palette, { x: x + 12, y, value, size: 15, color: palette.fg, weight: 500, mono: true })}`;
+/** 고정폭 글꼴은 글자 폭이 일정해(약 0.6em) 칩 너비를 문구 길이로 계산한다. */
+const MONO_ADVANCE = 0.6;
+export function chip(palette, { x, y, value, size = 15, padding = 12 }) {
+  const width = Math.ceil(value.length * size * MONO_ADVANCE + padding * 2);
+  return `<rect x="${x}" y="${y - 21}" width="${width}" height="30" rx="6" fill="${palette.chip}" stroke="${palette.line}"/>${text(palette, { x: x + padding, y, value, size, color: palette.fg, weight: 500, mono: true })}`;
+}
 
 export const svg = ({ width, height }, body) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`;

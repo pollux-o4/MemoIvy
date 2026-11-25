@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // README 그래픽 생성: node scripts/readme-assets/build.mjs (mise run readme:assets)
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ASSETS } from './assets.mjs';
 import { THEMES } from './theme.mjs';
@@ -14,11 +15,15 @@ const HELP_CROP = { source: 'distribution/snap/visuals/screenshots/03.png', crop
 
 function buildHelpImage() {
   const { source, crop: [w, h, x, y], scale, mark: [mx, my, size] } = HELP_CROP;
-  const file = path.join(out, 'help-button.png');
+  // 중간 PNG는 tips SVG 안에 base64로 들어가므로 저장소에 남기지 않는다.
+  const dir = mkdtempSync(path.join(tmpdir(), 'readme-assets-'));
+  const file = path.join(dir, 'help-button.png');
   execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', path.join(root, source), '-vf',
     `crop=${w}:${h}:${x}:${y},scale=${w * scale}:${h * scale}:flags=lanczos,drawbox=x=${mx}:y=${my}:w=${size}:h=${size}:color=0xff6b35:t=5`,
     '-frames:v', '1', file]);
-  return { base64: readFileSync(file).toString('base64'), width: w * scale, height: h * scale };
+  const base64 = readFileSync(file).toString('base64');
+  rmSync(dir, { recursive: true, force: true });
+  return { base64, width: w * scale, height: h * scale };
 }
 
 export function renderAll(context) {

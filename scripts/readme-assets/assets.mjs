@@ -35,7 +35,7 @@ const tips = (palette, { helpImage }) => svg({ width: 1200, height: 300 }, cardR
     + text(palette, { x: 28, y: 154, value: ['앱이 켜져 있으면 ', { text: '종료한 뒤', accent: true }, ' 적용됩니다.'], size: 18 })
     + text(palette, { x: 28, y: 200, value: '바로 받기', size: 14, weight: 500, mono: true })
     + text(palette, { x: 28, y: 232, value: 'Windows  Store 라이브러리 → 업데이트 받기', size: 17, color: palette.fg })
-    + chip(palette, { x: 28, y: 276, width: 330, value: 'sudo snap refresh memoivy' }),
+    + chip(palette, { x: 28, y: 276, value: 'sudo snap refresh memoivy' }),
   (width) => at(28, 28, ICONS.help(palette))
     + text(palette, { x: 28, y: 118, value: '단축키·서식은 앱 안에서', size: 26, color: palette.fg, weight: 700 })
     + text(palette, { x: 28, y: 154, value: [{ text: 'F1', mono: true }, ' 또는 캔버스 아래 ', { text: '?', accent: true }, ' — 움직이는 예시로 봅니다.'], size: 18 })
