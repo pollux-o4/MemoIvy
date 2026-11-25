@@ -64,9 +64,9 @@ export function Editor({ store, noteId, onClose }: { store: MemoStore; noteId: s
         onViewImage={setViewingImage}
       />
     </EditorContent>
-    <footer className={`editor-status${draft.error ? ' save-error' : ''}`} role={draft.error ? 'alert' : undefined}>
+    <footer className={`editor-status${draft.error ? ' save-error' : ''}`}>
       {draft.error ? <>
-        <span>{draft.conflict ? draft.error : `저장하지 못했어요. ${draft.error}`}</span>
+        <span role="alert">{draft.conflict ? draft.error : `저장하지 못했어요. ${draft.error}`}</span>
         {draft.conflict ? <>
           <button className="primary" onClick={() => void draft.overwriteDraft()}>내 초안으로 덮어쓰기</button>
           <button onClick={draft.useRemoteVersion}>최신 버전 불러오기</button>

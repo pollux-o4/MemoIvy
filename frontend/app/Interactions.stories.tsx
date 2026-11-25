@@ -71,7 +71,7 @@ export const SaveFailure: Story = {
     await userEvent.keyboard('{Control>}{End}{/Control}');
     // 글자별 DOM 변경은 CodeMirror의 선택 영역 동기화와 충돌하므로 편집기가 처리하는 paste 경로를 쓴다.
     await userEvent.paste('\n상태 확인용 초안');
-    await expect(await canvas.findByText('저장 공간에 접근할 수 없습니다.')).toBeVisible();
+    await expect(await canvas.findByText('저장하지 못했어요. 저장 공간에 접근할 수 없습니다.')).toBeVisible();
     await expect([...editor.querySelectorAll('.cm-line')].map((line) => line.textContent)).toEqual([...originalLines, '상태 확인용 초안']);
   },
 };
