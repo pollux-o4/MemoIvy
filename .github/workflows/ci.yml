@@ -1,6 +1,6 @@
 name: CI
 # 병합 관문: 로컬 mise 작업을 그대로 실행해 로컬·CI 검증 정의를 하나로 유지한다(OPS-003).
-# main 푸시는 PR에서 통과한 코드라 Release의 ci-gate가 그 결과를 확인한다(OPS-005).
+# 같은 커밋은 한 번만 검사한다: dev 머리의 PR은 dev 푸시 실행이 이미 검사하므로 건너뛰고, Release의 ci-gate가 그 결과를 확인한다(OPS-005).
 on:
   push:
     branches: [dev]
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   check:
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'dev') }}
     name: 정적 점검·단위 테스트
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -35,6 +36,7 @@ jobs:
       - run: mise run test:desktop
 
   e2e:
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'dev') }}
     name: Electron e2e (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -73,6 +75,7 @@ jobs:
       - run: node scripts/release-plan.mjs
 
   secrets:
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'dev') }}
     name: 비밀정보 검사
     runs-on: ubuntu-24.04
     timeout-minutes: 5

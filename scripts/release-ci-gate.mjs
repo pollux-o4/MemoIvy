@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// 출시 검사 관문(OPS-005): main 출시 커밋과 같은 코드(트리)가 병합 PR의 CI를 이미 통과했으면 검사를 다시 돌리지 않는다.
+// 출시 검사 관문(OPS-005): main 출시 커밋과 같은 코드(트리)가 병합 PR 머리 커밋의 dev 푸시 CI를 이미 통과했으면 검사를 다시 돌리지 않는다.
+// dev→main PR은 같은 커밋을 다시 검사하지 않아(ci.yml) pull_request 실행은 작업을 건너뛴 채 성공으로 남으므로 근거로 쓰지 않는다.
 // 확인할 수 없으면 passed=false를 내고, 출시 워크플로가 CI 전체를 다시 실행한다(실패 시 안전 쪽).
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
@@ -11,8 +12,8 @@ export const CI_WORKFLOW = '.github/workflows/ci.yml';
 export function decideGate({ releaseTree, pr, prHeadTree, prRuns }) {
   if (!pr) return { passed: false, reason: '출시 커밋에 연결된 병합 PR이 없다' };
   if (prHeadTree !== releaseTree) return { passed: false, reason: `PR #${pr.number} 머리와 출시 커밋의 코드가 다르다` };
-  const ok = prRuns.some((run) => run.path === CI_WORKFLOW && run.event === 'pull_request' && run.conclusion === 'success');
-  if (!ok) return { passed: false, reason: `PR #${pr.number} 머리 커밋에 성공한 CI가 없다` };
+  const ok = prRuns.some((run) => run.path === CI_WORKFLOW && run.event === 'push' && run.conclusion === 'success');
+  if (!ok) return { passed: false, reason: `PR #${pr.number} 머리 커밋에 성공한 dev 푸시 CI가 없다` };
   return { passed: true, reason: `PR #${pr.number}에서 같은 코드가 CI를 통과했다` };
 }
 
