@@ -1,7 +1,8 @@
 import { syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import type { SyntaxNode } from '@lezer/common';
+
+type SyntaxNode = ReturnType<typeof syntaxTree>['topNode'];
 
 /**
  * 링크 판정의 단일 기준. 파서는 정의 없는 `[글자]`도 Link 노드로 만들지만,
