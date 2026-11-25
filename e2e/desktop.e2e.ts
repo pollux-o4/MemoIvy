@@ -116,7 +116,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
         await expect.poll(() => status.textContent(), { timeout: 30_000 }).not.toMatch(/^$|가져오는 중/);
         if (await status.textContent() !== '이전 메모를 가져왔습니다.') {
           // 화면 문구만으로는 원인을 알 수 없어 같은 경로를 다시 불러 엔진 오류를 실패 메시지에 남긴다.
-          const cause = await settings.evaluate(() => window.memoivy?.importLegacy().then(() => 'ok', (error: Error) => `${(error as { code?: string }).code}: ${error.message}`));
+          const cause = await settings.evaluate(() => window.memoivy?.importLegacy().then(() => 'ok', (error: { __memoivyError?: { code?: string; message?: string } }) => `${error.__memoivyError?.code}: ${error.__memoivyError?.message}`));
           throw new Error(`가져오기 실패(${await status.textContent()}) — ${cause}`);
         }
       }
@@ -272,6 +272,74 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const again = await windowWith(app, '.library-screen');
       await expect.poll(() => last.isClosed()).toBe(true);
       expect(again.isClosed()).toBe(false);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // 회귀: 캔버스가 같은 메모의 위치만 바꿔도 메모 창 본문 저장이 충돌로 막혀 창이 닫히지 않았다.
+  test('캔버스의 위치 변경은 메모 본문 저장·닫기를 막지 않고, 본문 충돌은 선택지를 보인다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-conflict-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      await canvas.getByRole('button', { name: 'New' }).click();
+      await canvas.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await editor.locator('.cm-content').click();
+      await editor.keyboard.type('충돌 회귀');
+      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+      const remote = (patch: { text?: string; position?: [number, number] }) => canvas.evaluate(async ({ text, position }) => {
+        const bridge = window.memoivy;
+        if (!bridge) throw new Error('데스크톱 bridge 없음');
+        const { snapshot } = await bridge.request('snapshot') as { snapshot: { revision: number; notes: { id: string; text: string }[] } };
+        const note = snapshot.notes.find((item) => item.text.startsWith('충돌 회귀'));
+        if (!note) throw new Error('메모 없음');
+        if (position) await bridge.request('canvas', { baseRevision: snapshot.revision, changes: [{ id: note.id, canvas: { position } }] });
+        if (text) await bridge.request('update', { baseRevision: snapshot.revision, id: note.id, text });
+      }, patch);
+      // 입력 직후(자동저장 전) 캔버스가 위치를 바꾼다 → 본문은 그대로 저장돼야 한다.
+      await editor.keyboard.type(' 본문');
+      await remote({ position: [480, 320] });
+      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+      // 다른 창이 본문을 바꾸면 덮어쓰지 않고 선택지를 보인다.
+      await editor.keyboard.type(' 내 초안');
+      await remote({ text: '충돌 회귀 다른 창' });
+      const status = editor.locator('.editor-status');
+      await expect.poll(() => status.getByRole('button', { name: '여기 쓴 내용 남기기' }).isVisible(), { timeout: 10_000 }).toBe(true);
+      if (process.env.MEMOIVY_SHOT) await editor.screenshot({ path: process.env.MEMOIVY_SHOT });
+      await status.getByRole('button', { name: '여기 쓴 내용 남기기' }).click();
+      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+      await editor.getByRole('button', { name: '창 닫기' }).click();
+      await expect.poll(() => editor.isClosed()).toBe(true);
+    } finally {
+      await quit(app);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // 회귀(사용자 보고): 캔버스에서 새 메모를 만들고 인스펙터에 제목을 적은 뒤 메모 창에 쓰면 저장·닫기가 막혔다.
+  test('캔버스 인스펙터로 제목을 적은 새 메모도 메모 창에서 저장하고 닫을 수 있다', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-title-'));
+    const { app, library } = await launch(dir);
+    try {
+      await library.getByRole('button', { name: '캔버스 열기' }).first().click();
+      const canvas = await windowWith(app, '.canvas-screen');
+      await canvas.getByRole('button', { name: 'New' }).click();
+      await canvas.getByRole('menuitem', { name: /메모/ }).click();
+      const editor = await windowWith(app, '.editor-screen');
+      await canvas.getByRole('textbox', { name: '메모 제목' }).fill('인스펙터 제목');
+      await canvas.getByRole('textbox', { name: '메모 제목' }).press('Enter');
+      await expect.poll(() => editor.locator('.cm-content').textContent(), { timeout: 10_000 }).toContain('인스펙터 제목');
+      await editor.locator('.cm-content').click();
+      await editor.keyboard.press('Control+End');
+      await editor.keyboard.type('\n메모 창 본문');
+      await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
+      expect(await editor.locator('.editor-status.save-error').count()).toBe(0);
+      await editor.getByRole('button', { name: '창 닫기' }).click();
+      await expect.poll(() => editor.isClosed()).toBe(true);
     } finally {
       await quit(app);
       rmSync(dir, { recursive: true, force: true });

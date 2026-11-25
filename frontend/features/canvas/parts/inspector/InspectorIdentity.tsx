@@ -12,7 +12,7 @@ import { useTitledText } from './useTitledText';
  */
 export function InspectorIdentity({ note, revision, titleRef, onSaveText, onToggleTask, onColor, onClose, onExternal }: {
   note: Note; revision?: number; titleRef: RefObject<HTMLInputElement | null>;
-  onSaveText: (text: string, baseRevision?: number) => Promise<number | undefined>; onColor: (color: string) => void; onClose: () => void;
+  onSaveText: (text: string, baseRevision: number | undefined, origin: string) => Promise<number | undefined>; onColor: (color: string) => void; onClose: () => void;
   onToggleTask: (sourceLine: number) => void;
   onExternal: (url: string) => void;
 }) {

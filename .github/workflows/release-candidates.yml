@@ -1,5 +1,5 @@
 name: Desktop release candidates
-# CI 전체 통과 후 Windows·Snap 후보를 빌드하고 체크섬·빌드 출처 증명을 남긴다. 태그가 있으면 GitHub Release에 붙인다(OPS-005).
+# 검사를 통과한 커밋에서 Windows·Snap 후보를 빌드하고 체크섬·빌드 출처 증명을 남긴다. 태그가 있으면 GitHub Release에 붙인다(OPS-005).
 on:
   workflow_dispatch:
     inputs:
@@ -17,11 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   build:
-    needs: ci
     name: ${{ matrix.target }}
     strategy:
       fail-fast: false
