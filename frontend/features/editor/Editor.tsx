@@ -64,13 +64,13 @@ export function Editor({ store, noteId, onClose }: { store: MemoStore; noteId: s
         onViewImage={setViewingImage}
       />
     </EditorContent>
-    <footer className={`editor-status${draft.error ? ' save-error' : ''}`}>
+    <footer className={`editor-status${draft.error ? ' save-error' : ''}`} role={draft.error ? 'alert' : undefined}>
       {draft.error ? <>
-        <span>{draft.error}</span>
+        <span>{draft.conflict ? draft.error : `저장하지 못했어요. ${draft.error}`}</span>
         {draft.conflict ? <>
-          <button onClick={() => void draft.overwriteDraft()}>내 초안으로 덮어쓰기</button>
+          <button className="primary" onClick={() => void draft.overwriteDraft()}>내 초안으로 덮어쓰기</button>
           <button onClick={draft.useRemoteVersion}>최신 버전 불러오기</button>
-        </> : <button onClick={() => void draft.save()}>다시 시도</button>}
+        </> : <button className="primary" onClick={() => void draft.save()}>다시 시도</button>}
       </> : <span key={saveLabel} className="save-label">{saveLabel}</span>}
     </footer>
     {viewingImage && assetUrls[viewingImage] && <ImageViewer src={assetUrls[viewingImage]} alt={store.assets.find((asset) => asset.id === viewingImage)?.name ?? '이미지'} onClose={() => setViewingImage(null)}/>}

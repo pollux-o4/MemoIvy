@@ -17,6 +17,10 @@
 .editor-tools .menu-popover { top: 38px; }
 .editor-content { flex: 1; min-height: 0; overflow: auto; }
 .editor-status { min-height: 22px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 2px 20px 5px; color: var(--note-muted); font-size: 10px; }
-.editor-status.save-error { justify-content: flex-start; color: var(--memoivy-danger); }
+.editor-status.save-error { flex-wrap: wrap; row-gap: 6px; padding: 8px 20px 10px; color: var(--memoivy-danger); font-size: 12px; line-height: 1.4; border-top: 1px solid color-mix(in srgb,var(--memoivy-danger) 22%,transparent); background: color-mix(in srgb,var(--memoivy-danger) 6%,transparent); }
+.editor-status.save-error > span { flex: 1 1 100%; text-wrap: pretty; }
+.editor-status.save-error button { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.editor-status.save-error button.primary { color: light-dark(#fff, #1c1c1e); background: var(--note-text); }
+.editor-status.save-error button.primary:hover { background: color-mix(in srgb,var(--note-text) 86%,transparent); }
 .editor-status button { padding: 2px 6px; border: 0; border-radius: 5px; color: var(--note-text); background: color-mix(in srgb,var(--note-text) 7%,transparent); cursor: pointer; font-size: 10px; }
 .editor-status button:hover { background: color-mix(in srgb,var(--note-text) 12%,transparent); }
