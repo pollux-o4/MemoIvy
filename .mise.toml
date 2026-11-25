@@ -92,3 +92,7 @@ run = ["npm run lint", "npm run check:unused", "npm run check:deps", "npm run ch
 [tasks.proto]
 description = "prototypes/ 정적 서버(공용): http://127.0.0.1:8790/<폴더>/"
 run = "python3 scripts/proto-serve.py"
+
+[tasks."readme:assets"]
+description = "README 그래픽(.github/readme) 다시 생성"
+run = "node scripts/readme-assets/build.mjs"
