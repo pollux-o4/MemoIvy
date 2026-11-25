@@ -5,7 +5,7 @@ export type ShortcutSection = readonly [title: string, rows: readonly ShortcutRo
 export const NOTE_SHORTCUTS: readonly ShortcutSection[] = [
   ['앱', [['새 메모', '', ['Ctrl+N']], ['메모 목록 검색', '', ['Ctrl+F']], ['현재 창 닫기', '', ['Ctrl+W']], ['이 안내', '', ['F1']]]],
   ['메모 서식', [
-    ['제목', '# 제목', ['Ctrl+1']], ['소제목', '## 소제목', ['Ctrl+2']], ['굵게', '**글자**', ['Ctrl+B']], ['기울임', '*글자*', ['Ctrl+I']],
+    ['제목', '# 제목', ['Ctrl+1']], ['소제목', '## 소제목', ['Ctrl+2']], ['굵게', '**글자**', ['Ctrl+B']], ['기울임', '*글자*', ['Ctrl+I']], ['밑줄', '<u>글자</u>', ['Ctrl+U']],
     ['취소선', '~~글자~~', ['Ctrl+Shift+X']], ['링크', '[이름](주소)', ['Ctrl+K']], ['번호 목록', '1. 항목', ['Ctrl+Shift+7']],
     ['글머리표', '- 항목', ['Ctrl+Shift+8']], ['체크 목록', '- [ ] 할 일', ['Ctrl+Shift+9']],
   ]],

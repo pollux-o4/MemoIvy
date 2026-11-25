@@ -59,7 +59,9 @@
   line-height: 0;
 }
 
-.markdown-surface .md-link {
+/* 링크·밑줄은 같은 밑줄 모양을 쓴다. */
+.markdown-surface .md-link,
+.markdown-surface .md-underline {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
