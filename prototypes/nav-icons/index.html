@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이동 아이콘 후보</title>
+<style>
+  :root { --bg: #f3f1ea; --note: #fdf1c2; --text: #2b2a26; --muted: #6f6c63; --hover: rgba(0,0,0,.07); --raised: #fff; --hair: rgba(0,0,0,.1); --shadow: rgba(0,0,0,.12); --ease: cubic-bezier(.33,1,.68,1); }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1c1c1c; --note: #3d3829; --text: #ece9e0; --muted: #a29e93; --hover: rgba(255,255,255,.08); --raised: #2c2c2c; --hair: rgba(255,255,255,.1); --shadow: rgba(0,0,0,.5); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, "Noto Sans KR", sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 20px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  .card { background: var(--note); border-radius: 12px; box-shadow: 0 0 0 1px var(--hair); height: 170px; position: relative; }
+  .head { display: flex; align-items: center; height: 52px; padding: 0 10px; gap: 2px; }
+  .head .title { flex: 1; text-align: center; font-weight: 600; }
+  .label { position: absolute; left: 14px; bottom: 12px; font-size: 13px; color: var(--muted); }
+  .label b { color: var(--text); font-weight: 600; margin-right: 6px; }
+  .btn { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; padding: 0; }
+  .btn:hover { background: var(--hover); }
+  svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .morph { position: relative; }
+  .morph .trigger { position: relative; z-index: 2; }
+  .morph.open .trigger, .morph.open .trigger:hover { background: transparent; }
+  .turn { display: inline-grid; transition: transform 280ms cubic-bezier(.22,1,.36,1); }
+  .morph.open .turn { transform: rotate(var(--turn, 0deg)); }
+  .surface { position: absolute; z-index: 1; top: 0; right: 0; width: 180px; padding-top: 32px; border-radius: 14px; background: var(--raised); box-shadow: 0 4px 12px var(--shadow); clip-path: inset(0 0 calc(100% - 32px) calc(100% - 32px) round 8px); opacity: 0; pointer-events: none; transition: clip-path 280ms var(--ease), opacity 120ms; }
+  .morph.open .surface { clip-path: inset(0 round 14px); opacity: 1; pointer-events: auto; }
+  .surface button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+  .surface button:hover { background: var(--hover); }
+  .surface .rows { padding: 4px 6px 6px; }
+  @media (prefers-reduced-motion: reduce) { .turn, .surface { transition: none; } }
+</style>
+</head>
+<body>
+<h1>메모 창 이동 아이콘 후보 10개</h1>
+<p class="lead">아이콘을 눌러 펼침과 회전을 확인하세요. 왼쪽 창 조작 3개와 오른쪽 3개(이동·색상·더보기)는 그대로입니다.</p>
+<div class="grid" id="grid"></div>
+
+<template id="card">
+  <div class="card">
+    <div class="head">
+      <button class="btn" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="btn" aria-label="최소화"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+      <button class="btn" aria-label="최대화"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+      <span class="title">메모</span>
+      <div class="morph">
+        <div class="surface" role="menu"><div class="rows">
+          <button role="menuitem"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 11 15.7 7M8.3 13l7.4 4"/></svg>캔버스</button>
+          <button role="menuitem"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>메모 목록</button>
+        </div></div>
+        <button class="btn trigger" aria-haspopup="menu" aria-expanded="false"><span class="turn"></span></button>
+      </div>
+      <button class="btn" aria-label="색상"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.6-.9 1.2-1.8-.6-1.3.2-2.7 1.6-2.7H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></svg></button>
+      <button class="btn" aria-label="더보기"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+    </div>
+    <div class="label"></div>
+  </div>
+</template>
+
+<script>
+// [번호, 이름, 회전, SVG 경로]
+const icons = [
+  ['펼침 화살표', '180deg', '<path d="m7 10 5 5 5-5"/>'],
+  ['나침반', '90deg', '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'],
+  ['이정표', '0deg', '<path d="M12 3v18M12 5h6l2 2.5-2 2.5h-6M12 12H6l-2 2.5L6 17h6"/>'],
+  ['좌우 전환', '180deg', '<path d="M4 8h14l-3-3M20 16H6l3 3"/>'],
+  ['앱 격자', '45deg', '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>'],
+  ['겹친 창', '0deg', '<rect x="8" y="4" width="12" height="10" rx="2"/><path d="M16 18v0a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2"/>'],
+  ['지도', '0deg', '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>'],
+  ['경로', '0deg', '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>'],
+  ['층', '0deg', '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>'],
+  ['홈', '0deg', '<path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/>'],
+];
+const grid = document.getElementById('grid');
+const tpl = document.getElementById('card');
+icons.forEach(([name, turn, path], i) => {
+  const card = tpl.content.firstElementChild.cloneNode(true);
+  const morph = card.querySelector('.morph');
+  const trigger = card.querySelector('.trigger');
+  morph.style.setProperty('--turn', turn);
+  card.querySelector('.turn').innerHTML = `<svg viewBox="0 0 24 24">${path}</svg>`;
+  trigger.setAttribute('aria-label', `이동 (${name})`);
+  card.querySelector('.label').innerHTML = `<b>${i + 1}. ${name}</b>회전 ${turn}`;
+  trigger.addEventListener('click', () => {
+    const open = !morph.classList.contains('open');
+    document.querySelectorAll('.morph.open').forEach((m) => { m.classList.remove('open'); m.querySelector('.trigger').setAttribute('aria-expanded', 'false'); });
+    morph.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', String(open));
+  });
+  grid.append(card);
+});
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.morph')) document.querySelectorAll('.morph.open').forEach((m) => m.classList.remove('open')); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.morph.open').forEach((m) => m.classList.remove('open')); });
+</script>
+</body>
+</html>

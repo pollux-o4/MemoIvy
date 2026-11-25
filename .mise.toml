@@ -88,3 +88,11 @@ run_windows = "npm run test:e2e --"
 [tasks."check:web"]
 description = "웹·데스크톱 정적 점검: 린트, 미사용 코드, 모듈 경계, 중복"
 run = ["npm run lint", "npm run check:unused", "npm run check:deps", "npm run check:dupes", "cargo machete engine"]
+
+[tasks.proto]
+description = "prototypes/ 정적 서버(공용): http://127.0.0.1:8790/<폴더>/"
+run = "python3 scripts/proto-serve.py"
+
+[tasks."readme:assets"]
+description = "README 그래픽(.github/readme) 다시 생성"
+run = "node scripts/readme-assets/build.mjs"

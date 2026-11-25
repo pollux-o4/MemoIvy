@@ -5,4 +5,4 @@
 - structure: 책임 분리·공유 정책.
 - release: 브랜치·출시·버전 흐름(GitHub 워크플로).
 
-2026-10-29까지의 구현·대화·Git 이력을 정리한 기록이다. 현재 결정은 관심사 경로의 `--current.md`로 찾는다.
+현재 결정만 보면 된다: `rg --files docs/decisions | rg -- '--current\.md$'`. stale은 대체된 이력이다.

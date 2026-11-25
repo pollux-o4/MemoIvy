@@ -4,6 +4,7 @@ import { indentWithTab, history, historyKeymap, defaultKeymap } from '@codemirro
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { syntaxHighlighting } from '@codemirror/language';
+import { inlineStyling } from './inline_marks';
 import { markdownStyle } from './markdown_style';
 import { EditorView, keymap, placeholder as hint } from '@codemirror/view';
 import { editorTheme } from './editor_theme';
@@ -43,7 +44,7 @@ export function MarkdownSurface({ value, onChange, raw, assetUrls, onReady, onCo
   useEffect(() => {
     if (!host.current) return;
     const state = EditorState.create({ doc: value, extensions: [
-      history(), EditorView.lineWrapping, hints.of(hintExtensions()), markdown({ base: markdownLanguage }), syntaxHighlighting(markdownStyle), editorTheme, linkPreview({ open: (url) => callbacks.current.onExternal(url) }),
+      history(), EditorView.lineWrapping, hints.of(hintExtensions()), markdown({ base: markdownLanguage }), syntaxHighlighting(markdownStyle), inlineStyling, editorTheme, linkPreview({ open: (url) => callbacks.current.onExternal(url) }),
       rawMode.of(raw ? [] : [liveMarkdown(assetUrls, imageHandlers)]),
       pendingFence,
       Prec.highest(keymap.of(formattingKeymap())),

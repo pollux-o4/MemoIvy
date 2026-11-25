@@ -278,7 +278,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  // 회귀: 캔버스가 같은 메모의 위치만 바꿔도 메모 창 본문 저장이 충돌로 막혀 창이 닫히지 않았다.
+  // 검증: SAVE-002. 회귀: 캔버스가 같은 메모의 위치만 바꿔도 메모 창 본문 저장이 충돌로 막혀 창이 닫히지 않았다.
   test('캔버스의 위치 변경은 메모 본문 저장·닫기를 막지 않고, 본문 충돌은 선택지를 보인다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-conflict-'));
     const { app, library } = await launch(dir);
@@ -320,7 +320,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  // 회귀(사용자 보고): 캔버스에서 새 메모를 만들고 인스펙터에 제목을 적은 뒤 메모 창에 쓰면 저장·닫기가 막혔다.
+  // 검증: SAVE-002. 회귀: 캔버스에서 새 메모를 만들고 인스펙터에 제목을 적은 뒤 메모 창에 쓰면 저장·닫기가 막혔다.
   test('캔버스 인스펙터로 제목을 적은 새 메모도 메모 창에서 저장하고 닫을 수 있다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-title-'));
     const { app, library } = await launch(dir);
@@ -760,7 +760,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
   test('링크 미리보기 카드 유지와 인라인 주소 수정', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-link-preview-'));
     const id = 'd0000000-0000-4000-8000-000000000002';
-    const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)';
+    const text = '링크 확인\n[링크](https://example.com)\n[네이버](naver.com)\n[질병청] 말머리\n<u>밑줄</u> 끝';
     writeFileSync(path.join(dir, 'notes.json'), JSON.stringify([{ id, text, color: 'blue', modified: 100, canvas: { position: [0, 0] } }]));
     const { app, library } = await launch(dir);
     try {
@@ -768,6 +768,18 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       const editor = await windowWith(app, '.editor-screen');
       const content = editor.locator('.cm-content');
       const preview = editor.locator('.link-preview-card');
+      // 주소 없는 대괄호는 링크 서식 없이 대괄호까지 글자로 남는다.
+      await expect.poll(() => editor.locator('.md-link').allTextContents()).toEqual(['링크', '네이버']);
+      await content.getByText('[질병청] 말머리', { exact: true }).waitFor();
+      // 밑줄은 커서 밖에서 <u> 기호를 숨기고 글자에만 밑줄을 긋는다.
+      await expect.poll(() => editor.locator('.md-underline').allTextContents()).toEqual(['밑줄']);
+      // 태그 안쪽 글자만 골라도 Ctrl+U로 밑줄이 풀린다. 클릭하면 태그가 드러나 위치가 바뀌므로 키보드로 고른다.
+      await content.getByText('밑줄', { exact: true }).click();
+      await editor.keyboard.press('End');
+      for (let i = 0; i < 6; i++) await editor.keyboard.press('ArrowLeft');
+      for (let i = 0; i < 2; i++) await editor.keyboard.press('Shift+ArrowLeft');
+      await editor.keyboard.press('Control+U');
+      await expect.poll(() => editor.locator('.md-underline').count()).toBe(0);
       await app.evaluate(({ shell }) => {
         shell.openExternal = async (url) => { process.env.MEMOIVY_TEST_OPENED_URL = url; };
       });
@@ -805,7 +817,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => library.evaluate(async (id) => {
         const { snapshot } = await window.memoivy.request('snapshot');
         return snapshot?.notes.find((note) => note.id === id)?.text;
-      }, id)).toBe(text.replace('(naver.com)', '(https://naver.com/news)'));
+      }, id)).toBe(text.replace('(naver.com)', '(https://naver.com/news)').replace('<u>밑줄</u>', '밑줄'));
       await content.getByText('링크 확인', { exact: true }).hover();
       await content.getByText('네이버', { exact: true }).hover();
       await preview.getByText('naver.com/news', { exact: true }).waitFor({ timeout: 3_000 });

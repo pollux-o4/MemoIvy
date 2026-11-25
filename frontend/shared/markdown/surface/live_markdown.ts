@@ -2,6 +2,7 @@ import { createBlockScanner } from '../list_item';
 import { syntaxTree } from '@codemirror/language';
 import { StateEffect } from '@codemirror/state';
 import { Decoration, ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
+import { inlineMarks, isMarkdownLink } from './inline_marks';
 import { listDecorations } from './list_markers';
 import { pendingFenceLine } from './fence_input';
 import { AssetWidget, installImageDropHandlers, type ImageHandlers } from './image_tools';
@@ -104,6 +105,8 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push({ from: node.from, to: node.to, value: inlineCode });
         }
         const parent = node.node.parent;
+        // 주소 없는 `[글자]`의 대괄호는 글자이므로 숨기지 않는다.
+        if (parent?.name === 'Link' && !isMarkdownLink(parent)) return;
         if (marks.has(node.name) && (node.name !== 'URL' || parent?.name === 'Link') && node.to > node.from) {
           if (imageLines.has(view.state.doc.lineAt(node.from).number)) return;
           const reveal = node.name === 'HeaderMark'
@@ -116,6 +119,12 @@ export function liveMarkdown(assetUrls: Record<string, string>, imageHandlers?: 
           ranges.push({ from: node.from, to, value: hiddenMark });
         }
       } });
+      // 밑줄 `<u>`·`</u>`는 커서가 범위 밖에 있을 때만 숨긴다.
+      for (const mark of inlineMarks(view.state, visibleFrom, visibleTo)) {
+        if (mark.tags.length === 0 || touchesSelection(mark.from, mark.to)) continue;
+        if (codeLines.has(view.state.doc.lineAt(mark.from).number)) continue;
+        for (const tag of mark.tags) ranges.push({ from: tag.from, to: tag.to, value: hiddenMark });
+      }
       return Decoration.set(ranges.sort((a, b) => a.from - b.from || a.to - b.to).map((item) => item.value.range(item.from, item.to)), true);
     }
   }, {

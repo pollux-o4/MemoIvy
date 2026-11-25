@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MemoIvy 마스코트 후보</title>
+<style>
+:root{--bg:#eef2e6;--card:#fff;--ink:#1f3d2a;--mut:#5d7264;--line:#dfe6dc;--acc:#33734c;--chip:#e7f1e8;--warn:#a2503a}
+@media (prefers-color-scheme:dark){:root{--bg:#121814;--card:#1c241f;--ink:#e3eedf;--mut:#9fb3a4;--line:#2c3830;--acc:#7fc39a;--chip:#24342a;--warn:#e59a83}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans CJK KR",system-ui,sans-serif;padding:32px 16px 64px;line-height:1.5}
+.wrap{max-width:1180px;margin:auto}
+h1{font-size:30px;letter-spacing:-.5px}
+.lead{color:var(--mut);margin:6px 0 20px}
+.crit{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.crit span{font-size:13px;padding:6px 12px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
+.crit b{color:var(--acc)}
+h3{font-size:15px;color:var(--mut);margin:28px 0 12px;letter-spacing:.5px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;font-size:13px;color:var(--mut)}
+.bar button{font:inherit;font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.c.rec{border:2px solid var(--acc)}
+.stage{position:relative;height:200px;background:linear-gradient(160deg,#fff6d8,#dde8dc);display:flex;align-items:flex-end;justify-content:center;gap:18px;padding-bottom:24px}
+.stage svg{image-rendering:pixelated}.stage .big{animation:bob 1.2s steps(2) infinite}.stage .big+.big{animation-delay:.6s}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.stage .ico{position:absolute;right:12px;top:12px;background:#fff;border-radius:10px;padding:6px 8px;display:flex;gap:6px;align-items:flex-end;font-size:10px;color:#5d7264;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.badge{position:absolute;left:12px;top:12px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;background:var(--acc);color:#fff}
+.badge.base{background:#8a968e}
+.body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;flex:1}
+.hd{display:flex;align-items:baseline;gap:10px}.hd h2{font-size:22px}.hd .no{font-size:12px;color:var(--mut)}.hd .tot{margin-left:auto;font-size:13px;color:var(--mut)}.hd .tot b{font-size:20px;color:var(--ink)}
+.hook{font-size:16px;font-weight:700;color:var(--acc)}
+.beats{display:flex;align-items:stretch;gap:4px;font-size:13px}
+.beats div{flex:1;background:var(--chip);border-radius:10px;padding:6px 8px}.beats small{display:block;font-size:11px;color:var(--mut);font-weight:700}
+.sc{display:grid;grid-template-columns:76px 1fr;gap:4px 10px;font-size:12px;color:var(--mut);align-items:center}
+.sc i{display:flex;gap:3px}.sc i b{width:100%;height:8px;border-radius:4px;background:var(--line)}.sc i b.on{background:var(--acc)}
+.pc{font-size:13.5px;display:grid;gap:4px}.pc .p::before{content:"＋ ";color:var(--acc);font-weight:700}.pc .m::before{content:"－ ";color:var(--warn);font-weight:700}
+details{font-size:13px;color:var(--mut)}summary{cursor:pointer;color:var(--ink)}
+.spr{position:relative;display:inline-flex}.spr svg{position:relative}
+.gs{position:absolute;left:12%;right:12%;bottom:-6px;height:10px;border-radius:50%;background:rgba(30,50,35,.18)}
+.stage .big{animation:none}.stage .big svg{animation:bob 1.2s steps(2) infinite}.stage .hp svg{animation:hop .9s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}}
+.stage{background:radial-gradient(ellipse 70% 40% at 50% 100%,#cfe3cf,transparent 70%),linear-gradient(170deg,#fffaf0,#eef4e8)}
+@media (prefers-reduced-motion:reduce){.stage svg{animation:none!important}}
+</style></head><body><div class="wrap">
+<h1>MemoIvy 마스코트 후보 10종</h1>
+<p class="lead">영상·스토어에 쓸 캐릭터를 고르는 비교판. 새 후보 5종(덩굴치마·등불·연필망토·문어·메모냥) 추가. 위 3종이 추천안, 회색 배지는 현재 잎새를 다듬은 비교 기준.</p>
+<div class="crit"><span><b>이름</b> 메모·아이비가 바로 떠오르나</span><span><b>서사</b> 흩어짐→모으기→잇기에서 할 일이 있나</span><span><b>가독성</b> 아이콘 크기에서도 읽히나</span><span><b>재미</b> 개그·감정 연기가 되나</span></div>
+<h3>추천 3종</h3><div class="grid" id="rec"></div>
+<h3>나머지 후보</h3>
+<div class="bar" role="group" aria-label="정렬">정렬 <button data-k="-1" aria-pressed="true">총점</button><button data-k="0">이름</button><button data-k="1">서사</button><button data-k="2">가독성</button><button data-k="3">재미</button></div>
+<div class="grid" id="rest"></div></div>
+<script>
+const PAL={o:'#1f3d2a',g:'#42845b',l:'#a9c788',d:'#2a5e3e',y:'#ffdf70',Y:'#f2c94c',w:'#ffffff',p:'#f6f1e3',r:'#ec86a2',b:'#9a6b43',B:'#6e4a2c',k:'#2b2b2b',s:'#8fa3b8',c:'#e2483d',e:'#1f3d2a'};
+// 각 후보: [이름, 개념, 서사 역할, 장단점, 기본 도트, 기쁨 도트]
+const M=[
+['쪽지', '노란 메모지 몸통 + 머리에 아이비 잎 한 장. 접힌 귀퉁이가 꼬리.', '흩어진 쪽지들 사이에서 "나도 그중 하나"였다가 덩굴로 동료를 묶어 계획을 만든다.', '<b>장점</b> 메모 앱임이 한눈에. <b>단점</b> 일반 스티키 메모와 겹쳐 보일 수 있음.',
+['.......gg.......','......glgg......','.......dg.......','..yyyyyyyyyy....','..yyyyyyyyyyY...','..yyyyyyyyyyYY..','..yyyoyyyyoyyy..','..yyyoyyyyoyyy..','..yyyyyyyyyyyy..','..yyryyyyyyryy..','..yyyyyooyyyyy..','..yyyyyyyyyyyy..','..yyyyyyyyyyyy..','...o........o...','...o........o...'],
+['.......gg.......','......glgg......','.......dg.......','o.yyyyyyyyyy...o','o.yyyyyyyyyyY..o','.oyyyyyyyyyyYYo.','..yyoyoyyoyoyy..','..yyyyyyyyyyyy..','..yyyyyyyyyyyy..','..yyryyyyyyryy..','..yyyyoooyyyyy..','..yyyyyooyyyyy..','..yyyyyyyyyyyy..','...o........o...','...o........o...']],
+['싹이', '씨앗 몸통에 떡잎 두 장. 작은 메모 = 씨앗이라는 은유.', '첫 메모가 씨앗으로 심기고, 메모가 늘수록 떡잎 → 덩굴로 자란다. 성장 자체가 진행 표시.', '<b>장점</b> "작은 메모에서 연결된 생각으로" 슬로건과 1:1. 성장 단계 연출 가능. <b>단점</b> 식물 앱으로 오해 여지.',
+['................','..gg........gg..','.glgg......ggLg.','.gllgg....ggllg.','..gggg....gggg..','....dg....gd....','.....dggggd.....','.....oooooo.....','....obbbbbbo....','...obbbbbbbbo...','...obobbbbobo...','...obbbbbbbbo...','...obrbbbbrbo...','....obbbbbbo....','.....oooooo.....'],
+['.gg..........gg.','glgg........ggLg','gllgg......ggllg','.gggg......gggg.','...dg......gd...','....dg....gd....','.....dggggd.....','.....oooooo.....','....obbbbbbo....','...obbbbbbbbo...','...oboboobobo...','...obbbbbbbbo...','...obrbooorbo...','....obbbbbbo....','.....oooooo.....']],
+['다람', '꼬리가 담쟁이 덩굴인 다람쥐. 볼주머니에 메모를 모은다.', '1막에서 쪽지를 볼에 잔뜩 넣다 터지고(개그), 2막에서 목록 창에 하나씩 꺼내 정리한다.', '<b>장점</b> "모으기"가 행동으로 보여 재미가 큼. 동물이라 감정 표현 쉬움. <b>단점</b> 이름과 연결은 꼬리에만 의존.',
+['................','..oo.......gg...','.obbo.....glgg..','.obbbo...ggllg..','..obbbbo.gdggg..','..oboobbo.dgg...','..obbbbbbo.dg...','..orbbbbbbo.dg..','..obpppbbbo.dg..','...obpppbbbodg..','...obbbbbbbog...','....oobbbboo....','....o.oooo.o....'],
+['................','..oo.......gg...','.obbo.....glgg..','.obbbo...ggllg..','..obbbbo.gdggg..','..ooboobo.dgg...','..obbbbbbo.dg...','.yrbbbbbbyo.dg..','.yyppobbyyo.dg..','..yobpppbyodg...','...obbbbbbbog...','....oobbbboo....','....o.oooo.o....']],
+['핀', '메모를 꽂는 압정 캐릭터. 머리는 잎 모양 핀 헤드.', '흩어진 메모를 "여기!" 하고 꽂아 연결점을 만든다. 캔버스 연결선의 시작점 역할.', '<b>장점</b> 실루엣이 단순해 작은 크기·아이콘에 강함. <b>단점</b> 뾰족해서 귀여움이 약하고 아이비 느낌이 적음.',
+['................','....gggggggg....','...gllllllggg...','..glgggggggggg..','..gggoggggoggg..','..gggoggggoggg..','..ggrggggggrgg..','..gggggooggggg..','...gggggggggg...','.....dddddd.....','......ssss......','......ssss......','.......ss.......','.......ss.......','.......s........'],
+['................','....gggggggg....','...gllllllggg...','..glgggggggggg..','..ggoggggggogg..','..gogogggogogg..','..ggrggggggrgg..','..ggggooooggggg.','...ggggoogggg...','.....dddddd.....','......ssss......','......ssss......','.......ss.......','.......ss.......','.......s........']],
+['종이새', '메모 한 장을 접어 만든 종이학. 날개 끝에 잎.', '흩어진 메모 사이를 날아다니며 실(덩굴)을 끌고 가 메모끼리 잇는다. 이동이 많은 영상에 유리.', '<b>장점</b> 비행 동선이 영상 카메라 이동과 잘 맞음. 우아함. <b>단점</b> 도트로 접힌 면 표현이 어려움.',
+['................','.......pp.......','......pppp......','.....ppopppp....','gg..pppppppY....','glg.pppppcYY....','.gpppppppYYY..gg','..pppppppYYY.glg','...ppppppYYYpgg.','....pppppYYpp...','.....ppppYp.....','......ppY.......','.......Y........'],
+['gg..............','glg....pp.......','.gp...pppp......','..pp.ppoppp.....','...pppppppY.....','....pppppcYY....','....pppppYYY..gg','...ppppppYYY.glg','..pppppppYYYpgg.','.....ppppYYpp...','.....ppppYp.....','......ppY.......','.......Y........']],
+['덩굴손', '꼬불꼬불 덩굴손 자체가 몸. 끝이 손처럼 메모를 감는다.', '메모를 감아 끌어오고, 몸을 늘여 메모 사이를 직접 잇는다. 연결 = 몸으로 하는 행동.', '<b>장점</b> "연결"을 가장 직관적으로 연기. 늘어나는 변형이 재미. <b>단점</b> 형태가 고정되지 않아 로고화가 어려움.',
+['................','.....oggo.......','....ogllgo......','....ogogog......','....ogggggo.....','.....orggr.o....','......ogg..go...','.......gg...g...','......gg...gg...','.....gg...gg....','....gg..ggg.....','....gg.gg.......','.....ggg........','......g.........'],
+['................','.....oggo.......','....ogllgo......','....ooggoo......','....ogggggo.....','.....orooro..gg.','......ogg..ggl..','.......gg.gg....','......gg.gg.....','.....gg.gg......','....gggg........','....gg..........','.....g..........']],
+['달팽잎', '등껍질이 돌돌 만 메모지인 달팽이. 지나간 자리에 덩굴 흔적.', '느리지만 한 장도 잃지 않는다 — "생각을 천천히 모아도 괜찮아". 지나간 길이 곧 연결선.', '<b>장점</b> 껍질 = 말린 메모, 흔적 = 연결선으로 은유가 두 겹. 차분한 톤. <b>단점</b> 느림이 생산성 앱 메시지와 충돌할 수 있음.',
+['................','.......ppppp....','......ppYYYpp...','.....ppYpppYpp..','.o.o.pYpYYpYpp..','.o.o.pYpYpYYpp..','.ggg.ppYYYpppp..','ggogg.pppppppp..','gggggg.pppppp...','ggrgggggggggggg.','.gggggggggggggg.','..dddddddddddd..'],
+['.o...o..........','..o.o..ppppp....','..ggg.ppYYYpp...','.goggoppYpppYpp.','.gggggpYpYYpYpp.','.grgggpYpYpYYpp.','.googgppYYYpppp.','.ggggg.pppppppp.','gggggg.pppppp...','gggggggggggggggg','.gggggggggggggg.','..dddddddddddd..']],
+['책갈피', '잎 모양 책갈피 캐릭터. 길쭉한 몸, 끝에 리본 꼬리.', '메모 사이에 쏙 끼어들어 "여기 있어"를 표시. 검색 결과를 가리키는 하이라이트 역할.', '<b>장점</b> "찾기"를 상징, 세로 실루엣이 독특. <b>단점</b> 책 앱 느낌이 날 수 있음.',
+['......gg........','.....glgg.......','....ggllgg......','....gggggg......','....goggog......','....gggggg......','....grggrg......','....ggoogg......','....gggggg......','....gggggg......','....gggggg......','....gg..gg......','....g....g......','.....c..c.......','......cc........'],
+['......gg........','.....glgg.......','....ggllgg......','o...gggggg...o..','.o..gogogg..o...','..o.gggggg.o....','...ogrggrgo.....','....gooogg......','....ggoggg......','....gggggg......','....gggggg......','....gg..gg......','....g....g......','.....c..c.......','......cc........']],
+['고슴', '가시가 전부 작은 메모지인 고슴도치. 메모가 늘면 가시가 늘어난다.', '1막: 가시(메모)가 너무 많아 스스로 굴러다니며 엉킴(개그). 2막: MemoIvy에서 가시를 뽑아 목록에 정리, 날씬해진다.', '<b>장점</b> 문제(메모 과잉)를 몸으로 보여 줘 "왜 써야 하나"를 캐릭터가 증명. 개그 잠재력 최고. <b>단점</b> 아이비 연결은 약함 → 코에 잎 하나로 보완.',
+['................','...y.Y.y.Y......','..yYyYyYyYy.....','.YyYyYyYyYyY....','.yYyYyYyYyYbb...','YyYyYyYyYybbbb..','yYyYyYyYybbobbg.','YyYyYyYyYbbbbbgl','yYyYyYyYbbrbbbo.','.YyYyYyYbbbbbo..','..bbbbbbbbbbb...','...o..o..o..o...'],
+['................','................','.......y.Y......','......yYyYbb....','.....YyYybbbb...','.....yYyybbobbg.','.....YyYybbbbbgl','.....yYybbrbbbo.','......YybbooBo..','......bbbbbbb...','.......o.o.o....','................']],
+['잎새+', '현재 잎새를 다듬은 버전: 몸은 세 갈래 잎, 머리에 메모 한 장을 모자처럼 씀.', '지금 영상 그대로 쓰되, 모자 메모 색이 장면마다 바뀌어 "지금 무엇을 들고 있는지"를 보여 줌.', '<b>장점</b> 기존 자산 재사용, 이름 연결 유지. <b>단점</b> 현재 안과 차이가 작음 — 비교 기준용.',
+['....yyyyyy......','....yyyyyY......','.....oo.........','....olloo.......','oo..oggo..oo....','olooglgoool.o...','oggggggggggo....','.oggoggoggo.....','ogggoggogggo....','oggrggggrggo....','.ogggooggo......','..oooooooo......','...o....o.......'],
+['....yyyyyy......','....yyyyyY......','.....oo.........','o...olloo...o...','.o..oggo...o....','..oooglgooo.....','oggggggggggo....','.ogoogoogogo....','ogggggggggggo...','oggrggggrggo....','.oggooooggo.....','..oooooooo......','...o....o.......']],
+['포도알', '담쟁이 열매(작은 검푸른 열매) 세 알이 붙은 삼총사. 한 알 = 메모 하나.', '처음엔 한 알씩 흩어져 있다가 덩굴 줄기로 이어져 한 송이가 된다. "연결"이 곧 합체.', '<b>장점</b> 여러 캐릭터라 군집·합체 연출이 재미있음. 아이비 열매라 이름과도 연결. <b>단점</b> 단일 캐릭터 정체성이 약함.',
+['.......dg.......','......dgg.......','.....d..d.......','...oooo.oooo....','..osssso.ssso...','..osoosoossoo...','..osssso.ssso...','...oooooooooo...','.....osssso.....','.....osoosso....','.....osrrsso....','......oooo......'],
+['.......dg.......','......dgg.......','.....d..d.......','...oooo.oooo....','..osssso.ssso...','..oosooooosoo...','..osssso.ssso...','...oooooooooo...','.....osssso.....','.....oossoo.....','.....osooso.....','......oooo......']],
+];
+// [후보 이름]: 핵심 한 줄, 점수[이름,서사,가독성,재미], 영상 3단계, 장점, 단점, 그룹
+const META={
+'쪽지':['메모지 그 자체가 캐릭터',[5,3,5,2],['더미 속 한 장','덩굴로 동료를 묶음','계획 완성'],'메모 앱임이 바로 보임','평범한 스티키 메모와 구분이 약함'],
+'싹이':['작은 메모 = 씨앗',[4,5,4,3],['메모가 씨앗으로 심김','메모마다 떡잎이 자람','덩굴로 서로 이어짐'],'슬로건과 1:1, 성장이 곧 진행 표시','식물 키우기 앱으로 오해 여지','rec'],
+'다람':['메모를 볼에 모으는 다람쥐',[3,5,4,5],['볼에 쪽지 잔뜩 → 펑','목록에 하나씩 꺼내 정리','덩굴 꼬리로 이음'],'"모으기"가 행동으로 보여 재밌음','이름 연결은 꼬리뿐','rec'],
+'핀':['메모를 꽂는 압정',[2,3,5,2],['흩어진 메모','"여기!" 꽂기','연결의 시작점'],'작은 크기·아이콘에 강함','귀여움·아이비 느낌이 약함'],
+'종이새':['메모로 접은 종이새',[3,4,2,4],['메모 사이를 날아다님','실(덩굴)을 끌고 감','메모끼리 이어짐'],'카메라 이동과 잘 맞는 비행 동선','도트로 접힌 면이 잘 안 읽힘'],
+'덩굴손':['몸이 곧 연결선',[5,5,3,4],['메모를 감아 끌어옴','몸을 늘여 메모 사이를 이음','덩굴 그물 완성'],'"연결"을 가장 직관적으로 연기','형태가 고정되지 않아 로고화 어려움'],
+'달팽잎':['껍질이 말린 메모',[4,3,4,3],['천천히 메모를 모음','지나간 자리에 덩굴','흔적이 곧 연결선'],'은유가 두 겹, 차분한 톤','"느림"이 생산성 메시지와 충돌'],
+'책갈피':['찾는 곳을 표시하는 책갈피',[3,3,4,2],['메모 사이에 쏙','"여기 있어" 표시','검색 하이라이트'],'"찾기"를 상징, 세로 실루엣이 독특','책 앱 느낌'],
+'고슴':['가시가 전부 메모지',[2,5,4,5],['가시가 넘쳐 엉킴(개그)','목록에 가시를 뽑아 정리','날씬해져 홀가분'],'"왜 써야 하나"를 몸으로 증명, 개그 최고','아이비 연결이 약함 → 코에 잎 하나로 보완','rec'],
+'잎새+':['현재 잎새 + 메모 모자',[5,3,4,3],['지금 영상 그대로','모자 메모 색이 장면마다 바뀜','—'],'기존 자산 재사용','현재 안과 차이가 작음','base'],
+'포도알':['담쟁이 열매 삼총사',[4,4,3,4],['한 알씩 흩어짐','줄기로 이어짐','한 송이로 합체'],'군집·합체 연출이 재밌음','단일 캐릭터 정체성이 약함'],
+};
+
+// ── 새 도트 엔진: 재질 실루엣만 그리면 외곽선·명암·얼굴·포즈를 규칙으로 만든다 ──
+// 재질: [기본, 그림자, 하이라이트, 외곽선]
+const MAT={Y:['#ffd95e','#f0b43a','#fff3b0','#8a5a1c'],O:['#ffb86b','#e8913f','#ffdcae','#7a4416'],P:['#fbf6ea','#ddd2b8','#ffffff','#6b5a43'],
+G:['#5fae6e','#3f8a55','#a5dc8e','#1f4a30'],D:['#3f8a55','#2c6b40','#5fae6e','#1a3d27'],B:['#b97f4c','#8f5c35','#dba26a','#4a2c18'],
+C:['#f6e3c4','#e2c69c','#fff6e6','#4a2c18'],S:['#bcc8d4','#8c9cae','#eef3f7','#3a4652'],K:['#4a4f57','#33373d','#6b717a','#1a1c20'],R:['#e2574c','#b53b33','#ff8f80','#5a1a16'],V:['#6268b4','#434889','#959be0','#1e2050']};
+const EYE='#1e2a22',BLUSH='#f39aa8';
+// f: 얼굴 [눈x, 눈y, 간격|0(옆모습)]
+const SPR={
+'쪽지':{f:[[7,8,5]],g:['.........GG.........','........GGGG........','.........DG.........','.........D..........','...YYYYYYYYYYYYY....','...YYYYYYYYYYYYYY...','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYYYY..','...YYYYYYYYYYYYPPP..','...YYYYYYYYYYYYPP...','...YYYYYYYYYYYYP....','....DD.......DD.....']},
+'싹이':{f:[[7,12,5]],g:['..GGG..........GGG..','.GGGGG........GGGGG.','.GGGGGG......GGGGGG.','..GGGGGD....DGGGGG..','....GGGDD..DDGGG....','.......DD..DD.......','........DDDD........','.........DD.........','......BBBBBBBB......','....BBBBBBBBBBBB....','...BBBBBBBBBBBBBB...','..BBBBBBBBBBBBBBBB..','..BBBBBBBBBBBBBBBB..','..BBBBBBBBBBBBBBBB..','..BBBBBBBBBBBBBBBB..','...BBBBBBBBBBBBBB...','....BBBBBBBBBBBB....','......BBBBBBBB......']},
+'다람':{f:[[4,6,0]],g:['.............GGG....','...BB.......GGGGG...','..BBB......GGGGGGG..','..BBBB....GGGGGGGGG.','.BBBBBB...GGGGGGGG..','BBBBBBBB...GGGGGGG..','BBBBBBBB....GGGGGG..','BBBBBBBBB...DGGGG...','.BBBBBBBBB..DD......','..CCCBBBBBB.D.......','..CCCCBBBBBBD.......','...CCCCBBBBBD.......','...CCCCBBBBB........','....BB...BB.........']},
+'핀':{f:[[7,4,5]],g:['......GGGGGGGG......','....GGGGGGGGGGGG....','...GGGGGGGGGGGGGG...','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','...GGGGGGGGGGGGGG...','....GGGGGGGGGGGG....','.......DDDDDD.......','......DDDDDDDD......','.........SS.........','.........SS.........','.........SS.........','.........S..........']},
+'종이새':{f:[[6,4,0]],g:['.......PPPPP........','.....PPPPPPPPP......','....PPPPPPPPPPP.....','...PPPPPPPPPPPPP....','..RRPPPPPPPPPPPPP...','.RRRPPPPPPPPPPPPPPGG','..RRPPPPPPPPPPPPPGGG','...PPPPPPYYYYYYPPGG.','...PPPPPYYYYYYYYPP..','...PPPPPPYYYYYYPPP..','....PPPPPPPPPPPPP...','.....PPPPPPPPPPP....','.......DD...DD......']},
+'덩굴손':{f:[[7,3,4]],g:['......GGGGGG........','.....GGGGGGGG.......','....GGGGGGGGGG......','....GGGGGGGGGG......','....GGGGGGGGGG......','.....GGGGGGGG.......','......DDDDDD........','.......DDD..........','........DDD.........','.........DDD....GG..','..........DDD..GGG..','..........DDD.DDG...','.........DDD.DD.....','........DDDDDD......','.........DDD........']},
+'달팽잎':{f:[[2,8,2]],g:['..........YYYYY.....','........YYYYYYYYY...','.......YYYPPPPPYYY..','......YYYPPYYYYPPYY.','......YYPPYYPPYYPYY.','......YYPPYPPPYYPYY.','.D..D.YYPPYYYYYPPYY.','.GG.GG.YYPPPPPPPYY..','.GGGGG..YYYYYYYYY...','GGGGGGG...YYYYY.....','GGGGGGGGGGGGGGGGGG..','.GGGGGGGGGGGGGGGGGG.']},
+'책갈피':{f:[[7,6,4]],g:['........GG..........','.......GGGG.........','......GGGGGG........','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGGGGGG.......','.....GGGG.GGG.......','.....GGG...GG.......','......RR..RR........','.......R..R.........']},
+'고슴':{f:[[14,7,0]],g:['....Y.O.Y...........','...YOOYYOO..........','..OYYOOYYOO.........','.YOOYYOOYYOO........','YYOOYYOOYYOOB.......','OOYYOOYYOOYBBB......','YYOOYYOOYYBBBBB..G..','OOYYOOYYOBBBBBBBBGG.','YYOOYYOOBBBBBBBBBB..','.OYYOOYBBBBBBBBBBB..','..BBBBBBBBBBBBBBB...','...DD..DD...DD..DD..']},
+'잎새+':{f:[[6,7,5]],g:['.....YYYYYYYY.......','.....YYYYYYYY.......','......GGGGGG........','..GG..GGGGGG..GG....','.GGGG.GGGGGG.GGGG...','.GGGGGGGGGGGGGGGG...','..GGGGGGGGGGGGGG....','..GGGGGGGGGGGGGG....','.GGGGGGGGGGGGGGGG...','.GGGGGGGGGGGGGGGG...','..GGGGGGGGGGGGGG....','....GGGGGGGGGG......','......DD..DD........']},
+'포도알':{f:[[4,7,2],[11,7,2],[7,11,2]],g:['..........GG........','.........DGGG.......','.........D..........','........DDD.........','.......D...D........','...VVVVVV.VVVVVV....','..VVVVVVVVVVVVVVV...','..VVVVVVVVVVVVVVV...','..VVVVVVVVVVVVVVV...','...VVVVVV.VVVVVV....','......VVVVVV........','.....VVVVVVVV.......','.....VVVVVVVV.......','......VVVVVV........']},
+};
+
+Object.assign(SPR,{
+'덩굴치마':{f:[[6,5,5]],g:['..............GG....','.............GGGG...','...YYYYYYYYYYYGDG...','...YYYYYYYYYYYYY....','...YYYYYYYYYYYYY....','...YYYYYYYYYYYYY....','...YYYYYYYYYYYYY....','...YYYYYYYYYYYYY....','.D.YYYYYYYYYYYYY.D..','..DYYYYYYYYYYYYYD...','...DDDDDDDDDDDDD....','..GGGDGGGDGGGDGGG...','.GGGGGGGGGGGGGGGGG..','GGGG.GGGGG.GGGGG.GG.','GG....GGG...GGG...G.','.......D.....D......','.......D.....D......']},
+'등불':{f:[[7,8,5]],g:['........DDDD........','.......D....D.......','..GG...D....D...GG..','.GGGG..DDDDDD..GGGG.','..GGDDDPPPPPPDDDGG..','.....PPPPPPPPPP.....','....PPYYYYYYYYPP....','....PYYYYYYYYYYP....','....PYYYYYYYYYYP....','....PYYYYYYYYYYP....','....PYYYYYYYYYYP....','....PPYYYYYYYYPP....','.....PPPPPPPPPP.....','.......DDDDDD.......','.........RR.........','.........R..........']},
+'연필망토':{f:[[6,5,5]],g:['.......GGGGG........','.....GGGGGGGGG......','....GGGGGGGGGGG.....','...GGGCCCCCCCGGG....','...GGCCCCCCCCCGG....','...GGCCCCCCCCCGG....','..GGGCCCCCCCCCGGG...','..GGGGYYYYYYYGGGG...','.GGGG.YYYYYYY.GGGG..','.GG...YYYYYYY...GG..','......YYYYYYY.......','......YYYYYYY.......','.......CCCCC........','........CCC.........','.........K..........']},
+'문어':{f:[[7,4,5]],g:['......GGGGGGGG......','....GGGGGGGGGGGG....','...GGGGGGGGGGGGGG...','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','..GGGGGGGGGGGGGGGG..','...GGGGGGGGGGGGGG...','..DD.DD.DD.DD.DD.DD.','.DD..D..DD..D..D..DD','YY..DD...D..DD..D.YY','YY..D...DD...D..DD.Y']},
+'메모냥':{f:[[5,4,5]],g:['...O.........O......','..OO........OO......','..OOOOOOOOOOOO......','..OOOOOOOOOOOO......','..OOOOOOOOOOOO......','..OOOOOOOOOOOO......','..OOOOOOOOOOOO....G.','..OOOOOOOOOOOO...GG.','...OOOOOOOOOO...DG..','...OOOOOOOOOOODDD...','...OOOOOOOOOOO......','...OO.OO..OO.OO.....']},
+});
+Object.assign(META,{
+'덩굴치마':['덩굴 치마를 입은 메모',[5,5,5,4],['맨몸의 메모 한 장','잎 치마가 한 겹씩 자람','치마 끝 덩굴로 친구와 손잡기'],'메모+아이비가 한 몸, 옷이 자라며 성장 표현','치마 잎 연출이 작은 크기에서 뭉개질 수 있음','rec'],
+'등불':['메모로 접은 종이 등불',[4,4,4,4],['어둠 속 흩어진 메모','등불이 켜져 하나씩 비춤','등불 줄이 덩굴로 이어짐'],'"생각을 밝힌다"는 감성, 밤 장면이 아름다움','귀여움보다 분위기형'],
+'연필망토':['담쟁이 망토를 쓴 연필 아이',[3,4,4,4],['메모를 적다 길을 잃음','망토 덩굴로 메모를 묶음','망토를 펼쳐 계획을 덮음'],'"적기"가 바로 보이고 망토 실루엣이 선명','이름 중 아이비는 망토만'],
+'문어':['덩굴 다리 문어',[4,5,3,5],['여덟 다리에 메모가 엉킴','다리마다 메모 하나씩 정리','다리끼리 묶어 연결망'],'여러 메모를 동시에 잇는 장면이 압도적','다리가 많아 도트가 복잡'],
+'메모냥':['포스트잇 고양이, 꼬리는 덩굴',[3,4,5,5],['책상 위 메모를 휘저음','메모를 물어와 목록에 놓음','꼬리 덩굴로 이음'],'고양이는 보편적 호감, 사각 몸이 아이콘에 강함','고양이 캐릭터가 흔함'],
+});
+META['싹이'][5]=undefined;
+const DROP=['쪽지','핀','종이새','책갈피','포도알'];
+const NEW=[['덩굴치마','노란 메모가 담쟁이 잎 치마와 잎 머리핀을 했다.','메모가 늘수록 치마 잎이 한 겹씩 자라고, 치마 끝 덩굴로 다른 메모와 손잡는다.'],
+['등불','메모를 접어 만든 종이 등불, 손잡이는 덩굴.','흩어진 메모를 어둠 속에서 하나씩 비추고, 등불 줄이 이어져 길이 된다.'],
+['연필망토','연필 아이가 담쟁이 잎 망토를 썼다.','적기 담당. 망토 덩굴을 풀어 메모를 묶는다.'],
+['문어','머리는 잎, 다리는 덩굴인 문어.','다리마다 메모를 쥐고, 다리끼리 묶어 연결망을 만든다.'],
+['메모냥','오렌지 포스트잇으로 접은 고양이, 꼬리가 덩굴.','책상 메모를 어지르던 장난꾸러기가 정리 담당이 된다.']];
+M.splice(0,M.length,...NEW.map(([n,i,st])=>[n,i,st,'',[],[]]),...M.filter(x=>!DROP.includes(x[0])));
+
+SPR['덩굴모자']={f:[[6,7,5]],g:['.....G...GG.........','....GGG.GGGG..D.....','...GGGGGGGGGGD.D....','..GGGGGGGGGGGGGD....','.GGGGDGGGGDGGGGG....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYYY.....','..YYYYYYYYYYYPP.....','..YYYYYYYYYYPP......','..YYYYYYYYYYP.......','...DD.....DD........']};
+META['덩굴모자']=['덩굴 모자를 쓴 메모',[5,5,5,4],['메모 더미 속 한 장','모자 덩굴로 메모를 모음','덩굴을 뻗어 이음'],'가장 단순하고 메모+아이비가 한눈에','—','rec'];
+META['고슴'][5]=undefined;
+M.unshift(['덩굴모자','평범한 노란 메모가 담쟁이 잎 모자를 썼다. 모자 끝에 덩굴손 하나.','메모 더미 속 평범한 한 장이 모자 덩굴을 뻗어 다른 메모를 모으고 잇는다.','',[],[]]);
+function art(n,happy){
+  const {g,f}=SPR[n],H=g.length+2,W=Math.max(...g.map(r=>r.length))+2;
+  const m=(x,y)=>{const r=g[y-1];return r&&x>0?(r[x-1]||'.'):'.'}, filled=(x,y)=>MAT[m(x,y)];
+  const C=Array.from({length:H},()=>Array(W).fill(null));
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=m(x,y);
+    if(MAT[k]){const M=MAT[k];C[y][x]=!filled(x,y-1)?M[2]:(!filled(x,y+1)||!filled(x+1,y))?M[1]:M[0];}
+    else{const nb=[[0,-1],[0,1],[-1,0],[1,0]].map(([dx,dy])=>m(x+dx,y+dy)).find(c=>MAT[c]);if(nb)C[y][x]=MAT[nb][3];}}
+  const put=(x,y,c)=>{if(C[y+1]&&x+1<W)C[y+1][x+1]=c};
+  for(const [ex,ey,gap] of f){const eyes=gap?[ex,ex+gap]:[ex];
+    for(const x of eyes){if(happy){put(x-1,ey+1,EYE);put(x,ey,EYE);put(x+1,ey+1,EYE);}else{put(x,ey,EYE);put(x,ey+1,EYE);}}
+    if(gap){put(ex-1,ey+2,BLUSH);put(ex+gap+1,ey+2,BLUSH);const mx=ex+Math.floor(gap/2);
+      if(happy){put(mx,ey+2,EYE);put(mx+(gap%2?1:0),ey+2,EYE);put(mx,ey+3,'#c8463f');if(gap%2)put(mx+1,ey+3,'#c8463f');}
+      else{put(mx,ey+2,EYE);if(gap%2)put(mx+1,ey+2,EYE);}}
+    else{put(ex,ey+2,BLUSH);if(happy)put(ex-1,ey+2,EYE);}}
+  return C;
+}
+const svg=(n,happy,px,cls='')=>{const C=art(n,happy),h=C.length,w=C[0].length;let s='';C.forEach((r,y)=>r.forEach((c,x)=>{if(c)s+=`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`}));return `<span class="spr ${cls}" style="--w:${w*px}px">${cls?'<i class="gs"></i>':''}<svg viewBox="0 0 ${w} ${h}" width="${w*px}" height="${h*px}" shape-rendering="crispEdges" aria-hidden="true">${s}</svg></span>`};
+const L=['이름','서사','가독성','재미'];
+const items=M.map(([n,idea,story,,a,b],i)=>{const [hook,sc,beats,pro,con,grp]=META[n];return {i,n,idea,story,hook,sc,beats,pro,con,grp,a,b,tot:sc.reduce((x,y)=>x+y)}});
+const card=d=>`<article class="c ${d.grp==='rec'?'rec':''}"><div class="stage">${d.grp==='rec'?'<span class="badge">추천</span>':d.grp==='base'?'<span class="badge base">비교 기준</span>':''}
+<div class="ico" title="아이콘 크기 미리보기">${svg(d.n,0,2)}${svg(d.n,0,1.25)}</div>${svg(d.n,0,7,'big')}${svg(d.n,1,7,'big hp')}</div>
+<div class="body"><div class="hd"><span class="no">${String(d.i+1).padStart(2,'0')}</span><h2>${d.n}</h2><span class="tot"><b>${d.tot}</b>/20</span></div>
+<div class="hook">${d.hook}</div>
+<div class="beats">${d.beats.map((x,k)=>`<div><small>${['흩어짐','모으기','잇기'][k]}</small>${x}</div>`).join('')}</div>
+<div class="sc">${d.sc.map((v,k)=>`<span>${L[k]}</span><i aria-label="${L[k]} ${v}/5">${[1,2,3,4,5].map(j=>`<b class="${j<=v?'on':''}"></b>`).join('')}</i>`).join('')}</div>
+<div class="pc"><div class="p">${d.pro}</div><div class="m">${d.con}</div></div>
+<details><summary>개념·서사 자세히</summary><p style="margin-top:6px">${d.idea}</p><p style="margin-top:4px">${d.story}</p></details></div></article>`;
+document.getElementById('rec').innerHTML=items.filter(d=>d.grp==='rec').sort((x,y)=>y.tot-x.tot).map(card).join('');
+const rest=items.filter(d=>d.grp!=='rec'), R=document.getElementById('rest');
+const sortBy=k=>{R.innerHTML=rest.slice().sort((x,y)=>(k<0?y.tot-x.tot:y.sc[k]-x.sc[k])||y.tot-x.tot).map(card).join('');document.querySelectorAll('.bar button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.k===k))};
+document.querySelectorAll('.bar button').forEach(b=>b.onclick=()=>sortBy(+b.dataset.k));sortBy(-1);
+</script>
+</body></html>

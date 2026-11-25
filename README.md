@@ -1,112 +1,79 @@
-<h1 align="center"><img src="integration/memoivy.svg" width="36" height="36" alt=""> MemoIvy</h1>
+<h1 align="center"><img src="integration/memoivy.svg" width="64" height="64" alt=""><br>MemoIvy</h1>
 
-<p align="center"><strong>적고 · 묶고 · 연결하는 Linux 메모 앱</strong><br>작은 메모에서, 연결된 생각으로.</p>
-<p align="center"><a href="#시작하기">시작하기</a> · <a href="#화면-살펴보기">화면 살펴보기</a> · <a href="https://github.com/pollux-o4/MemoIvy/issues">문제 제보</a></p>
+<p align="center"><strong>바탕화면에 붙여 두는 스티커 메모, 그리고 그 메모를 잇는 캔버스</strong><br>작은 메모에서, 연결된 생각으로.</p>
 
-- **적기** — Markdown·체크리스트·이미지·파일, 독립 편집 창과 자동 저장.
-- **모으기** — 목록 검색·본문 펼침, 프로젝트와 하위 프로젝트로 정리.
-- **연결하기** — 캔버스 배치·연결·정렬, 변경 되돌리기와 다시 실행.
+<p align="center"><sub>무료 · 오픈소스(MIT) · Windows · Linux</sub></p>
 
-## 시작하기
+<p align="center">
+<a href="https://apps.microsoft.com/detail/9P4QJZCXFDJV"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/ms-store-dark.svg"><img src=".github/readme/ms-store-light.svg" alt="Windows용 MemoIvy 받기 (Microsoft Store)" height="48"></picture></a>&nbsp;
+<a href="https://snapcraft.io/memoivy"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/snap-store-dark.svg"><img src=".github/readme/snap-store-light.svg" alt="Linux용 MemoIvy 받기 (Snap Store)" height="48"></picture></a>&nbsp;
+<a href="https://buymeacoffee.com/oneulCreator"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/coffee-dark.svg"><img src=".github/readme/coffee-light.svg" alt="Buy Me a Coffee로 후원하기" height="48"></picture></a>
+</p>
 
-### 기존 Snap 배포본 설치·업데이트
+<p align="center"><img src="distribution/snap/visuals/screenshots/04.png" alt="쓰는 대로 제목·체크 목록·링크·사진 서식이 입혀지는 메모 창" width="100%"></p>
 
-[Snap Store에서 설치](https://snapcraft.io/memoivy)하거나 터미널에서 실행하세요. 배포판에 **snapd**가 필요합니다.
+<table>
+<tr>
+<td width="33%" valign="top"><img src="distribution/snap/visuals/screenshots/01.png" alt="검색 한 번으로 제목과 할 일까지 찾는 목록 화면"><br><b>찾기</b><br>할 일까지 한 번에 검색</td>
+<td width="33%" valign="top"><img src="distribution/snap/visuals/screenshots/02.png" alt="관련 메모를 프로젝트 한 장에 묶는 화면"><br><b>묶기</b><br>프로젝트 한 장으로</td>
+<td width="33%" valign="top"><img src="distribution/snap/visuals/screenshots/03.png" alt="메모를 잇고 진행률을 보는 캔버스 화면"><br><b>잇기</b><br>메모를 이어 계획으로</td>
+</tr>
+</table>
+
+## 특징
+
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/features-dark.svg"><img src=".github/readme/features-light.svg" alt="특징 — 01 메모마다 독립 창: 필요한 메모만 띄워 옆에 붙여 두고, 쓰는 즉시 자동 저장. 02 무료·오픈소스: 광고·구독 없이 모든 기능, MIT 라이선스. 03 계정 없이, 내 컴퓨터에: 가입·서버 없이 로컬 저장, 인터넷 없이도 사용." width="100%"></picture>
+
+## 설치
+
+- **Windows** — [Microsoft Store](https://apps.microsoft.com/detail/9P4QJZCXFDJV)에서 설치합니다.
+- **Linux** — [Snap Store](https://snapcraft.io/memoivy)에서 설치하거나 터미널에서 실행합니다.
 
 ```bash
-# 처음 설치
 sudo snap install memoivy
-
-# 설치된 앱 업데이트
-sudo snap refresh memoivy
-
-# 실행
-snap run memoivy
 ```
 
-이전에 로컬 `.snap` 파일로 설치해 “스토어에서 알 수 없음” 오류가 나면, 한 번만 Store 배포본으로 전환하세요.
+<details>
+<summary>“스토어에서 알 수 없음” 오류가 날 때</summary>
+
+로컬 `.snap`으로 설치한 경우입니다. 한 번만 Store 배포본으로 전환하세요.
 
 ```bash
 sudo snap refresh memoivy --amend --channel=stable
 ```
 
-Snap은 자동 업데이트도 지원합니다. 수동 업데이트 전에는 앱을 정상 종료하고, 완료 후 다시 열어 주세요.
+</details>
 
-기존 설치본과 Electron 개발판의 데이터 위치는 **백업·복원**(OPS-002)에서 확인하세요.
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tips-dark.svg"><img src=".github/readme/tips-light.svg" alt="업데이트는 자동: 앱이 켜져 있으면 종료한 뒤 적용. 바로 받기는 Windows Store 라이브러리의 업데이트 받기, Linux는 sudo snap refresh memoivy. 단축키·서식은 F1 또는 캔버스 아래 막대의 물음표(?) 버튼에서 움직이는 예시로 확인." width="100%"></picture>
 
-<details>
-<summary>소스에서 실행·설치하기 (개발용)</summary>
+데이터 위치와 백업은 `docs`에서 **백업·복원**(OPS-002)으로 찾으세요.
 
-개발판은 Electron·React 화면과 Rust·SQLite 엔진을 사용합니다. **mise**로 Node와 Rust 버전을 맞춥니다.
+## 개발
+
+Electron · React · Rust · SQLite. **mise**로 Node·Rust 버전을 맞춥니다.
 
 ```bash
-# 개발 의존성 설치 후 실행
-mise install
-npm ci
-mise run dev
-
-# 화면별 상태 살펴보기
-mise run storybook
+mise install && npm ci && mise run dev
 ```
-
-앱 메뉴와 바탕화면에 설치하거나 기존 설치본을 갱신하려면:
-
-```bash
-mise run install
-```
-
-실행 중인 MemoIvy는 종료한 뒤 다시 열어 주세요.
-
-</details>
-
-## 화면 살펴보기
-
-<details>
-<summary><strong>목록</strong> — 메모를 검색하고 본문 펼쳐 읽기</summary>
-
-긴 본문은 목록 안에서 펼치고 접습니다. 관련 메모는 프로젝트로 묶고 하위 프로젝트로 나눕니다.
-
-</details>
-
-<details>
-<summary><strong>캔버스</strong> — 메모를 배치하고 다음 작업 연결하기</summary>
-
-카드를 끌어 배치하고 다음 메모를 연결합니다. 여러 카드를 선택해 정렬하거나 간격을 맞추고, 배치·연결·완료 변경을 되돌릴 수 있습니다. 카드를 두 번 누르면 원본 메모가 열립니다.
-
-</details>
-
-<details>
-<summary><strong>단축키</strong> — 자주 쓰는 조작 빠르게 확인하기</summary>
-
-| 하고 싶은 일 | 조작 |
-| --- | --- |
-| 앱·서식 단축키 확인 | `F1` |
-| 체크 항목 완료·해제 | 체크박스 클릭 또는 `Ctrl+Enter` |
-| 링크 열기 | `Ctrl+클릭` · 마우스를 올리면 실제 주소 표시 |
-| Markdown 원문 전환 | `Ctrl+Shift+M` 또는 더보기 메뉴 |
-| 캔버스에서 여러 카드 선택 | 빈 곳에서 끌기 |
-| 선택한 캔버스 메모 삭제 | `Delete` → 확인 후 삭제 |
-
-</details>
-
-## 개발·검증
-
-Electron · React · Rust · SQLite · MIT License
 
 <details>
 <summary>빌드·검증 명령</summary>
 
 | 작업 | 명령 |
 | --- | --- |
+| 화면별 상태 보기 | `mise run storybook` |
+| 앱 메뉴·바탕화면에 설치 | `mise run install` |
 | 화면 타입 검사 | `npm run typecheck` |
 | 저장 엔진 검증 | `mise run test:engine` |
-| Storybook 빌드 | `npm run build:storybook` |
 | 릴리스 빌드 | `mise run build` |
-| 현재 운영체제 설치 패키지 | `npm run desktop:build` |
-| 커밋·푸시 비밀정보 검사 활성화 | `mise install` 후 `mise run hooks:install` |
+| 커밋·푸시 비밀정보 검사 켜기 | `mise run hooks:install` |
+
+상세 안내는 `docs`에서 **설치**(OPS-001), **개발 검증**(OPS-003), **아키텍처** 관심사로 찾으세요.
 
 </details>
 
-상세 안내는 `docs`에서 **설치**(OPS-001), **백업·복구**(OPS-002), **개발 검증**(OPS-003), **아키텍처** 관심사로 찾을 수 있습니다.
+## 후원
+
+<a href="https://buymeacoffee.com/oneulCreator"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/support-dark.svg"><img src=".github/readme/support-light.svg" alt="MemoIvy가 도움이 됐다면 Buy Me a Coffee로 다음 기능을 응원해 주세요" width="100%"></picture></a>
 
 [버그 제보·기능 제안](https://github.com/pollux-o4/MemoIvy/issues) · [MIT License](LICENSE)
