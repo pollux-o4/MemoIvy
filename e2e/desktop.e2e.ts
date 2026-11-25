@@ -278,7 +278,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  // 회귀: 캔버스가 같은 메모의 위치만 바꿔도 메모 창 본문 저장이 충돌로 막혀 창이 닫히지 않았다.
+  // 검증: SAVE-002. 회귀: 캔버스가 같은 메모의 위치만 바꿔도 메모 창 본문 저장이 충돌로 막혀 창이 닫히지 않았다.
   test('캔버스의 위치 변경은 메모 본문 저장·닫기를 막지 않고, 본문 충돌은 선택지를 보인다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-conflict-'));
     const { app, library } = await launch(dir);
@@ -320,7 +320,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
     }
   });
 
-  // 회귀(사용자 보고): 캔버스에서 새 메모를 만들고 인스펙터에 제목을 적은 뒤 메모 창에 쓰면 저장·닫기가 막혔다.
+  // 검증: SAVE-002. 회귀: 캔버스에서 새 메모를 만들고 인스펙터에 제목을 적은 뒤 메모 창에 쓰면 저장·닫기가 막혔다.
   test('캔버스 인스펙터로 제목을 적은 새 메모도 메모 창에서 저장하고 닫을 수 있다', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'memoivy-e2e-title-'));
     const { app, library } = await launch(dir);
