@@ -7,10 +7,9 @@ const isId = (value) => typeof value === 'string' && NOTE_ID.test(value);
 const flushListeners = new Set();
 const engineRequest = (channel, ...args) => ipcRenderer.invoke(channel, ...args).then((envelope) => {
   if (envelope?.__memoivyError) {
-    const error = new Error(envelope.__memoivyError.message || 'MemoIvy engine request failed');
-    error.code = envelope.__memoivyError.code || 'ENGINE_ERROR';
-    error.snapshot = envelope.__memoivyError.snapshot;
-    throw error;
+    // contextBridge는 Error의 code·snapshot을 버리므로 평범한 객체로 넘기고 렌더러(desktop_errors)가 Error로 되살린다.
+    const { message, code, snapshot } = envelope.__memoivyError;
+    throw { __memoivyError: { message: message || 'MemoIvy engine request failed', code: code || 'ENGINE_ERROR', snapshot } };
   }
   return envelope?.__memoivyResult;
 });
