@@ -773,6 +773,13 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await content.getByText('[질병청] 말머리', { exact: true }).waitFor();
       // 밑줄은 커서 밖에서 <u> 기호를 숨기고 글자에만 밑줄을 긋는다.
       await expect.poll(() => editor.locator('.md-underline').allTextContents()).toEqual(['밑줄']);
+      // 태그 안쪽 글자만 골라도 Ctrl+U로 밑줄이 풀린다. 클릭하면 태그가 드러나 위치가 바뀌므로 키보드로 고른다.
+      await content.getByText('밑줄', { exact: true }).click();
+      await editor.keyboard.press('End');
+      for (let i = 0; i < 6; i++) await editor.keyboard.press('ArrowLeft');
+      for (let i = 0; i < 2; i++) await editor.keyboard.press('Shift+ArrowLeft');
+      await editor.keyboard.press('Control+U');
+      await expect.poll(() => editor.locator('.md-underline').count()).toBe(0);
       await app.evaluate(({ shell }) => {
         shell.openExternal = async (url) => { process.env.MEMOIVY_TEST_OPENED_URL = url; };
       });
@@ -810,7 +817,7 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await expect.poll(() => library.evaluate(async (id) => {
         const { snapshot } = await window.memoivy.request('snapshot');
         return snapshot?.notes.find((note) => note.id === id)?.text;
-      }, id)).toBe(text.replace('(naver.com)', '(https://naver.com/news)'));
+      }, id)).toBe(text.replace('(naver.com)', '(https://naver.com/news)').replace('<u>밑줄</u>', '밑줄'));
       await content.getByText('링크 확인', { exact: true }).hover();
       await content.getByText('네이버', { exact: true }).hover();
       await preview.getByText('naver.com/news', { exact: true }).waitFor({ timeout: 3_000 });

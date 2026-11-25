@@ -30,3 +30,10 @@ test('underline tags are reported for hiding', () => {
   ensureSyntaxTree(state, 8);
   expect(inlineMarks(state)[0].tags).toEqual([{ from: 0, to: 3 }, { from: 4, to: 8 }]);
 });
+
+test('a visible range starting mid-paragraph still sees the opening tag', () => {
+  const doc = '<u>첫 줄\n둘째 줄</u>';
+  const state = EditorState.create({ doc, extensions: [markdown({ base: markdownLanguage })] });
+  ensureSyntaxTree(state, doc.length);
+  expect(inlineMarks(state, doc.indexOf('둘째')).map((mark) => mark.kind)).toEqual(['underline']);
+});

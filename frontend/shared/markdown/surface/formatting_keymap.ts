@@ -1,18 +1,9 @@
 import type { EditorView } from '@codemirror/view';
 import { continueListItem, handleListKey } from './list_markers';
 import { commitCodeFence } from './fence_input';
+import { toggleInlineMark as wrap } from './inline_toggle';
 
 export function formattingKeymap() {
-  const wrap = (left: string, right = left) => (view: EditorView) => {
-    if (view.composing) return false;
-    const { from, to } = view.state.selection.main;
-    const selected = view.state.sliceDoc(from, to);
-    const remove = selected.startsWith(left) && selected.endsWith(right) && selected.length >= left.length + right.length;
-    const insert = remove ? selected.slice(left.length, selected.length - right.length) : `${left}${selected || '텍스트'}${right}`;
-    const start = from + (remove ? 0 : left.length);
-    view.dispatch({ changes: { from, to, insert }, selection: { anchor: start, head: start + (remove ? insert.length : selected ? selected.length : 2) }, scrollIntoView: true });
-    view.focus(); return true;
-  };
   const linePrefix = (prefix: string) => (view: EditorView) => {
     if (view.composing) return false;
     const line = view.state.doc.lineAt(view.state.selection.main.head);

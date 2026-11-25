@@ -27,7 +27,11 @@ const UNDERLINE_CLOSE = /^<\/u>$/i;
 export function inlineMarks(state: EditorState, from = 0, to = state.doc.length): InlineMark[] {
   const marks: InlineMark[] = [];
   let open: { tag: Range; block: number } | undefined;
-  syntaxTree(state).iterate({ from, to, enter(node) {
+  const tree = syntaxTree(state);
+  // 보이는 범위가 문단 중간에서 시작해도 그 문단의 여는 `<u>`를 보도록 최상위 블록 시작부터 훑는다.
+  let block = tree.resolveInner(from, 1);
+  while (block.parent && block.parent.name !== 'Document') block = block.parent;
+  tree.iterate({ from: Math.min(from, block.from), to, enter(node) {
     if (node.name === 'Link') {
       if (isMarkdownLink(node.node)) marks.push({ from: node.from, to: node.to, kind: 'link', tags: [] });
       return false;
