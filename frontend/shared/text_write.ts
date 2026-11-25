@@ -1,7 +1,7 @@
 import type { Snapshot } from './engine_contract';
 
 /** 본문 충돌의 사용자 문구(SSoT). 엔진 원문은 화면에 노출하지 않는다. */
-export const TEXT_CONFLICT_MESSAGE = '다른 창에서 본문이 바뀌었어요. 어느 쪽을 남길까요?';
+export const TEXT_CONFLICT_MESSAGE = '다른 창에서도 이 메모를 고쳤어요. 어느 쪽 내용을 남길까요?';
 const ENGINE_CONFLICT_MESSAGE = 'This note changed in another window.';
 
 export const isConflict = (reason: unknown) => (reason as { code?: string } | null)?.code === 'CONFLICT';

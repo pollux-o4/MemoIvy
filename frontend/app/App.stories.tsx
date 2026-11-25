@@ -203,6 +203,6 @@ export const SaveConflict: Story = {
   }),
   play: async ({ canvasElement }) => {
     await typeIntoEditor(canvasElement);
-    await waitFor(() => expect(within(canvasElement).getByRole('button', { name: '내 초안으로 덮어쓰기' })).toBeVisible(), { timeout: 3000 });
+    await waitFor(() => expect(within(canvasElement).getByRole('button', { name: '여기 쓴 내용 남기기' })).toBeVisible(), { timeout: 3000 });
   },
 };

@@ -308,9 +308,9 @@ describe('데스크톱 정합 작동 (합성 데이터 폴더)', () => {
       await editor.keyboard.type(' 내 초안');
       await remote({ text: '충돌 회귀 다른 창' });
       const status = editor.locator('.editor-status');
-      await expect.poll(() => status.getByRole('button', { name: '내 초안으로 덮어쓰기' }).isVisible(), { timeout: 10_000 }).toBe(true);
+      await expect.poll(() => status.getByRole('button', { name: '여기 쓴 내용 남기기' }).isVisible(), { timeout: 10_000 }).toBe(true);
       if (process.env.MEMOIVY_SHOT) await editor.screenshot({ path: process.env.MEMOIVY_SHOT });
-      await status.getByRole('button', { name: '내 초안으로 덮어쓰기' }).click();
+      await status.getByRole('button', { name: '여기 쓴 내용 남기기' }).click();
       await expect.poll(() => editor.locator('.save-label').textContent(), { timeout: 10_000 }).toBe('저장됨');
       await editor.getByRole('button', { name: '창 닫기' }).click();
       await expect.poll(() => editor.isClosed()).toBe(true);
