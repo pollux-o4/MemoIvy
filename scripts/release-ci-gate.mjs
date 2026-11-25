@@ -34,6 +34,8 @@ function main() {
   const sha = process.env.GITHUB_SHA;
   const pr = gh(`repos/${repo}/commits/${sha}/pulls`).find((p) => p.merged_at && p.base.ref === 'main');
   const headSha = pr?.head.sha;
+  // 병합 시 머리 브랜치가 자동 삭제되면 체크아웃에 그 커밋이 없다. PR 참조는 GitHub이 계속 보관한다.
+  if (pr && !tree(headSha)) execFileSync('git', ['fetch', '--no-tags', 'origin', `refs/pull/${pr.number}/head`], { stdio: 'inherit' });
   const decision = decideGate({
     releaseTree: tree(sha),
     pr,
