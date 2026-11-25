@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { App } from './App';
 import markdownImage from '../../fixtures/attachments/dc76b5742600dc4aa297c35649b08ed26ee3b9f7972166b061752681cb134eb8.png?inline';
 import windowKinds from '../../desktop/window_kinds.json';
@@ -175,13 +176,33 @@ export const EmptyLibrary: Story = { render: () => previewApp('library', undefin
 export const NarrowWindow: Story = {
   render: () => previewApp('library', undefined, undefined, [360, 600]),
 };
+/** 저장 실패·충돌 상태: 본문을 한 글자 입력해 자동저장이 실패한 화면을 보인다. */
+function failingEditor(fail: (mock: DesktopBridge) => Promise<never>) {
+  const mock = storyBridge();
+  const bridge: DesktopBridge = { ...mock, async request(op, params) { return op === 'update' ? fail(mock) : mock.request(op, params); } };
+  return <div className="theme-light" style={{ width: 380, height: 420, margin: '0 auto' }}><App bridge={bridge} preview={false} initialScreen="note" initialId={fixtureNoteIds.ideas}/></div>;
+}
+const typeIntoEditor = async (canvasElement: HTMLElement) => {
+  const content = await waitFor(() => { const node = canvasElement.querySelector<HTMLElement>('.cm-content'); if (!node) throw new Error('편집기 없음'); return node; });
+  await userEvent.click(content);
+  await userEvent.keyboard('!');
+};
 export const SaveFailure: Story = {
-  render: () => {
-    const mock = storyBridge();
-    const bridge: DesktopBridge = { ...mock, async request(op, params) {
-      if (op === 'update') { const error = new Error('저장 공간에 접근할 수 없습니다.') as Error & { code: string }; error.code = 'IO'; throw error; }
-      return mock.request(op, params);
-    } };
-    return <div className="theme-light" style={{ width: 380, height: 420, margin: '0 auto' }}><App bridge={bridge} preview={false} initialScreen="note" initialId={fixtureNoteIds.ideas}/></div>;
+  render: () => failingEditor(async () => { throw Object.assign(new Error('저장 공간에 접근할 수 없습니다.'), { code: 'IO' }); }),
+  play: async ({ canvasElement }) => {
+    await typeIntoEditor(canvasElement);
+    await waitFor(() => expect(within(canvasElement).getByRole('button', { name: '다시 시도' })).toBeVisible(), { timeout: 3000 });
+  },
+};
+/** 다른 창이 본문을 바꾼 진짜 충돌: 재기준하지 않고 덮어쓰기·최신 버전 선택을 보인다. */
+export const SaveConflict: Story = {
+  render: () => failingEditor(async (mock) => {
+    const { snapshot } = await mock.request('snapshot');
+    if (snapshot) snapshot.notes = snapshot.notes.map((note) => note.id === fixtureNoteIds.ideas ? { ...note, text: `${note.text}\n다른 창에서 고친 줄` } : note);
+    throw Object.assign(new Error('This note changed in another window.'), { code: 'CONFLICT', snapshot });
+  }),
+  play: async ({ canvasElement }) => {
+    await typeIntoEditor(canvasElement);
+    await waitFor(() => expect(within(canvasElement).getByRole('button', { name: '내 초안으로 덮어쓰기' })).toBeVisible(), { timeout: 3000 });
   },
 };
