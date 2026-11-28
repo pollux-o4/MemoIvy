@@ -5,14 +5,71 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-const installers = path.resolve(import.meta.dirname, '../artifacts/installers');
-const ENGINE = 'resources/engine/memoivy-engine'; // electron-builder.yml의 extraResources `to`와 같아야 한다.
-const EXPECTED_LOCALES = ['en-US.pak', 'ko.pak'];
+const root = path.resolve(import.meta.dirname, '..');
+const installers = path.join(root, 'artifacts/installers');
 
 function fail(message, detail = '') {
   if (detail) console.error(detail);
   throw new Error(message);
 }
+
+/** electron-builder.yml(SSoT)에서 동봉 엔진 경로와 유지할 언어 목록을 직접 읽는다. */
+function readPackagingSpec() {
+  const yml = readFileSync(path.join(root, 'desktop/electron-builder.yml'), 'utf8');
+  const lines = yml.split(/\r?\n/);
+  const languages = [];
+  let section = null;
+  let inLanguages = false;
+  let inExtra = false;
+  let unixEngine;
+  let winEngine;
+
+  for (const raw of lines) {
+    const line = raw.replace(/#.*$/, '');
+    if (!line.trim()) continue;
+    const top = line.match(/^([A-Za-z0-9_]+):/);
+    if (top) {
+      section = top[1];
+      inLanguages = section === 'electronLanguages';
+      inExtra = false;
+      continue;
+    }
+    if (inLanguages) {
+      const item = line.match(/^\s+-\s+([^\s]+)\s*$/);
+      if (item) languages.push(item[1].replace(/^['"]|['"]$/g, ''));
+      continue;
+    }
+    if (section === 'mac' || section === 'win') {
+      if (/^\s{2}extraResources:/.test(line)) {
+        inExtra = true;
+        continue;
+      }
+      if (/^\s{2}[A-Za-z0-9_]+:/.test(line)) {
+        inExtra = false;
+        continue;
+      }
+      if (inExtra) {
+        const to = line.match(/^\s+to:\s+([^\s]+)\s*$/);
+        if (to) {
+          const target = `resources/${to[1].replace(/^['"]|['"]$/g, '')}`;
+          if (section === 'mac') unixEngine = target;
+          else winEngine = target;
+        }
+      }
+    }
+  }
+
+  if (!languages.length) fail('electronLanguages missing in desktop/electron-builder.yml');
+  if (!unixEngine) fail('mac.extraResources engine target missing in desktop/electron-builder.yml');
+  if (!winEngine) fail('win.extraResources engine target missing in desktop/electron-builder.yml');
+  return {
+    unixEngine,
+    winEngine,
+    expectedLocales: languages.map((lang) => `${lang}.pak`).sort(),
+  };
+}
+
+const SPEC = readPackagingSpec();
 
 function readAsarEntries(asarPath) {
   const buf = readFileSync(asarPath);
@@ -23,8 +80,8 @@ function readAsarEntries(asarPath) {
 
 function assertExpectedLocales(found, label) {
   const actual = [...found].sort();
-  if (actual.length !== EXPECTED_LOCALES.length || actual.some((item, index) => item !== EXPECTED_LOCALES[index])) {
-    fail(`${label} locales mismatch: expected [${EXPECTED_LOCALES.join(', ')}], got [${actual.join(', ')}]`);
+  if (actual.length !== SPEC.expectedLocales.length || actual.some((item, index) => item !== SPEC.expectedLocales[index])) {
+    fail(`${label} locales mismatch: expected [${SPEC.expectedLocales.join(', ')}], got [${actual.join(', ')}]`);
   }
 }
 
@@ -42,8 +99,8 @@ function verifyUnpacked(dir, engineRelPath) {
 const checks = {
   windows() {
     const unpacked = path.join(installers, 'win-unpacked');
-    verifyUnpacked(unpacked, `${ENGINE}.exe`);
-    const engine = path.join(unpacked, `${ENGINE}.exe`);
+    verifyUnpacked(unpacked, SPEC.winEngine);
+    const engine = path.join(unpacked, SPEC.winEngine);
     // 러너에는 VC 런타임이 깔려 있어 e2e로는 드러나지 않으므로, 엔진이 시스템 DLL만 쓰는지 직접 확인한다.
     const vswhere = path.join(process.env['ProgramFiles(x86)'] ?? '', 'Microsoft Visual Studio/Installer/vswhere.exe');
     const dumpbin = execFileSync(vswhere, ['-latest', '-find', 'VC\\Tools\\MSVC\\*\\bin\\Hostx64\\x64\\dumpbin.exe'], { encoding: 'utf8' }).split(/\r?\n/)[0];
@@ -51,13 +108,13 @@ const checks = {
     if (/vcruntime|msvcp|api-ms-win-crt/i.test(deps)) fail('Windows engine depends on the VC runtime', deps);
   },
   linux() {
-    verifyUnpacked(path.join(installers, 'linux-unpacked'), ENGINE);
+    verifyUnpacked(path.join(installers, 'linux-unpacked'), SPEC.unixEngine);
   },
   snap() {
     const snaps = readdirSync(installers).filter((name) => name.endsWith('.snap'));
     if (snaps.length !== 1) fail(`Expected one snap, found ${snaps.length}`);
     const listing = execFileSync('unsquashfs', ['-ll', path.join(installers, snaps[0])], { encoding: 'utf8', maxBuffer: 64 << 20 });
-    if (!listing.split('\n').some((line) => line.endsWith(ENGINE))) fail(`Snap engine missing: ${ENGINE}`);
+    if (!listing.split('\n').some((line) => line.endsWith(SPEC.unixEngine))) fail(`Snap engine missing: ${SPEC.unixEngine}`);
     const locales = [];
     for (const line of listing.split('\n')) {
       const match = line.match(/\/locales\/([^/\s]+\.pak)$/);
