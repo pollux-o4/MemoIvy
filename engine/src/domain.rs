@@ -77,6 +77,24 @@ pub(crate) fn valid_hash(s: &str) -> bool {
         && s.bytes()
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
+/// Scans every note text once in O(sum(|text|)) and maps each referenced valid asset hash
+/// to the notes that contain `asset:<hash>` (preserving note order, deduplicated per note).
+pub(crate) fn build_asset_index<'a>(notes: &'a [Note]) -> HashMap<&'a str, Vec<&'a Note>> {
+    let mut index: HashMap<&'a str, Vec<&'a Note>> = HashMap::new();
+    for note in notes {
+        if !note.text.contains("asset:") {
+            continue;
+        }
+        let mut seen = HashSet::new();
+        for (pos, _) in note.text.match_indices("asset:") {
+            let rest = &note.text[pos + 6..];
+            if let Some(hash_str) = rest.get(..64).filter(|h| valid_hash(h) && seen.insert(*h)) {
+                index.entry(hash_str).or_default().push(note);
+            }
+        }
+    }
+    index
+}
 pub(crate) fn mime_from_ext(e: &str) -> &'static str {
     match e {
         "png" => "image/png",
@@ -120,13 +138,13 @@ pub(crate) fn note_depth(ns: &[Note], id: &str) -> Option<usize> {
     Some(d)
 }
 pub(crate) fn validate_notes(ns: &[Note]) -> Result<(), String> {
-    let mut ids = HashSet::new();
-    for n in ns {
+    let mut by_id: HashMap<&str, usize> = HashMap::with_capacity(ns.len());
+    for (idx, n) in ns.iter().enumerate() {
         let parsed = uuid::Uuid::parse_str(&n.id).map_err(|_| "invalid note id".to_string())?;
         if parsed.to_string() != n.id {
             return Err("noncanonical note id".into());
         }
-        if !ids.insert(n.id.as_str()) {
+        if by_id.insert(n.id.as_str(), idx).is_some() {
             return Err("duplicate note id".into());
         }
         if !COLORS.contains(&n.color.as_str()) {
@@ -139,47 +157,153 @@ pub(crate) fn validate_notes(ns: &[Note]) -> Result<(), String> {
             return Err("invalid canvas position".into());
         }
     }
-    let by_id: HashMap<&str, &Note> = ns.iter().map(|n| (n.id.as_str(), n)).collect();
-    for n in ns {
-        let mut seen = HashSet::new();
+    let mut parents: Vec<Option<usize>> = Vec::with_capacity(ns.len());
+    for (idx, n) in ns.iter().enumerate() {
+        let mut seen = HashSet::with_capacity(n.canvas.next.len());
         for edge in &n.canvas.next {
-            if uuid::Uuid::parse_str(edge)
-                .ok()
-                .is_none_or(|u| u.to_string() != *edge)
-                || edge == &n.id
-                || !by_id.contains_key(edge.as_str())
-                || !seen.insert(edge)
-            {
+            if edge == &n.id || !by_id.contains_key(edge.as_str()) || !seen.insert(edge.as_str()) {
                 return Err("invalid canvas edge".into());
             }
         }
-        if let Some(parent) = &n.canvas.parent {
-            if uuid::Uuid::parse_str(parent)
-                .ok()
-                .is_none_or(|u| u.to_string() != *parent)
-                || parent == &n.id
-                || !by_id.contains_key(parent.as_str())
-            {
-                return Err("invalid project parent".into());
+        let parent_idx = match n.canvas.parent.as_deref() {
+            Some(parent) => {
+                let &p = by_id
+                    .get(parent)
+                    .filter(|&&p| p != idx)
+                    .ok_or_else(|| "invalid project parent".to_string())?;
+                Some(p)
             }
-        }
+            None => None,
+        };
+        parents.push(parent_idx);
     }
-    for n in ns {
-        let mut cur = Some(n.id.as_str());
-        let mut depth = 0;
-        let mut chain = HashSet::new();
-        while let Some(id) = cur {
-            if !chain.insert(id) {
-                return Err("project cycle".into());
+    // 0 = unvisited, 1 = visiting, 2 = done (single O(N) pass)
+    let mut state = vec![0u8; ns.len()];
+    let mut depths = vec![0usize; ns.len()];
+    let mut chain = Vec::new();
+    for start in 0..ns.len() {
+        if state[start] == 2 {
+            continue;
+        }
+        chain.clear();
+        let mut cur = Some(start);
+        let base_depth = loop {
+            let Some(i) = cur else { break 0 };
+            match state[i] {
+                1 => return Err("project cycle".into()),
+                2 => break depths[i],
+                _ => {
+                    state[i] = 1;
+                    chain.push(i);
+                    cur = parents[i];
+                }
             }
-            depth += 1;
+        };
+        for (offset, &i) in chain.iter().rev().enumerate() {
+            let depth = base_depth + offset + 1;
             if depth > MAX_DEPTH + 1 {
                 return Err("project nesting exceeds depth limit".into());
             }
-            cur = by_id.get(id).and_then(|x| x.canvas.parent.as_deref())
+            depths[i] = depth;
+            state[i] = 2;
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_asset_index, validate_notes, Canvas, Note, MAX_DEPTH};
+
+    fn make_note(id: &str, text: &str, parent: Option<&str>) -> Note {
+        Note {
+            id: id.into(),
+            text: text.into(),
+            color: "yellow".into(),
+            modified: 1,
+            canvas: Canvas {
+                parent: parent.map(str::to_owned),
+                ..Canvas::default()
+            },
+        }
+    }
+
+    #[test]
+    fn asset_index_handles_multibyte_utf8_duplicates_and_invalid_hashes() {
+        let h1 = "a".repeat(64);
+        let h2 = "b".repeat(64);
+        let upper = "C".repeat(64);
+        let n1 = make_note(
+            "00000000-0000-4000-8000-000000000001",
+            &format!("![x](asset:{h1})한글바로뒤 ![dup](asset:{h1}) asset:{upper} asset:short"),
+            None,
+        );
+        let n2 = make_note(
+            "00000000-0000-4000-8000-000000000002",
+            &format!("asset:{h1} and asset:{h2}"),
+            None,
+        );
+        let notes = [n1, n2];
+        let index = build_asset_index(&notes);
+        assert_eq!(index.len(), 2);
+        assert_eq!(
+            index[h1.as_str()]
+                .iter()
+                .map(|n| n.id.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "00000000-0000-4000-8000-000000000001",
+                "00000000-0000-4000-8000-000000000002",
+            ]
+        );
+        assert_eq!(
+            index[h2.as_str()]
+                .iter()
+                .map(|n| n.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["00000000-0000-4000-8000-000000000002"]
+        );
+    }
+
+    #[test]
+    fn validate_notes_checks_cycles_depth_and_edges_in_linear_pass() {
+        let ids = [
+            "00000000-0000-4000-8000-000000000001",
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000003",
+            "00000000-0000-4000-8000-000000000004",
+            "00000000-0000-4000-8000-000000000005",
+        ];
+        // Depth MAX_DEPTH + 1 (4 nodes: 0 <- 1 <- 2 <- 3) is allowed.
+        let allowed = vec![
+            make_note(ids[0], "", None),
+            make_note(ids[1], "", Some(ids[0])),
+            make_note(ids[2], "", Some(ids[1])),
+            make_note(ids[3], "", Some(ids[2])),
+        ];
+        assert_eq!(allowed.len(), MAX_DEPTH + 1);
+        assert!(validate_notes(&allowed).is_ok());
+
+        // Depth MAX_DEPTH + 2 exceeds limit.
+        let mut too_deep = allowed.clone();
+        too_deep.push(make_note(ids[4], "", Some(ids[3])));
+        assert_eq!(
+            validate_notes(&too_deep),
+            Err("project nesting exceeds depth limit".into())
+        );
+
+        // Cycle detection.
+        let cycle = vec![
+            make_note(ids[0], "", Some(ids[1])),
+            make_note(ids[1], "", Some(ids[0])),
+        ];
+        assert_eq!(validate_notes(&cycle), Err("project cycle".into()));
+
+        // Invalid edge.
+        let mut bad_edge = vec![make_note(ids[0], "", None)];
+        bad_edge[0].canvas.next.push(ids[1].into());
+        assert_eq!(validate_notes(&bad_edge), Err("invalid canvas edge".into()));
+    }
 }
 
 #[cfg(test)]
