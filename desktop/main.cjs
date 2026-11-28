@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, shell, session, nativeTheme } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, session, nativeTheme, Menu } = require('electron');
 const windowKinds = require('./window_kinds.json');
 const fs = require('node:fs');
 const { absoluteDirectory, linuxDataHome, snapDataDirectory, legacyNotesPath: findLegacyNotes } = require('./data_paths.cjs');
@@ -297,6 +297,7 @@ function createWindow(kind = 'library', id) {
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
+      spellcheck: false,
     },
   });
   // closed 시점에는 win.webContents 접근이 'Object has been destroyed'로 실패한다.
@@ -421,6 +422,7 @@ if (gotLock) {
     else createWindow('library');
   });
   app.whenReady().then(async () => {
+    if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
     configureCsp();
     installIpc();
     createWindow('library');

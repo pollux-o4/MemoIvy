@@ -1,6 +1,10 @@
 appId: io.github.pollux_o4.MemoIvy
 productName: MemoIvy
 asar: true
+compression: maximum
+electronLanguages:
+  - ko
+  - en-US
 directories:
   output: artifacts/installers
 files:
@@ -13,6 +17,7 @@ files:
   - frontend/dist/**
   - package.json
   - '!desktop/**/*.test.cjs'
+  - '!node_modules/**'
 mac:
   # 엔진 동봉 위치는 scripts/verify-package.mjs의 ENGINE과 같아야 한다.
   extraResources: &unixEngine
