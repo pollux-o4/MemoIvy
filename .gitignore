@@ -16,3 +16,6 @@ __pycache__/
 *.py[cod]
 /.dev-data/
 /frontend/node_modules/
+
+# 공통 규칙 원본(~/.codex/init-rules) 심링크
+.init_rules

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+run_node() {
+  if command -v node >/dev/null 2>&1; then
+    node "$@"
+  else
+    mise exec -- node "$@"
+  fi
+}
+
+run_node -e '
+const fs = require("node:fs");
+const subject = fs.readFileSync(process.argv[1], "utf8").split(/\r?\n/, 1)[0] ?? "";
+if (/^(Merge |Revert |fixup!|squash!)/.test(subject)) process.exit(0);
+if (/^release: MemoIvy \d+\.\d+\.\d+$/.test(subject)) process.exit(0);
+const validPrefix = /^(feat|fix|docs|refactor|test|chore|ci|perf|release)(\([a-z0-9-]+\))?: .*\p{Script=Hangul}/u;
+const declarativeEnding = /(다|니다|어요|아요|해요|세요|까요)\.?\s*$/;
+if (!validPrefix.test(subject) || declarativeEnding.test(subject)) {
+  console.error("커밋 제목 형식: type(scope): 명사형 한국어 설명 (예: docs(rules): 승인 조건 명시)");
+  console.error("현재 제목: " + subject);
+  process.exit(1);
+}
+' "$1"

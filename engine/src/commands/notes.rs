@@ -103,9 +103,10 @@ impl Engine {
         };
         let (_, s) = self.write_tx(Some(base), |tx| {
             let mut ns = notes_tx(tx)?;
+            let existing: HashSet<&str> = ns.iter().map(|n| n.id.as_str()).collect();
             for id in &ids {
                 ensure_note_fresh(tx, id, base)?;
-                if !ns.iter().any(|n| &n.id == id) {
+                if !existing.contains(id.as_str()) {
                     return Err(err("NOT_FOUND", "Note not found"));
                 }
             }
@@ -222,16 +223,21 @@ fn apply_changes(
     changes: &[Value],
     base: u64,
 ) -> Result<(), ApiError> {
+    let index: HashMap<String, usize> = ns
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (n.id.clone(), i))
+        .collect();
     for change in changes {
         let id = change
             .get("id")
             .and_then(Value::as_str)
             .ok_or_else(|| err("INVALID_PARAMS", "change id required"))?;
         ensure_note_fresh(tx, id, base)?;
-        let n = ns
-            .iter_mut()
-            .find(|n| n.id == id)
+        let &idx = index
+            .get(id)
             .ok_or_else(|| err("NOT_FOUND", "Note not found"))?;
+        let n = &mut ns[idx];
         let cv = change
             .get("canvas")
             .ok_or_else(|| err("INVALID_PARAMS", "canvas required"))?;

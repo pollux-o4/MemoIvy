@@ -21,16 +21,24 @@ export function Files({ store, onClose, onOpenNote, initialTab = 'used' }: { sto
   const [autoPrune, setAutoPrune] = useState(Boolean(store.snapshot?.preferences?.autoPrune));
   const gridRef = useRef<HTMLElement>(null);
   const confirmTrigger = useRef<HTMLElement | null>(null);
-  const assets = useMemo(() => {
+  const noteById = useMemo(() => new Map(store.notes.map((note) => [note.id, note])), [store.notes]);
+  const { assetById, used, unused } = useMemo(() => {
     const users = usersByAsset(store.notes);
-    return store.assets.map((asset) => ({ ...asset, usedBy: users.get(asset.id) ?? [] }));
+    const byId = new Map<string, Asset & { usedBy: string[] }>();
+    const usedAssets: Array<Asset & { usedBy: string[] }> = [];
+    const unusedAssets: Array<Asset & { usedBy: string[] }> = [];
+    for (const asset of store.assets) {
+      const enriched = { ...asset, usedBy: users.get(asset.id) ?? [] };
+      byId.set(asset.id, enriched);
+      if (enriched.usedBy.length > 0) usedAssets.push(enriched);
+      else unusedAssets.push(enriched);
+    }
+    return { assetById: byId, used: usedAssets, unused: unusedAssets };
   }, [store.assets, store.notes]);
-  const used = assets.filter((asset) => asset.usedBy.length > 0);
-  const unused = assets.filter((asset) => asset.usedBy.length === 0);
   const visible = tab === 'used' ? used : unused;
-  const active = assets.find((asset) => asset.id === selected) ?? visible[0];
+  const active = (selected ? assetById.get(selected) : undefined) ?? visible[0];
   const lastNote = active?.usedBy[0] ?? active?.lastNote ?? undefined;
-  const lastNoteItem = lastNote ? store.notes.find((note) => note.id === lastNote) : undefined;
+  const lastNoteItem = lastNote ? noteById.get(lastNote) : undefined;
 
   useEffect(() => setAutoPrune(Boolean(store.snapshot?.preferences?.autoPrune)), [store.snapshot?.preferences?.autoPrune]);
   useEffect(() => { if (!confirm) confirmTrigger.current?.focus(); }, [confirm]);
@@ -89,7 +97,7 @@ export function Files({ store, onClose, onOpenNote, initialTab = 'used' }: { sto
           <p className="asset-meta">{readableBytes(active.bytes)} · {daysAgo(active.added)} 추가</p>
           <h2>{active.usedBy.length ? '사용 중인 메모' : active.unusedSince ? `마지막 사용 · ${daysAgo(active.unusedSince)}` : '마지막 사용'}</h2>
           <div className="asset-notes">{active.usedBy.length ? active.usedBy.map((id) => {
-            const note = store.notes.find((item) => item.id === id);
+            const note = noteById.get(id);
             return note && <button key={id} title={titleOf(note)} onClick={() => onOpenNote(id)}>{titleOf(note)}</button>;
           }) : lastNote ? lastNoteItem ? <button title={titleOf(lastNoteItem)} onClick={() => onOpenNote(lastNote)}>{titleOf(lastNoteItem)}</button> : <span>삭제된 메모</span> : <span>쓰인 적 없음</span>}</div>
           <div className="asset-actions">

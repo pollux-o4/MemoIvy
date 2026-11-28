@@ -78,13 +78,15 @@ fn assets(engine: &Engine, notes: &[Note]) -> Result<Vec<Asset>, String> {
             ))
         })
         .map_err(|e| e.to_string())?;
+    let refs = build_asset_index(notes);
     let mut out = vec![];
     for row in rows {
         let (id, name, mime, bytes, added, last_note, unused_since) =
             row.map_err(|e| e.to_string())?;
-        let used_by = notes_referencing_asset(notes, &id)
-            .map(|n| n.id.clone())
-            .collect();
+        let used_by = refs
+            .get(id.as_str())
+            .map(|list| list.iter().map(|n| n.id.clone()).collect())
+            .unwrap_or_default();
         out.push(Asset {
             id,
             name,
@@ -134,12 +136,15 @@ pub(super) fn prune_expired(engine: &mut Engine) -> ApiResult {
     }
     let (_, snapshot) = super::revision::write_tx(engine, None, |tx| {
         let notes = notes_tx(tx)?;
+        let refs = build_asset_index(&notes);
+        let mut del = tx
+            .prepare_cached("DELETE FROM assets WHERE id=?1")
+            .map_err(internal)?;
         for id in &expired {
-            if notes_referencing_asset(&notes, id).next().is_some() {
+            if refs.contains_key(id.as_str()) {
                 continue;
             }
-            tx.execute("DELETE FROM assets WHERE id=?1", [id])
-                .map_err(internal)?;
+            del.execute([id]).map_err(internal)?;
         }
         Ok(())
     })?;
@@ -159,12 +164,12 @@ pub(crate) fn notes_tx(tx: &Transaction<'_>) -> Result<Vec<Note>, ApiError> {
 
 pub(crate) fn persist_all(tx: &Transaction<'_>, notes: &[Note]) -> Result<(), ApiError> {
     tx.execute("DELETE FROM notes", []).map_err(internal)?;
-    for n in notes {
-        tx.execute(
-            "INSERT INTO notes(id,body) VALUES(?1,?2)",
-            params![n.id, serialize_body(n)?],
-        )
+    let mut ins = tx
+        .prepare_cached("INSERT INTO notes(id,body) VALUES(?1,?2)")
         .map_err(internal)?;
+    for n in notes {
+        ins.execute(params![n.id, serialize_body(n)?])
+            .map_err(internal)?;
     }
     Ok(())
 }
@@ -175,6 +180,7 @@ pub(crate) fn serialize_body(value: &impl Serialize) -> Result<String, ApiError>
 
 pub(crate) fn reconcile_asset_usage(tx: &Transaction<'_>) -> Result<(), ApiError> {
     let notes = notes_tx(tx)?;
+    let refs = build_asset_index(&notes);
     let mut q = tx
         .prepare("SELECT id,last_note,unused_since FROM assets")
         .map_err(internal)?;
@@ -190,21 +196,26 @@ pub(crate) fn reconcile_asset_usage(tx: &Transaction<'_>) -> Result<(), ApiError
     let mut updates = Vec::new();
     for row in rows {
         let (id, last, unused) = row.map_err(internal)?;
-        let mut users: Vec<_> = notes_referencing_asset(&notes, &id).collect();
-        users.sort_by_key(|n| std::cmp::Reverse(n.modified));
-        if let Some(n) = users.first() {
+        let newest = refs.get(id.as_str()).and_then(|list| {
+            list.iter()
+                .copied()
+                .fold(None, |best: Option<&Note>, n| match best {
+                    Some(b) if b.modified >= n.modified => Some(b),
+                    _ => Some(n),
+                })
+        });
+        if let Some(n) = newest {
             updates.push((id, Some(n.id.clone()), None))
         } else {
             updates.push((id, last, unused.or(Some(now()))))
         }
     }
     drop(q);
-    for (id, last, unused) in updates {
-        tx.execute(
-            "UPDATE assets SET last_note=?2,unused_since=?3 WHERE id=?1",
-            params![id, last, unused],
-        )
+    let mut upd = tx
+        .prepare_cached("UPDATE assets SET last_note=?2,unused_since=?3 WHERE id=?1")
         .map_err(internal)?;
+    for (id, last, unused) in updates {
+        upd.execute(params![id, last, unused]).map_err(internal)?;
     }
     Ok(())
 }

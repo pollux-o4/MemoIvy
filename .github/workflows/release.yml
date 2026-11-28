@@ -70,6 +70,8 @@ jobs:
 
   publish:
     needs: [draft, candidates]
+    # ci가 건너뛰어지면 그 건너뜀이 후속 작업으로 번지므로 결과를 직접 확인한다.
+    if: ${{ !cancelled() && needs.candidates.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -81,7 +83,7 @@ jobs:
 
   snap-candidate:
     needs: [draft, publish]
-    if: vars.SNAP_STORE_CANDIDATE_ENABLED == 'true'
+    if: ${{ !cancelled() && needs.publish.result == 'success' && vars.SNAP_STORE_CANDIDATE_ENABLED == 'true' }}
     uses: ./.github/workflows/snap-store-candidate.yml
     with:
       tag: ${{ needs.draft.outputs.tag }}
@@ -90,7 +92,7 @@ jobs:
 
   msstore-submission:
     needs: [draft, publish]
-    if: vars.MSSTORE_PRODUCT_ID != ''
+    if: ${{ !cancelled() && needs.publish.result == 'success' && vars.MSSTORE_PRODUCT_ID != '' }}
     uses: ./.github/workflows/msstore-submission.yml
     with:
       tag: ${{ needs.draft.outputs.tag }}

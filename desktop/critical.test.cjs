@@ -2,10 +2,15 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const { EventEmitter } = require('node:events');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { PassThrough, Writable } = require('node:stream');
 const { validateRequest, validateWindowTarget } = require('./ipc_validation.cjs');
 const { EngineTransport } = require('./engine_transport.cjs');
+const { createEngineRuntime } = require('./engine_runtime.cjs');
 const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
@@ -96,4 +101,78 @@ test('preload window allowlist matches window_kinds.json (except note)', () => {
   const listed = JSON.parse(source.match(/openWindow: \(kind, id\) => \{[\s\S]*?(\[[^\]]*\])\.includes\(kind\)/)[1].replaceAll("'", '"'));
   const kinds = Object.keys(require('./window_kinds.json')).filter((kind) => kind !== 'note');
   assert.deepEqual([...listed].sort(), kinds.sort());
+});
+
+test('engine runtime deduplicates concurrent launches and enforces monotonic snapshot revisions', async () => {
+  let spawns = 0;
+  let transportInstance;
+  class MockTransport extends EventEmitter {
+    constructor() {
+      super();
+      spawns += 1;
+      transportInstance = this;
+    }
+    start() {}
+    request(op) {
+      if (op === 'snapshot') return Promise.resolve({ snapshot: { revision: 5, savedRevision: 5, notes: [], assets: [] } });
+      if (op === 'update') return Promise.resolve({ snapshot: { revision: 6, savedRevision: 6, notes: [], assets: [] } });
+      return Promise.resolve({});
+    }
+  }
+  const seenRevisions = [];
+  const runtime = createEngineRuntime({
+    dataDirectory: () => '/tmp/memoivy-runtime-test',
+    legacyNotesPath: () => undefined,
+    engineExecutable: () => '/tmp/memoivy-engine',
+    Transport: MockTransport,
+    fs: { mkdirSync() {}, chmodSync() {} },
+    onSnapshot: (snapshot) => seenRevisions.push(snapshot.revision),
+  });
+
+  await Promise.all([runtime.launch(), runtime.launch()]);
+  assert.equal(spawns, 1);
+  assert.equal(runtime.snapshot().revision, 5);
+
+  transportInstance.emit('event', { snapshot: { revision: 4, savedRevision: 4, notes: [], assets: [] } });
+  transportInstance.emit('event', { snapshot: { revision: 5, savedRevision: 5, notes: [], assets: [] } });
+  await runtime.request('update', {});
+  transportInstance.emit('event', { snapshot: { revision: 6, savedRevision: 6, notes: [], assets: [] } });
+  assert.deepEqual(seenRevisions, [5, 6]);
+  assert.equal(runtime.snapshot().revision, 6);
+});
+
+test('only main.cjs and preload.cjs import electron directly', () => {
+  const desktopFiles = fs.readdirSync(__dirname)
+    .filter((name) => name.endsWith('.cjs') && !name.endsWith('.test.cjs'))
+    .sort();
+  const importers = desktopFiles.filter((name) => /\brequire\(\s*['"]electron['"]\s*\)/.test(fs.readFileSync(path.join(__dirname, name), 'utf8')));
+  assert.deepEqual(importers, ['main.cjs', 'preload.cjs']);
+});
+
+test('commit-msg hook enforces nominal Korean subjects and rejects declarative endings', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'memoivy-commit-msg-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const msgFile = path.join(dir, 'COMMIT_EDITMSG');
+  const hook = path.join(__dirname, '..', '.githooks', 'commit-msg');
+
+  for (const valid of [
+    'refactor(desktop): main.cjs를 협력 모듈로 분리',
+    'chore: 버전 0.1.8',
+    'release: MemoIvy 0.1.8',
+    "Merge remote-tracking branch 'origin/main' into dev",
+  ]) {
+    fs.writeFileSync(msgFile, `${valid}\n`);
+    assert.doesNotThrow(() => execFileSync(hook, [msgFile], { stdio: 'pipe' }), valid);
+  }
+
+  for (const invalid of [
+    'refactor(desktop): main.cjs를 분리한다',
+    'fix(editor): 밑줄 서식을 더한다.',
+    'feat(ui): 창을 닫는다',
+    'docs(readme): English only title',
+    '형식 없는 제목',
+  ]) {
+    fs.writeFileSync(msgFile, `${invalid}\n`);
+    assert.throws(() => execFileSync(hook, [msgFile], { stdio: 'pipe' }), invalid);
+  }
 });
