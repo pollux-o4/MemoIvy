@@ -67,7 +67,11 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   const { focus, outlineRows, indent, outdent, move, shift } = useBranchFocus({ allNotes: store.notes, scope: activeScope, noteById, selected, commit: (changes) => commands.commit(changes) });
   const linkStyle = readLinkStyle(store.snapshot?.preferences);
   const title = scopedProject ? canvasTitle(scopedProject) : '메모 캔버스';
-  const selectedNotes = notes.filter((note) => selected.includes(note.id));
+  const selectedNotes = useMemo(() => {
+    if (!selected.length) return [];
+    const selectedSet = new Set(selected);
+    return notes.filter((note) => selectedSet.has(note.id));
+  }, [notes, selected]);
   const selectedNote = selectedNotes.length === 1 ? selectedNotes[0] : undefined;
   const openCard = (note: Note, editProject = false) => note.canvas.project && !editProject ? scopeState.navigate(note.id) : onOpenNote(note.id);
   const actions = useSelectionActions({ store, selected, selectedNote, openCard, clipboard, toggleDone: commands.toggleDone, requestDelete: setDeleteTarget, requestRename: () => setRenameRequest((count) => count + 1) });
@@ -142,7 +146,14 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
   };
   const preview = pointer.connectPreview; const connectFrom = selection.connectFrom ? positions[selection.connectFrom] : undefined;
   const connectView = useMemo(() => preview && connectFrom ? { from: connectFrom, to: preview.to, target: preview.target ? positions[preview.target] : undefined, targetId: preview.target } : null, [preview, connectFrom, positions]);
-  const hasProjects = store.notes.some((note) => note.canvas.project);
+  const hasProjects = useMemo(() => store.notes.some((note) => note.canvas.project), [store.notes]);
+  const linkCount = useMemo(() => {
+    let total = 0;
+    for (const note of notes) {
+      for (const id of note.canvas.next) if (noteById.has(id)) total += 1;
+    }
+    return total;
+  }, [notes, noteById]);
   // 가지 초점: 흐림은 world의 has-focus가 정하고 카드·선은 가지 안인지만 받는다. 초점이 바뀌어도 가지 밖 카드 200장은 다시 그리지 않는다.
   // 단축키는 화면 루트가 포커스를 받아 처리한다. application 역할은 보드에만 둬 제목 줄·도구 막대가 랜드마크로 남게 한다.
   // biome-ignore lint/a11y/noNoninteractiveTabindex: 캔버스 단축키를 받으려면 화면 자체가 포커스를 받아야 한다.
@@ -173,7 +184,7 @@ export function Canvas({ store, scope, onOpenNote, onBack, onHelp, onOpenSetting
       onSelect={inspectorActions.select} openLinkPicker={openLinkPicker} onToggleLink={inspectorActions.toggleLink} onAddBranch={inspectorActions.addBranch} outline={inspectorOutline}/>}
     {deleteTarget.length > 0 && <CanvasDeleteDialog ids={deleteTarget} notes={store.notes} onCancel={() => setDeleteTarget([])} onAccept={() => void confirmDelete()}/>}
     <CanvasDock count={notes.length}
-      links={notes.reduce((count, note) => count + note.canvas.next.filter((id) => noteById.has(id)).length, 0)}
+      links={linkCount}
       zoom={camera.zoom} saving={store.saving} error={store.error}
       canUndo={commands.history.canUndo} canRedo={commands.history.canRedo} onUndo={commands.history.undo} onRedo={commands.history.redo}
       onZoom={motion.zoomByStep} onFit={() => fitView()} onReset={resetZoom}
