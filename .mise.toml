@@ -43,7 +43,7 @@ description = "Git 전체 이력의 비밀정보 검사 (출력 마스킹)"
 run = "gitleaks git --redact --no-banner"
 
 [tasks."hooks:install"]
-description = "커밋·푸시 전 Gitleaks 검사 활성화"
+description = "커밋 형식·비밀정보 Git 훅 활성화"
 run = "git config --local core.hooksPath .githooks"
 
 [tasks.check]

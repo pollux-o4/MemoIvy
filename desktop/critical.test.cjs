@@ -2,7 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const { EventEmitter } = require('node:events');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { PassThrough, Writable } = require('node:stream');
 const { validateRequest, validateWindowTarget } = require('./ipc_validation.cjs');
 const { EngineTransport } = require('./engine_transport.cjs');
@@ -135,4 +139,40 @@ test('engine runtime deduplicates concurrent launches and enforces monotonic sna
   transportInstance.emit('event', { snapshot: { revision: 6, savedRevision: 6, notes: [], assets: [] } });
   assert.deepEqual(seenRevisions, [5, 6]);
   assert.equal(runtime.snapshot().revision, 6);
+});
+
+test('only main.cjs and preload.cjs import electron directly', () => {
+  const desktopFiles = fs.readdirSync(__dirname)
+    .filter((name) => name.endsWith('.cjs') && !name.endsWith('.test.cjs'))
+    .sort();
+  const importers = desktopFiles.filter((name) => /\brequire\(\s*['"]electron['"]\s*\)/.test(fs.readFileSync(path.join(__dirname, name), 'utf8')));
+  assert.deepEqual(importers, ['main.cjs', 'preload.cjs']);
+});
+
+test('commit-msg hook enforces nominal Korean subjects and rejects declarative endings', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'memoivy-commit-msg-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const msgFile = path.join(dir, 'COMMIT_EDITMSG');
+  const hook = path.join(__dirname, '..', '.githooks', 'commit-msg');
+
+  for (const valid of [
+    'refactor(desktop): main.cjs를 협력 모듈로 분리',
+    'chore: 버전 0.1.8',
+    'release: MemoIvy 0.1.8',
+    "Merge remote-tracking branch 'origin/main' into dev",
+  ]) {
+    fs.writeFileSync(msgFile, `${valid}\n`);
+    assert.doesNotThrow(() => execFileSync(hook, [msgFile], { stdio: 'pipe' }), valid);
+  }
+
+  for (const invalid of [
+    'refactor(desktop): main.cjs를 분리한다',
+    'fix(editor): 밑줄 서식을 더한다.',
+    'feat(ui): 창을 닫는다',
+    'docs(readme): English only title',
+    '형식 없는 제목',
+  ]) {
+    fs.writeFileSync(msgFile, `${invalid}\n`);
+    assert.throws(() => execFileSync(hook, [msgFile], { stdio: 'pipe' }), invalid);
+  }
 });
