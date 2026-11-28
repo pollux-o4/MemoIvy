@@ -6,6 +6,7 @@ const { EventEmitter } = require('node:events');
 const { PassThrough, Writable } = require('node:stream');
 const { validateRequest, validateWindowTarget } = require('./ipc_validation.cjs');
 const { EngineTransport } = require('./engine_transport.cjs');
+const { createEngineRuntime } = require('./engine_runtime.cjs');
 const { isSafeExternal, openExternal } = require('./external_links.cjs');
 
 const noteId = '49fcbca1-94f1-48bb-8f1d-8a2261d50bb4';
@@ -96,4 +97,42 @@ test('preload window allowlist matches window_kinds.json (except note)', () => {
   const listed = JSON.parse(source.match(/openWindow: \(kind, id\) => \{[\s\S]*?(\[[^\]]*\])\.includes\(kind\)/)[1].replaceAll("'", '"'));
   const kinds = Object.keys(require('./window_kinds.json')).filter((kind) => kind !== 'note');
   assert.deepEqual([...listed].sort(), kinds.sort());
+});
+
+test('engine runtime deduplicates concurrent launches and enforces monotonic snapshot revisions', async () => {
+  let spawns = 0;
+  let transportInstance;
+  class MockTransport extends EventEmitter {
+    constructor() {
+      super();
+      spawns += 1;
+      transportInstance = this;
+    }
+    start() {}
+    request(op) {
+      if (op === 'snapshot') return Promise.resolve({ snapshot: { revision: 5, savedRevision: 5, notes: [], assets: [] } });
+      if (op === 'update') return Promise.resolve({ snapshot: { revision: 6, savedRevision: 6, notes: [], assets: [] } });
+      return Promise.resolve({});
+    }
+  }
+  const seenRevisions = [];
+  const runtime = createEngineRuntime({
+    dataDirectory: () => '/tmp/memoivy-runtime-test',
+    legacyNotesPath: () => undefined,
+    engineExecutable: () => '/tmp/memoivy-engine',
+    Transport: MockTransport,
+    fs: { mkdirSync() {}, chmodSync() {} },
+    onSnapshot: (snapshot) => seenRevisions.push(snapshot.revision),
+  });
+
+  await Promise.all([runtime.launch(), runtime.launch()]);
+  assert.equal(spawns, 1);
+  assert.equal(runtime.snapshot().revision, 5);
+
+  transportInstance.emit('event', { snapshot: { revision: 4, savedRevision: 4, notes: [], assets: [] } });
+  transportInstance.emit('event', { snapshot: { revision: 5, savedRevision: 5, notes: [], assets: [] } });
+  await runtime.request('update', {});
+  transportInstance.emit('event', { snapshot: { revision: 6, savedRevision: 6, notes: [], assets: [] } });
+  assert.deepEqual(seenRevisions, [5, 6]);
+  assert.equal(runtime.snapshot().revision, 6);
 });

@@ -2,10 +2,20 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const { roleOf, homeToReplace, shouldShowLibrary } = require('./window_policy.cjs');
+const { createWindowManager } = require('./window_manager.cjs');
+const { windowChrome } = require('./window_chrome.cjs');
+const windowKinds = require('./window_kinds.json');
 
 function once(values) {
   return (function* () { yield* values; })();
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
 }
 
 test('roles distinguish home, note work, and auxiliary windows', () => {
@@ -53,25 +63,31 @@ test('auxiliary close shows library only when no visible windows remain', () => 
 });
 
 function mainHarness() {
-  const { EventEmitter } = require('node:events');
-  const { readFileSync } = require('node:fs');
-  const { createRequire } = require('node:module');
-  const vm = require('node:vm');
-  const path = require('node:path');
-  const localRequire = createRequire(__filename);
   const created = [];
   const flushed = [];
-  let flush = async (win) => { flushed.push(win); };
+  let flushEngine = async () => {};
+  let manager;
   class FakeWindow extends EventEmitter {
     constructor() {
-      super(); this.visible = false; this.destroyed = false;
+      super();
+      this.visible = false;
+      this.destroyed = false;
       this.webContents = new EventEmitter();
       this.webContents.setWindowOpenHandler = () => {};
+      this.webContents.isDestroyed = () => this.destroyed;
+      this.webContents.send = (channel, payload) => {
+        if (channel === 'memoivy:flush') {
+          flushed.push(this);
+          manager.ackFlush(this.webContents, payload, { ok: true });
+        }
+      };
       created.push(this);
     }
     isDestroyed() { return this.destroyed; }
     isVisible() { return this.visible; }
     isMinimized() { return false; }
+    isMaximized() { return false; }
+    isFullScreen() { return false; }
     show() { this.visible = true; }
     hide() { this.visible = false; }
     focus() {}
@@ -82,14 +98,25 @@ function mainHarness() {
     }
     loadURL() { return Promise.resolve(); }
   }
-  const app = { setName() {}, setDesktopName() {}, commandLine: { appendSwitch() {} }, requestSingleInstanceLock: () => false, quit() {}, setPath() {} };
-  const context = {
-    require: (name) => name === 'electron' ? { app, BrowserWindow: FakeWindow, nativeTheme: { shouldUseDarkColors: false } } : localRequire(name),
-    process, console, URL, URLSearchParams, __dirname, module: { exports: {} },
-    flush: (win) => flush(win),
+  manager = createWindowManager({
+    BrowserWindow: FakeWindow,
+    nativeTheme: { shouldUseDarkColors: false },
+    windowKinds,
+    windowChrome,
+    preloadPath: 'preload.cjs',
+    isPackaged: true,
+    rendererTarget: (kind, id) => `file:///index.html?window=${kind}${id ? `&id=${id}` : ''}`,
+    isApprovedFrame: () => true,
+    flushEngine: () => flushEngine(),
+    openExternal: () => {},
+  });
+  return {
+    createWindow: manager.createWindow,
+    requestWindowClose: manager.requestWindowClose,
+    created,
+    flushed,
+    setFlush: (fn) => { flushEngine = fn; },
   };
-  vm.runInNewContext(`${readFileSync(path.join(__dirname, 'main.cjs'), 'utf8')}\nflushWindow = flush; module.exports = { createWindow, requestWindowClose };`, context);
-  return { ...context.module.exports, created, flushed, setFlush: (fn) => { flush = fn; } };
 }
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
@@ -98,14 +125,14 @@ test('new home replaces the previous home only after ready-to-show and flush', a
   const h = mainHarness();
   const library = h.createWindow('library');
   library.emit('ready-to-show');
-  let finishFlush;
-  h.setFlush(() => new Promise((resolve) => { finishFlush = resolve; }));
+  const pendingFlush = deferred();
+  h.setFlush(() => pendingFlush.promise);
   const canvas = h.createWindow('canvas');
   assert.equal(library.isDestroyed(), false);
   canvas.emit('ready-to-show');
   assert.equal(canvas.isVisible(), true);
   assert.equal(library.isDestroyed(), false);
-  finishFlush();
+  pendingFlush.resolve();
   await settle();
   assert.equal(library.isDestroyed(), true);
   assert.equal(h.created.length, 2);
@@ -142,11 +169,11 @@ test('replacement upgrades an in-flight hide to a real close', async () => {
   const library = h.createWindow('library');
   library.emit('ready-to-show');
   h.createWindow('note', '1').emit('ready-to-show');
-  let finishFlush;
-  h.setFlush(() => new Promise((resolve) => { finishFlush = resolve; }));
+  const pendingFlush = deferred();
+  h.setFlush(() => pendingFlush.promise);
   library.close();
   h.createWindow('canvas').emit('ready-to-show');
-  finishFlush();
+  pendingFlush.resolve();
   await settle();
   assert.equal(library.isDestroyed(), true);
   assert.equal(h.created.length, 3);
